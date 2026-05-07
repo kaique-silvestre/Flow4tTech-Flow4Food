@@ -6,6 +6,7 @@ from src.api.routes import categorias as categorias_routes
 from src.api.routes import fornecedores as fornecedores_routes
 from src.api.routes import garcons as garcons_routes
 from src.api.routes import health
+from src.api.routes import itens as itens_routes
 from src.api.routes import metodos_pagamento as metodos_pagamento_routes
 from src.core.config import get_settings
 from src.core.errors import register_exception_handlers
@@ -42,6 +43,7 @@ def create_app() -> FastAPI:
     app.include_router(fornecedores_routes.router, prefix="/api/fornecedores", tags=["fornecedores"])
     app.include_router(garcons_routes.router, prefix="/api/garcons", tags=["garcons"])
     app.include_router(metodos_pagamento_routes.router, prefix="/api/metodos-pagamento", tags=["metodos_pagamento"])
+    app.include_router(itens_routes.router, prefix="/api/itens", tags=["itens"])
 
     log = get_logger(__name__)
     log.info("app_started", env=settings.ENV, version=settings.APP_VERSION)

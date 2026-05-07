@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { label: "Compras", to: "/compras" },
   { label: "Relatórios", to: "/relatorios" },
   { label: "─ Cadastros ─", to: null },
+  { label: "Itens", to: "/cadastros/itens" },
   { label: "Categorias", to: "/cadastros/categorias" },
   { label: "Fornecedores", to: "/cadastros/fornecedores" },
   { label: "Garçons", to: "/cadastros/garcons" },
