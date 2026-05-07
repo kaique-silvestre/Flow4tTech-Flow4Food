@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api.routes import auth as auth_routes
 from src.api.routes import health
 from src.core.config import get_settings
 from src.core.errors import register_exception_handlers
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
     register_exception_handlers(app)
 
     app.include_router(health.router)
+    app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
 
     log = get_logger(__name__)
     log.info("app_started", env=settings.ENV, version=settings.APP_VERSION)

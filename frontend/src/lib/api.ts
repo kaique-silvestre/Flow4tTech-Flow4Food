@@ -1,6 +1,5 @@
 import axios, { AxiosError } from "axios";
-
-const TOKEN_KEY = "matchpoint_jwt";
+import { useAuthStore } from "@/stores/authStore";
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000",
@@ -8,7 +7,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = useAuthStore.getState().token;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -19,7 +18,7 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem(TOKEN_KEY);
+      useAuthStore.getState().clearToken();
       if (window.location.pathname !== "/login") {
         window.location.assign("/login");
       }
@@ -27,12 +26,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-export const tokenStorage = {
-  get: () => localStorage.getItem(TOKEN_KEY),
-  set: (token: string) => localStorage.setItem(TOKEN_KEY, token),
-  clear: () => localStorage.removeItem(TOKEN_KEY),
-};
 
 export interface ApiErrorBody {
   error: {
