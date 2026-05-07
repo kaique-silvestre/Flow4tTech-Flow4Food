@@ -5,9 +5,19 @@ from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_current_user, get_db
 from src.schemas.itens import ItemCreateRequest, ItemResponse, ItemUpdateRequest
-from src.services import itens_service
+from src.services import comandas_service, itens_service
 
 router = APIRouter()
+
+
+@router.get("/top", response_model=list[ItemResponse])
+def top_itens(
+    dias: int = Query(7, ge=1),
+    limit: int = Query(6, ge=1, le=50),
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> list[ItemResponse]:
+    return comandas_service.get_top_itens(db, dias, limit)  # type: ignore[return-value]
 
 
 @router.get("", response_model=list[ItemResponse])

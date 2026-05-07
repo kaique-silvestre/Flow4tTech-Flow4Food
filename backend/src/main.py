@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes import auth as auth_routes
 from src.api.routes import categorias as categorias_routes
+from src.api.routes import comandas as comandas_routes
 from src.api.routes import compras as compras_routes
 from src.api.routes import estoque as estoque_routes
 from src.api.routes import fornecedores as fornecedores_routes
@@ -48,6 +49,7 @@ def create_app() -> FastAPI:
     app.include_router(itens_routes.router, prefix="/api/itens", tags=["itens"])
     app.include_router(compras_routes.router, prefix="/api/compras", tags=["compras"])
     app.include_router(estoque_routes.router, prefix="/api/estoque", tags=["estoque"])
+    app.include_router(comandas_routes.router, prefix="/api/comandas", tags=["comandas"])
 
     log = get_logger(__name__)
     log.info("app_started", env=settings.ENV, version=settings.APP_VERSION)

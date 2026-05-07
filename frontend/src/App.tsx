@@ -13,6 +13,8 @@ import { ComprasPage } from "@/features/compras/ComprasPage";
 import { NovaCompraPage } from "@/features/compras/NovaCompraPage";
 import { EstoquePage } from "@/features/estoque/EstoquePage";
 import { MovimentosPage } from "@/features/estoque/MovimentosPage";
+import { ComandasPage } from "@/features/comandas/ComandasPage";
+import { ComandaAbertaPage } from "@/features/comandas/ComandaAbertaPage";
 import { queryClient } from "@/lib/queryClient";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
@@ -25,6 +27,8 @@ export function App() {
           <Route element={<RequireAuth />}>
             <Route element={<AppLayout />}>
               <Route path="/" element={<PlaceholderPage />} />
+              <Route path="/comandas" element={<ComandasPage />} />
+              <Route path="/comandas/:id" element={<ComandaAbertaPage />} />
               <Route path="/compras" element={<ComprasPage />} />
               <Route path="/compras/nova" element={<NovaCompraPage />} />
               <Route path="/estoque" element={<EstoquePage />} />

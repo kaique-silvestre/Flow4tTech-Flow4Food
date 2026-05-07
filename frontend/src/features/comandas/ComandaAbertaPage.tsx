@@ -1,0 +1,384 @@
+import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useItens } from "@/features/cadastros/itens/useItens";
+import { formatCurrency } from "@/lib/format";
+import { CancelarItemModal } from "./CancelarItemModal";
+import { useComanda, useEditarItem, useLancarItem, useTopItens, type ItemComandaResponse } from "./useComandas";
+
+export function ComandaAbertaPage() {
+  const { id } = useParams<{ id: string }>();
+  const comanda_id = Number(id);
+
+  const { data: comanda, isLoading } = useComanda(comanda_id);
+  const lancarItem = useLancarItem(comanda_id);
+  const editarItem = useEditarItem(comanda_id);
+  const { data: topItens = [] } = useTopItens(7, 6);
+
+  const [busca, setBusca] = useState("");
+  const { data: itens = [] } = useItens({ busca: busca || undefined, vendavel: true });
+
+  const [itemSelecionado, setItemSelecionado] = useState<number | null>(null);
+  const [quantidade, setQuantidade] = useState("1");
+  const [pessoaAssociada, setPessoaAssociada] = useState("");
+  const [observacao, setObservacao] = useState("");
+  const [cortesia, setCortesia] = useState(false);
+
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editQtd, setEditQtd] = useState("");
+  const [editPessoa, setEditPessoa] = useState("");
+  const [editObs, setEditObs] = useState("");
+
+  const [cancelando, setCancelando] = useState<ItemComandaResponse | null>(null);
+
+  const itemSelecionadoObj = itemSelecionado != null
+    ? (itens.find((i) => i.id === itemSelecionado) ?? topItens.find((i) => i.id === itemSelecionado))
+    : null;
+
+  function handleLancar() {
+    if (!comanda || itemSelecionado == null) return;
+    lancarItem.mutate(
+      {
+        item_id: itemSelecionado,
+        quantidade: Number(quantidade),
+        pessoa_associada: pessoaAssociada || undefined,
+        observacao: observacao || undefined,
+        cortesia,
+        version: comanda.version,
+      },
+      {
+        onSuccess: () => {
+          setItemSelecionado(null);
+          setQuantidade("1");
+          setPessoaAssociada("");
+          setObservacao("");
+          setCortesia(false);
+          setBusca("");
+        },
+      },
+    );
+  }
+
+  function startEdit(ic: ItemComandaResponse) {
+    setEditingId(ic.id);
+    setEditQtd(String(ic.quantidade));
+    setEditPessoa(ic.pessoa_associada ?? "");
+    setEditObs(ic.observacao ?? "");
+  }
+
+  function saveEdit(ic: ItemComandaResponse) {
+    if (!comanda) return;
+    editarItem.mutate(
+      {
+        item_id: ic.id,
+        version: comanda.version,
+        quantidade: Number(editQtd),
+        pessoa_associada: editPessoa || undefined,
+        observacao: editObs || undefined,
+      },
+      { onSuccess: () => setEditingId(null) },
+    );
+  }
+
+  if (isLoading || !comanda) {
+    return <div className="p-6 text-sm text-gray-500">Carregando...</div>;
+  }
+
+  const itensAtivos = comanda.itens_ativos.filter((i) => !i.cancelado);
+  const itensCancelados = comanda.itens_ativos.filter((i) => i.cancelado);
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* Header */}
+      <div className="border-b bg-white px-6 py-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-lg font-semibold">
+              #{comanda.id} — {comanda.tipo_identificacao === "mesa" ? "Mesa" : ""}{" "}
+              {comanda.identificacao}
+            </span>
+            <span className="ml-3 text-sm text-gray-500">
+              Garçom: {comanda.garcom_nome} · Aberta há {comanda.tempo_aberta_minutos} min
+            </span>
+          </div>
+          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+            {comanda.status}
+          </span>
+        </div>
+        {comanda.pessoas.length > 0 && (
+          <div className="mt-1 flex gap-2">
+            {comanda.pessoas.map((p, i) => (
+              <span key={i} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                {p}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Split layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left panel — lançar item */}
+        <div className="flex w-80 flex-col gap-4 overflow-y-auto border-r bg-gray-50 p-4">
+          <h3 className="font-medium">Adicionar Item</h3>
+
+          {/* Busca */}
+          <Input
+            placeholder="Buscar item..."
+            value={busca}
+            onChange={(e) => { setBusca(e.target.value); setItemSelecionado(null); }}
+          />
+
+          {/* Top atalhos */}
+          {!busca && topItens.length > 0 && (
+            <div>
+              <p className="mb-1 text-xs text-gray-400">Mais pedidos</p>
+              <div className="grid grid-cols-2 gap-1">
+                {topItens.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setItemSelecionado(item.id)}
+                    className={`rounded border p-2 text-left text-xs transition-colors ${
+                      itemSelecionado === item.id
+                        ? "border-blue-400 bg-blue-50"
+                        : "border-gray-200 bg-white hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="font-medium">{item.nome}</div>
+                    <div className="text-gray-400">
+                      {item.preco_venda != null ? formatCurrency(item.preco_venda) : "—"}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Resultados busca */}
+          {busca && (
+            <div className="max-h-48 space-y-1 overflow-y-auto">
+              {itens.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setItemSelecionado(item.id)}
+                  className={`w-full rounded border p-2 text-left text-sm transition-colors ${
+                    itemSelecionado === item.id
+                      ? "border-blue-400 bg-blue-50"
+                      : "border-gray-200 bg-white hover:bg-gray-50"
+                  }`}
+                >
+                  {item.nome}
+                  {item.preco_venda != null && (
+                    <span className="ml-2 text-gray-400">{formatCurrency(item.preco_venda)}</span>
+                  )}
+                </button>
+              ))}
+              {itens.length === 0 && (
+                <p className="text-xs text-gray-400">Nenhum item encontrado</p>
+              )}
+            </div>
+          )}
+
+          {/* Detalhes do item selecionado */}
+          {itemSelecionadoObj && (
+            <div className="rounded border bg-blue-50 p-3 text-sm">
+              <div className="font-medium">{itemSelecionadoObj.nome}</div>
+              {itemSelecionadoObj.preco_venda != null && (
+                <div className="text-gray-500">{formatCurrency(itemSelecionadoObj.preco_venda)}</div>
+              )}
+            </div>
+          )}
+
+          {/* Quantidade */}
+          <div>
+            <Label htmlFor="qtd">Quantidade</Label>
+            <Input
+              id="qtd"
+              type="number"
+              min="0.001"
+              step="0.001"
+              value={quantidade}
+              onChange={(e) => setQuantidade(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+
+          {/* Pessoa */}
+          {comanda.pessoas.length > 0 ? (
+            <div>
+              <Label>Pessoa</Label>
+              <select
+                className="mt-1 w-full rounded border px-3 py-2 text-sm"
+                value={pessoaAssociada}
+                onChange={(e) => setPessoaAssociada(e.target.value)}
+              >
+                <option value="">— nenhuma —</option>
+                {comanda.pessoas.map((p, i) => (
+                  <option key={i} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <Label htmlFor="pessoa">Pessoa (opcional)</Label>
+              <Input
+                id="pessoa"
+                value={pessoaAssociada}
+                onChange={(e) => setPessoaAssociada(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          )}
+
+          {/* Observação */}
+          <div>
+            <Label htmlFor="obs">Observação (opcional)</Label>
+            <Input
+              id="obs"
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+
+          {/* Cortesia */}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="cortesia"
+              checked={cortesia}
+              onChange={(e) => setCortesia(e.target.checked)}
+            />
+            <Label htmlFor="cortesia">Cortesia (preço zero)</Label>
+          </div>
+
+          <Button
+            onClick={handleLancar}
+            disabled={!itemSelecionado || lancarItem.isPending}
+          >
+            {lancarItem.isPending ? "Lançando..." : "+ Adicionar Item"}
+          </Button>
+        </div>
+
+        {/* Right panel — itens lançados */}
+        <div className="flex flex-1 flex-col overflow-y-auto p-4">
+          <h3 className="mb-3 font-medium">
+            Itens Lançados ({itensAtivos.length})
+          </h3>
+
+          {itensAtivos.length === 0 ? (
+            <p className="text-sm text-gray-400">Nenhum item lançado ainda.</p>
+          ) : (
+            <div className="space-y-2">
+              {itensAtivos.map((ic) => (
+                <div key={ic.id} className="rounded border bg-white p-3">
+                  {editingId === ic.id ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          value={editQtd}
+                          onChange={(e) => setEditQtd(e.target.value)}
+                          className="w-24"
+                        />
+                        <Input
+                          value={editPessoa}
+                          onChange={(e) => setEditPessoa(e.target.value)}
+                          placeholder="Pessoa"
+                        />
+                        <Input
+                          value={editObs}
+                          onChange={(e) => setEditObs(e.target.value)}
+                          placeholder="Obs"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => saveEdit(ic)} disabled={editarItem.isPending}>
+                          Salvar
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 font-medium">
+                          {ic.quantidade} × {ic.item_nome}
+                          {ic.cortesia && (
+                            <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-600">
+                              cortesia
+                            </span>
+                          )}
+                        </div>
+                        {ic.pessoa_associada && (
+                          <div className="text-xs text-gray-400">{ic.pessoa_associada}</div>
+                        )}
+                        {ic.observacao && (
+                          <div className="text-xs text-gray-400">Obs: {ic.observacao}</div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-right">
+                        <div className="text-sm font-medium">
+                          {formatCurrency(Number(ic.subtotal))}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => startEdit(ic)}
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setCancelando(ic)}
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Cancelados */}
+          {itensCancelados.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-1 text-xs text-gray-400">Itens cancelados</p>
+              {itensCancelados.map((ic) => (
+                <div key={ic.id} className="rounded border border-dashed p-2 text-sm text-gray-400 line-through">
+                  {ic.quantidade} × {ic.item_nome}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Rodapé total */}
+          <div className="mt-auto border-t pt-3 text-right">
+            <span className="text-sm text-gray-500">Total parcial: </span>
+            <span className="text-lg font-semibold">
+              {formatCurrency(Number(comanda.total_parcial))}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal cancelar */}
+      {cancelando && comanda && (
+        <CancelarItemModal
+          comanda_id={comanda.id}
+          item_id={cancelando.id}
+          version={comanda.version}
+          onClose={() => setCancelando(null)}
+          onSuccess={() => setCancelando(null)}
+        />
+      )}
+    </div>
+  );
+}
