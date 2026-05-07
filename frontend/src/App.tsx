@@ -9,6 +9,10 @@ import { ItensPage } from "@/features/cadastros/itens/ItensPage";
 import { FornecedoresPage } from "@/features/cadastros/fornecedores/FornecedoresPage";
 import { GarconsPage } from "@/features/cadastros/garcons/GarconsPage";
 import { MetodosPagamentoPage } from "@/features/cadastros/metodos_pagamento/MetodosPagamentoPage";
+import { ComprasPage } from "@/features/compras/ComprasPage";
+import { NovaCompraPage } from "@/features/compras/NovaCompraPage";
+import { EstoquePage } from "@/features/estoque/EstoquePage";
+import { MovimentosPage } from "@/features/estoque/MovimentosPage";
 import { queryClient } from "@/lib/queryClient";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
@@ -21,6 +25,10 @@ export function App() {
           <Route element={<RequireAuth />}>
             <Route element={<AppLayout />}>
               <Route path="/" element={<PlaceholderPage />} />
+              <Route path="/compras" element={<ComprasPage />} />
+              <Route path="/compras/nova" element={<NovaCompraPage />} />
+              <Route path="/estoque" element={<EstoquePage />} />
+              <Route path="/estoque/movimentos" element={<MovimentosPage />} />
               <Route path="/cadastros/itens" element={<ItensPage />} />
               <Route path="/cadastros/categorias" element={<CategoriasPage />} />
               <Route path="/cadastros/fornecedores" element={<FornecedoresPage />} />
