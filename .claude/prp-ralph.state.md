@@ -1,8 +1,32 @@
 ---
-iteration: 3
+iteration: 4
 max_iterations: 10
 plan_path: ".claude/PRPs/plans/issue-14-ux-sweep.md"
 started_at: "2026-05-08T18:00:00Z"
+---
+
+## Iteration 4 - 2026-05-08T23:10:00Z — Issue 5 (M001) IMPLEMENTADA
+
+### Completed
+- Backend: `FichaTecnicaItemResponse` + `custo_medio_insumo`; `delete_produto` → 422 se tem histórico; `desativar_produto` service + `PATCH /:id/desativar` route
+- Backend: `tests/test_produtos.py` (9 testes, todos passando)
+- Frontend: `useProdutos.ts` atualizado (FichaTecnicaItem, mutations create/update/desativar/delete)
+- Frontend: `src/features/cardapio/` criado: `produtoSchemas.ts`, `ProdutoModal.tsx`, `CardapioPage.tsx`
+- Frontend: `App.tsx` + `Sidebar.tsx` — rota `/cardapio` + NavLink "Cardápio"
+- 104 testes backend passando, TypeScript zero erros
+
+### Validation Status
+- type-check: PASS (tsc --noEmit zero erros)
+- lint: N/A
+- Tests: PASS (104 backend — 9 novos test_produtos)
+- Build: N/A
+
+### Learnings
+- `UnidadeBase` enum só aceita `"un"` e `"g"` — nunca "kg" em testes
+- `ItemComanda` não tem campo `version` — não incluir em inserts diretos
+- `Comanda.garcom_id` NOT NULL — usar garcom_id=1 em inserções de teste sem FK constraint SQLite
+- `delete_produto` original fazia soft-delete silencioso; novo comportamento: 422 explícito com mensagem clara
+
 ---
 
 ## Iteration 3 - 2026-05-08T22:35:00Z — Issue 4 (M000) sincronizada

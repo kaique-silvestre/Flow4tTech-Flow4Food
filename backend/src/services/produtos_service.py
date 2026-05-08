@@ -26,6 +26,7 @@ def _build_response(db: Session, produto) -> ProdutoResponse:
                 insumo_nome=insumo.nome if insumo else f"Insumo {comp.insumo_id}",
                 quantidade=comp.quantidade,
                 unidade_base=insumo.unidade_base if insumo else "un",
+                custo_medio_insumo=insumo.custo_medio if insumo else None,
             ))
     return ProdutoResponse(
         id=produto.id,
@@ -101,10 +102,23 @@ def delete_produto(db: Session, produto_id: int) -> None:
     if obj is None:
         raise AppError(ErrorCode.NOT_FOUND, "Produto não encontrado", http_status=404)
     if produtos_repository.is_referenced_in_comanda(db, produto_id):
-        produtos_repository.soft_delete(db, produto_id)
-    else:
-        obj.ativo = False
-        db.commit()
+        raise AppError(
+            ErrorCode.VALIDATION_ERROR,
+            "Produto tem histórico em comandas e não pode ser excluído. Use 'Desativar'.",
+            http_status=422,
+        )
+    db.delete(obj)
+    db.commit()
+
+
+def desativar_produto(db: Session, produto_id: int) -> ProdutoResponse:
+    obj = produtos_repository.get_by_id(db, produto_id)
+    if obj is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Produto não encontrado", http_status=404)
+    obj.ativo = False
+    db.commit()
+    db.refresh(obj)
+    return _build_response(db, obj)
 
 
 def get_top_produtos(db: Session, dias: int, limit: int) -> list[ProdutoResponse]:

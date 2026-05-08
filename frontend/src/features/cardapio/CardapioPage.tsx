@@ -1,0 +1,167 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useCategorias } from "@/features/cadastros/categorias/useCategorias";
+import {
+  useProdutos,
+  useDesativarProduto,
+  useDeleteProduto,
+  type ProdutoResponse,
+} from "@/features/cadastros/produtos/useProdutos";
+import { ProdutoModal } from "./ProdutoModal";
+
+function calcCusto(produto: ProdutoResponse): number | null {
+  if (!produto.ficha_tecnica?.length) return null;
+  let total = 0;
+  for (const item of produto.ficha_tecnica) {
+    if (item.custo_medio_insumo === null) return null;
+    total += item.custo_medio_insumo * item.quantidade;
+  }
+  return total;
+}
+
+function CmvBadge({ preco, custo }: { preco: number | null; custo: number | null }) {
+  if (custo === null || !preco) return <span className="text-gray-400">—</span>;
+  const cmv = (custo / preco) * 100;
+  const cls = cmv < 30 ? "text-green-600" : cmv <= 50 ? "text-yellow-600" : "text-red-600";
+  return <span className={`font-medium ${cls}`}>{cmv.toFixed(1)}%</span>;
+}
+
+export function CardapioPage() {
+  const { data: produtos = [], isLoading } = useProdutos();
+  const { data: categorias = [] } = useCategorias();
+  const desativar = useDesativarProduto();
+  const deletar = useDeleteProduto();
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<ProdutoResponse | null>(null);
+  const [confirmDesativar, setConfirmDesativar] = useState<number | null>(null);
+  const [confirmDeletar, setConfirmDeletar] = useState<number | null>(null);
+
+  const catMap = Object.fromEntries(categorias.map((c) => [c.id, c.nome]));
+
+  function openCreate() {
+    setEditing(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(p: ProdutoResponse) {
+    setEditing(p);
+    setModalOpen(true);
+  }
+
+  return (
+    <div className="p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Cardápio</h1>
+        <Button onClick={openCreate}>Novo Produto</Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />
+          ))}
+        </div>
+      ) : produtos.length === 0 ? (
+        <p className="text-sm text-gray-500">Nenhum produto cadastrado.</p>
+      ) : (
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b text-left text-gray-500">
+              <th className="py-2 pr-4">Nome</th>
+              <th className="py-2 pr-4">Categoria</th>
+              <th className="py-2 pr-4 text-right">Preço</th>
+              <th className="py-2 pr-4 text-right">Custo Ficha</th>
+              <th className="py-2 pr-4 text-right">CMV%</th>
+              <th className="py-2 pr-4 text-right">Lucro Bruto</th>
+              <th className="py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {produtos.map((p) => {
+              const custo = calcCusto(p);
+              const lucro =
+                p.preco_venda !== null && custo !== null ? p.preco_venda - custo : null;
+              return (
+                <tr key={p.id} className="border-b last:border-0">
+                  <td className="py-2 pr-4 font-medium">{p.nome}</td>
+                  <td className="py-2 pr-4 text-gray-500">
+                    {p.categoria_id ? (catMap[p.categoria_id] ?? "—") : "—"}
+                  </td>
+                  <td className="py-2 pr-4 text-right">
+                    {p.preco_venda !== null ? `R$ ${Number(p.preco_venda).toFixed(2)}` : "—"}
+                  </td>
+                  <td className="py-2 pr-4 text-right">
+                    {custo !== null ? `R$ ${custo.toFixed(2)}` : "—"}
+                  </td>
+                  <td className="py-2 pr-4 text-right">
+                    <CmvBadge preco={p.preco_venda} custo={custo} />
+                  </td>
+                  <td className="py-2 pr-4 text-right">
+                    {lucro !== null ? (
+                      <span className={lucro >= 0 ? "text-green-600" : "text-red-600"}>
+                        R$ {lucro.toFixed(2)}
+                      </span>
+                    ) : "—"}
+                  </td>
+                  <td className="py-2 text-right space-x-2">
+                    <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
+                      Editar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setConfirmDesativar(p.id)}
+                      className="text-yellow-600 hover:text-yellow-700"
+                    >
+                      Desativar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setConfirmDeletar(p.id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Remover
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+
+      <ProdutoModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        editing={editing}
+      />
+
+      <ConfirmDialog
+        open={confirmDesativar !== null}
+        title="Desativar produto?"
+        confirmLabel="Desativar"
+        onConfirm={() => {
+          desativar.mutate(confirmDesativar!);
+          setConfirmDesativar(null);
+        }}
+        onCancel={() => setConfirmDesativar(null)}
+        isPending={desativar.isPending}
+      />
+
+      <ConfirmDialog
+        open={confirmDeletar !== null}
+        title="Remover produto?"
+        confirmLabel="Remover"
+        onConfirm={() => {
+          deletar.mutate(confirmDeletar!);
+          setConfirmDeletar(null);
+        }}
+        onCancel={() => setConfirmDeletar(null)}
+        isPending={deletar.isPending}
+      />
+    </div>
+  );
+}

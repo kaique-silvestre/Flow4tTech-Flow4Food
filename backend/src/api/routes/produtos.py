@@ -58,6 +58,15 @@ def update_produto(
     return produtos_service.update_produto(db, produto_id, body)  # type: ignore[return-value]
 
 
+@router.patch("/{produto_id}/desativar", response_model=ProdutoResponse)
+def desativar_produto(
+    produto_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> ProdutoResponse:
+    return produtos_service.desativar_produto(db, produto_id)  # type: ignore[return-value]
+
+
 @router.delete("/{produto_id}", status_code=204)
 def delete_produto(
     produto_id: int,

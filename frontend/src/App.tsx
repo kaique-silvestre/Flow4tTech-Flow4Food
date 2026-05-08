@@ -26,6 +26,7 @@ import { PerdasCortesiasPage } from "@/features/relatorios/PerdasCortesiasPage";
 import { VendasPorGarcomPage } from "@/features/relatorios/VendasPorGarcomPage";
 import { ConfiguracoesPage } from "@/features/configuracoes/ConfiguracoesPage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
+import { CardapioPage } from "@/features/cardapio/CardapioPage";
 import { queryClient } from "@/lib/queryClient";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
@@ -58,6 +59,7 @@ export function App() {
               <Route path="/relatorios/cmv" element={<CmvPorProdutoPage />} />
               <Route path="/relatorios/perdas-cortesias" element={<PerdasCortesiasPage />} />
               <Route path="/relatorios/vendas-por-garcom" element={<VendasPorGarcomPage />} />
+              <Route path="/cardapio" element={<CardapioPage />} />
               <Route path="/configuracoes" element={<ConfiguracoesPage />} />
               <Route path="*" element={<PlaceholderPage />} />
             </Route>

@@ -30,6 +30,7 @@ class FichaTecnicaItemResponse(BaseModel):
     insumo_nome: str
     quantidade: Decimal
     unidade_base: str
+    custo_medio_insumo: Optional[Decimal] = None
 
 
 class ProdutoResponse(BaseModel):

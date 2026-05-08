@@ -134,18 +134,18 @@ Nova seção "Cardápio" no menu lateral com listagem de produtos, CMV colorido 
 
 ### Critérios de aceite
 
-- [ ] Rota `/cardapio` existe e é acessível pelo menu lateral
-- [ ] Listagem exibe: nome, categoria, preço de venda, custo da ficha, CMV%, lucro bruto
-- [ ] CMV colorido: verde < 30%, amarelo 30–50%, vermelho > 50%
-- [ ] Criar produto com ficha técnica → aparece na listagem com CMV correto
-- [ ] Criar produto sem ficha técnica → CMV exibe "—"
-- [ ] Editar produto (nome, categoria, preço, ficha técnica) persiste no banco
-- [ ] Desativar produto: soft delete, produto some do seletor de comandas
-- [ ] Produto inativo não aparece em `GET /api/produtos` na listagem de comandas
-- [ ] Unidade do insumo exibida inline na ficha técnica (ex: "200 g")
-- [ ] CMV e custo calculados em tempo real ao montar ficha (sem salvar)
-- [ ] `POST /api/produtos` cria produto + ficha em transação única
-- [ ] `DELETE /api/produtos/:id` retorna erro se produto tem histórico em comanda
+- [x] Rota `/cardapio` existe e é acessível pelo menu lateral
+- [x] Listagem exibe: nome, categoria, preço de venda, custo da ficha, CMV%, lucro bruto
+- [x] CMV colorido: verde < 30%, amarelo 30–50%, vermelho > 50%
+- [x] Criar produto com ficha técnica → aparece na listagem com CMV correto
+- [x] Criar produto sem ficha técnica → CMV exibe "—"
+- [x] Editar produto (nome, categoria, preço, ficha técnica) persiste no banco
+- [x] Desativar produto: soft delete, produto some do seletor de comandas
+- [x] Produto inativo não aparece em `GET /api/produtos` na listagem de comandas
+- [x] Unidade do insumo exibida inline na ficha técnica (ex: "200 g")
+- [x] CMV e custo calculados em tempo real ao montar ficha (sem salvar)
+- [x] `POST /api/produtos` cria produto + ficha em transação única
+- [x] `DELETE /api/produtos/:id` retorna erro se produto tem histórico em comanda
 
 ### User stories endereçadas
 
