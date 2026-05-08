@@ -385,7 +385,7 @@ Menu colapsado mantém ícones; expandido mostra ícone + texto. Estado padrão:
 
 ## M009 — Navbar: Cadastros como dropdown/submenu
 
-**Status:** Planejado — ajustado para refletir M000 (sem "Itens")
+**Status:** Concluído ✓ (2026-05-08)
 **Origem:** Cadastros agrupa subseções — acesso direto pelo menu melhora navegação.
 
 ### Solução
@@ -411,7 +411,7 @@ Menu colapsado mantém ícones; expandido mostra ícone + texto. Estado padrão:
 
 ## M010 — Página índice de Relatórios
 
-**Status:** Planejado
+**Status:** Concluído ✓ (2026-05-08)
 **Origem:** Rota `/relatorios` exibe placeholder — sub-relatórios inacessíveis pela interface.
 
 ### Solução

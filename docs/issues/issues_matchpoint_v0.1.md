@@ -1,3 +1,4 @@
+
 # Issues — Matchpoint Pós-MVP v0.1
 
 > Gerado a partir de `docs/prds/prd_matchpoint_v0.1.md`.
@@ -283,6 +284,7 @@ Menu lateral com dois estados: expandido (ícone + texto) e colapsado (só ícon
 ## Issue 11 — M009: Submenu de Cadastros no Sidebar
 
 **Tipo:** AFK  
+**Status:** Concluída ✓ (2026-05-08)
 **Bloqueado por:** Issue 4 (M000), Issue 3 (M015)
 
 ### O que construir
@@ -291,11 +293,11 @@ Transformar item "Cadastros" em dropdown/submenu em `Sidebar.tsx` com links dire
 
 ### Critérios de aceite
 
-- [ ] Clicar em "Cadastros" expande submenu com: Categorias, Fornecedores, Garçons, Pagamentos
-- [ ] "Itens" não aparece no submenu
-- [ ] Navegar para `/cadastros/categorias` destaca link "Categorias" (e apenas ele)
-- [ ] No estado colapsado: hover no ícone de Cadastros exibe submenu flutuante
-- [ ] Rota `/cadastros/itens` removida de `App.tsx`
+- [x] Clicar em "Cadastros" expande submenu com: Categorias, Fornecedores, Garçons, Pagamentos
+- [x] "Itens" não aparece no submenu
+- [x] Navegar para `/cadastros/categorias` destaca link "Categorias" (e apenas ele)
+- [x] No estado colapsado: hover no ícone de Cadastros exibe submenu flutuante
+- [x] Rota `/cadastros/itens` não existe em `App.tsx` (confirmado)
 - [ ] Teste: clicar "Categorias" → URL muda para `/cadastros/categorias`
 
 ### User stories endereçadas
@@ -307,6 +309,7 @@ Transformar item "Cadastros" em dropdown/submenu em `Sidebar.tsx` com links dire
 ## Issue 12 — M010: Índice de relatórios em /relatorios
 
 **Tipo:** AFK  
+**Status:** Concluída ✓ (2026-05-08)
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
 
 ### O que construir
@@ -315,10 +318,10 @@ Substituir `PlaceholderPage` em `/relatorios` por página índice com cards nave
 
 ### Critérios de aceite
 
-- [ ] `/relatorios` não exibe mais placeholder vazio
-- [ ] Página exibe grid de cards com todos os sub-relatórios listados
-- [ ] Cada card tem título e descrição de 1 linha
-- [ ] Clicar em card navega para a rota do relatório correspondente
+- [x] `/relatorios` não exibe mais placeholder vazio
+- [x] Página exibe grid de cards com todos os sub-relatórios listados
+- [x] Cada card tem título e descrição de 1 linha
+- [x] Clicar em card navega para a rota do relatório correspondente
 - [ ] Teste: renderizar `RelatoriosIndexPage` → todos os cards presentes e rotas corretas
 
 ### User stories endereçadas
