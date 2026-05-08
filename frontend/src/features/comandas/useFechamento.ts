@@ -52,7 +52,7 @@ export function useFecharComanda(comanda_id: number | string) {
       }
       if (data.status === "fechada") {
         toast.success("Comanda fechada com sucesso");
-        navigate("/comandas");
+        navigate(`/comprovante/${comanda_id}`);
       } else {
         toast.success("Pagamento parcial registrado");
         navigate(`/comandas/${comanda_id}`);

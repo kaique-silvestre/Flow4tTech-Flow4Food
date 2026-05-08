@@ -11,8 +11,9 @@ from src.schemas.comandas import (
     EditarItemRequest,
     LancarItemRequest,
 )
+from src.schemas.comprovante import ComprovanteResponse
 from src.schemas.fechamento import AplicarDescontoRequest, FecharComandaRequest
-from src.services import comandas_service
+from src.services import comandas_service, comprovante_service
 
 router = APIRouter()
 
@@ -97,3 +98,12 @@ def fechar_comanda(
     _user: dict = Depends(get_current_user),
 ) -> ComandaResponse:
     return comandas_service.fechar_comanda(db, comanda_id, body)  # type: ignore[return-value]
+
+
+@router.get("/{comanda_id}/comprovante", response_model=ComprovanteResponse)
+def get_comprovante(
+    comanda_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> ComprovanteResponse:
+    return comprovante_service.build_comprovante(db, comanda_id)  # type: ignore[return-value]
