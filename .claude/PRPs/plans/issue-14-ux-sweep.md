@@ -4,7 +4,7 @@
 **Parent Issue:** `docs/issues_matchpoint_mvp.md` → Issue 14
 **Documento mestre:** `docs/matchpoint_documentacao.md` §5.3
 **Type:** AFK (crosscutting)
-**Status:** Pendente
+**Status:** Concluída ✓ (2026-05-08)
 **Criado em:** 2026-05-08
 **Depende de:** Todas as demais issues concluídas
 
