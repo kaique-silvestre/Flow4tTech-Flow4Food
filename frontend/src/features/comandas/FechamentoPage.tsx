@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,6 +18,7 @@ export default function FechamentoPage() {
   const { data: metodos } = useMetodosPagamento();
   const { mutate: fechar, isPending } = useFecharComanda(id!);
   const [descontoOpen, setDescontoOpen] = useState(false);
+  const [nPessoas, setNPessoas] = useState<number | "">(2);
 
   const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm<FecharComandaValues>({
     resolver: zodResolver(fecharComandaSchema),
@@ -30,6 +31,18 @@ export default function FechamentoPage() {
   const { fields, append, remove } = useFieldArray({ control, name: "pagamentos" });
   const modo = watch("modo_divisao");
   const pagamentos = watch("pagamentos");
+
+  useEffect(() => {
+    if (comanda) {
+      const sub = comanda.total_parcial;
+      const desc = comanda.desconto_percentual
+        ? sub * (comanda.desconto_percentual / 100)
+        : (comanda.desconto_valor ?? 0);
+      const base = comanda.saldo_pendente ?? (sub - desc);
+      setValue("pagamentos.0.valor", Number(base.toFixed(2)));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comanda?.id]);
 
   if (isLoading || !comanda) {
     return (
@@ -120,7 +133,14 @@ export default function FechamentoPage() {
                   name="modo_divisao"
                   value={opt.value}
                   checked={modo === opt.value}
-                  onChange={() => setValue("modo_divisao", opt.value)}
+                  onChange={() => {
+                    setValue("modo_divisao", opt.value);
+                    if (opt.value === "sem_divisao") {
+                      setValue("pagamentos.0.valor", Number(baseTotal.toFixed(2)));
+                    } else {
+                      setValue("pagamentos.0.valor", 0);
+                    }
+                  }}
                   className="h-4 w-4 accent-blue-600"
                 />
                 <Label htmlFor={`modo-${opt.value}`}>{opt.label}</Label>
@@ -128,6 +148,49 @@ export default function FechamentoPage() {
             ))}
           </div>
         </div>
+
+        {/* Divisão por N pessoas */}
+        {modo === "igualmente" && (
+          <div className="border rounded-lg p-4 space-y-3 bg-blue-50">
+            <Label className="text-sm font-semibold">Divisão igualitária</Label>
+            <div className="flex items-center gap-3">
+              <Label className="text-sm whitespace-nowrap">Nº de pessoas:</Label>
+              <Input
+                type="number"
+                min={2}
+                step={1}
+                className="w-24"
+                value={nPessoas}
+                onChange={(e) => setNPessoas(e.target.value === "" ? "" : Math.max(2, parseInt(e.target.value, 10)))}
+              />
+            </div>
+            {nPessoas !== "" && nPessoas >= 2 && (
+              <div className="text-sm space-y-1">
+                {(() => {
+                  const n = nPessoas;
+                  const valorBase = Math.floor((baseTotal * 100) / n) / 100;
+                  const ultimo = Number((baseTotal - valorBase * (n - 1)).toFixed(2));
+                  return (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">{n - 1} pessoas pagam:</span>
+                        <span className="font-medium">{formatCurrency(valorBase)} cada</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">1ª pessoa paga:</span>
+                        <span className="font-medium">{formatCurrency(ultimo)}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-1 font-semibold">
+                        <span>Total:</span>
+                        <span>{formatCurrency(baseTotal)}</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Pagamentos */}
         <div className="space-y-3">

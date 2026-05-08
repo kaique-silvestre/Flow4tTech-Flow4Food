@@ -203,9 +203,10 @@ Botão `[✏]` ao lado de garçom e identificação no cabeçalho de `ComandaAbe
 
 ---
 
-## Issue 8 — M006: Fechamento pré-preenchido (modo + valor total)
+## Issue 8 — M006: Fechamento pré-preenchido (modo + valor total) ✓
 
 **Tipo:** AFK  
+**Status:** Concluída ✓ (2026-05-08)
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
 
 ### O que construir
@@ -214,10 +215,10 @@ Botão `[✏]` ao lado de garçom e identificação no cabeçalho de `ComandaAbe
 
 ### Critérios de aceite
 
-- [ ] `FechamentoPage` abre com "Sem divisão" já selecionado
-- [ ] Campo de valor já preenchido com total da comanda ao abrir
-- [ ] Trocar modo para "Dividir igualmente" limpa o campo de valor
-- [ ] Trocar de volta para "Sem divisão" preenche novamente com total da comanda
+- [x] `FechamentoPage` abre com "Sem divisão" já selecionado
+- [x] Campo de valor já preenchido com total da comanda ao abrir
+- [x] Trocar modo para "Dividir igualmente" limpa o campo de valor
+- [x] Trocar de volta para "Sem divisão" preenche novamente com total da comanda
 - [ ] Teste: renderizar com `total=100` → campo de valor inicia com "100" e modo "sem divisão" marcado
 
 ### User stories endereçadas
@@ -226,9 +227,10 @@ Botão `[✏]` ao lado de garçom e identificação no cabeçalho de `ComandaAbe
 
 ---
 
-## Issue 9 — M007: Divisão automática por N pessoas (sem perda de centavo)
+## Issue 9 — M007: Divisão automática por N pessoas (sem perda de centavo) ✓
 
 **Tipo:** AFK  
+**Status:** Concluída ✓ (2026-05-08)
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
 
 ### O que construir
@@ -237,10 +239,10 @@ No modo "Dividir entre N pessoas" em `FechamentoPage`: campo `n_pessoas` + exibi
 
 ### Critérios de aceite
 
-- [ ] Campo `n_pessoas` visível no modo "Dividir entre N pessoas"
-- [ ] `valor_por_pessoa` atualizado em onChange de `n_pessoas`
-- [ ] Soma das partes == total da comanda (sem perda de centavos)
-- [ ] N=0 ou vazio: campo `valor_por_pessoa` não exibe valor
+- [x] Campo `n_pessoas` visível no modo "Dividir entre N pessoas"
+- [x] `valor_por_pessoa` atualizado em onChange de `n_pessoas`
+- [x] Soma das partes == total da comanda (sem perda de centavos)
+- [x] N=0 ou vazio: campo `valor_por_pessoa` não exibe valor
 - [ ] Teste de função pura `dividirTotal(10.00, 3)` → partes somam exatamente 10.00
 - [ ] Teste com R$10,00 / 3 pessoas: valores não iguais mas soma correta
 
