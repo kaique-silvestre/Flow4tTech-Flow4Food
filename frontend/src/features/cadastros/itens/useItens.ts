@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { api } from "@/lib/api";
 import type { ItemFormValues } from "./itemSchemas";
 
@@ -71,7 +71,7 @@ export function useCreateItem() {
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
-      toast.error(msg ?? "Erro ao criar item.", { duration: Infinity });
+      toast.error(msg ?? "Erro ao criar item.");
     },
   });
 }
@@ -87,7 +87,7 @@ export function useUpdateItem() {
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
-      toast.error(msg ?? "Erro ao atualizar item.", { duration: Infinity });
+      toast.error(msg ?? "Erro ao atualizar item.");
     },
   });
 }
@@ -100,6 +100,6 @@ export function useDeleteItem() {
       qc.invalidateQueries({ queryKey: [QK] });
       toast.success("Item removido.");
     },
-    onError: () => toast.error("Erro ao remover item.", { duration: Infinity }),
+    onError: () => toast.error("Erro ao remover item."),
   });
 }

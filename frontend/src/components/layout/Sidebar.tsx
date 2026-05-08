@@ -16,29 +16,48 @@ const NAV_ITEMS = [
   { label: "Configurações", to: "/configuracoes" },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
-    <aside className="flex w-48 flex-col border-r bg-white">
-      <nav className="flex flex-col gap-1 p-2 pt-4">
+    <aside
+      className={`flex flex-col border-r bg-white transition-all duration-200 ${
+        collapsed ? "w-12" : "w-48"
+      }`}
+    >
+      <button
+        className="flex h-10 items-center justify-center border-b text-gray-400 hover:text-gray-700 shrink-0"
+        onClick={onToggle}
+        title={collapsed ? "Expandir menu" : "Colapsar menu"}
+      >
+        {collapsed ? "›" : "‹"}
+      </button>
+      <nav className="flex flex-col gap-1 overflow-hidden p-2 pt-2">
         {NAV_ITEMS.map((item) =>
           item.to === null ? (
-            <span key={item.label} className="px-3 py-1 text-xs text-gray-400 select-none">
-              {item.label}
-            </span>
+            collapsed ? null : (
+              <span key={item.label} className="px-3 py-1 text-xs text-gray-400 select-none truncate">
+                {item.label}
+              </span>
+            )
           ) : (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === "/"}
+              title={item.label}
               className={({ isActive }) =>
-                `rounded px-3 py-2 text-sm transition-colors ${
+                `rounded px-3 py-2 text-sm transition-colors truncate ${
                   isActive
                     ? "bg-gray-100 font-medium text-gray-900"
                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 }`
               }
             >
-              {item.label}
+              {collapsed ? item.label.slice(0, 2) : item.label}
             </NavLink>
           )
         )}

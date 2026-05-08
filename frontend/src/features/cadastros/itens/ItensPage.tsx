@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useCategorias } from "@/features/cadastros/categorias/useCategorias";
 import { formatCurrency } from "@/lib/format";
 import { ItemModal } from "./ItemModal";
@@ -13,6 +14,7 @@ export function ItensPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ItemResponse | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   function openCreate() {
     setEditing(null);
@@ -25,9 +27,7 @@ export function ItensPage() {
   }
 
   function handleDelete(id: number) {
-    if (confirm("Remover item? Se referenciado em ficha técnica, será apenas inativado.")) {
-      deleteMutation.mutate(id);
-    }
+    setConfirmDelete(id);
   }
 
   return (
@@ -146,6 +146,18 @@ export function ItensPage() {
       )}
 
       <ItemModal open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} />
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        title="Remover item?"
+        description="Se referenciado em ficha técnica, será apenas inativado."
+        confirmLabel="Remover"
+        onConfirm={() => {
+          deleteMutation.mutate(confirmDelete!);
+          setConfirmDelete(null);
+        }}
+        onCancel={() => setConfirmDelete(null)}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   );
 }

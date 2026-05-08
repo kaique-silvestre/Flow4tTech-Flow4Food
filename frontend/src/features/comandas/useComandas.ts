@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { api, type ApiErrorBody } from "@/lib/api";
 import type { ItemResponse } from "@/features/cadastros/itens/useItens";
 import type { CancelarItemValues, LancarItemValues, NovaComandaValues } from "./comandaSchemas";

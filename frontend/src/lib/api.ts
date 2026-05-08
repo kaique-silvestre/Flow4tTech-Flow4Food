@@ -1,4 +1,5 @@
 import axios, { AxiosError } from "axios";
+import * as Sentry from "@sentry/react";
 import { useAuthStore } from "@/stores/authStore";
 
 export const api = axios.create({
@@ -22,6 +23,9 @@ api.interceptors.response.use(
       if (window.location.pathname !== "/login") {
         window.location.assign("/login");
       }
+    }
+    if (error.response?.status && error.response.status >= 500) {
+      Sentry.captureException(error);
     }
     return Promise.reject(error);
   }

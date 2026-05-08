@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useItens } from "@/features/cadastros/itens/useItens";
@@ -87,7 +88,13 @@ export function ComandaAbertaPage() {
   }
 
   if (isLoading || !comanda) {
-    return <div className="p-6 text-sm text-gray-500">Carregando...</div>;
+    return (
+      <div className="p-6 space-y-3">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />
+        ))}
+      </div>
+    );
   }
 
   if (comanda.status === "fechada") {
@@ -128,27 +135,15 @@ export function ComandaAbertaPage() {
           </Button>
         </div>
 
-        {confirmReabrir && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="rounded-lg bg-white p-6 shadow-lg w-80">
-              <h2 className="text-base font-semibold mb-2">Reabrir comanda?</h2>
-              <p className="text-sm text-gray-500 mb-4">
-                Os pagamentos serão estornados e o estoque restaurado.
-              </p>
-              <div className="flex gap-3 justify-end">
-                <Button variant="outline" onClick={() => setConfirmReabrir(false)}>
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={() => reopenComanda.mutate()}
-                  disabled={reopenComanda.isPending}
-                >
-                  {reopenComanda.isPending ? "Reabrindo..." : "Confirmar"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        <ConfirmDialog
+          open={confirmReabrir}
+          title="Reabrir comanda?"
+          description="Os pagamentos serão estornados e o estoque restaurado."
+          confirmLabel="Reabrir"
+          onConfirm={() => reopenComanda.mutate()}
+          onCancel={() => setConfirmReabrir(false)}
+          isPending={reopenComanda.isPending}
+        />
       </div>
     );
   }

@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
@@ -31,6 +32,7 @@ import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
 export function App() {
   return (
+    <Sentry.ErrorBoundary fallback={<p className="p-8 text-red-600">Erro inesperado. Recarregue a página.</p>}>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
@@ -66,5 +68,6 @@ export function App() {
       </BrowserRouter>
       <Toaster position="top-right" richColors />
     </QueryClientProvider>
+    </Sentry.ErrorBoundary>
   );
 }
