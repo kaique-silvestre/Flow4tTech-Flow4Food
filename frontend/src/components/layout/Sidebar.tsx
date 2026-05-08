@@ -47,7 +47,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === "/"}
+              end
               title={item.label}
               className={({ isActive }) =>
                 `rounded px-3 py-2 text-sm transition-colors truncate ${
