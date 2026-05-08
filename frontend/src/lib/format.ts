@@ -14,3 +14,8 @@ export function formatDate(d: Date | string, fmt = "dd/MM/yyyy HH:mm"): string {
   const date = typeof d === "string" ? new Date(d) : d;
   return fnsFormat(date, fmt, { locale: ptBR });
 }
+
+export function formatQuantidade(value: number): string {
+  if (Number.isInteger(value)) return String(value);
+  return parseFloat(value.toFixed(3)).toString();
+}

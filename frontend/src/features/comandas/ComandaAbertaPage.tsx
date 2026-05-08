@@ -5,7 +5,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useItens } from "@/features/cadastros/itens/useItens";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatQuantidade } from "@/lib/format";
 import { CancelarItemModal } from "./CancelarItemModal";
 import { useComanda, useEditarItem, useLancarItem, useReopenComanda, useTopItens, type ItemComandaResponse } from "./useComandas";
 
@@ -116,7 +116,7 @@ export function ComandaAbertaPage() {
         <div className="rounded border bg-white p-4 space-y-2 mb-4">
           {itensNaoCancelados.map((ic) => (
             <div key={ic.id} className="flex justify-between text-sm">
-              <span>{ic.quantidade} × {ic.item_nome}{ic.cortesia ? " (cortesia)" : ""}</span>
+              <span>{formatQuantidade(ic.quantidade)} × {ic.item_nome}{ic.cortesia ? " (cortesia)" : ""}</span>
               <span>{formatCurrency(Number(ic.subtotal))}</span>
             </div>
           ))}
@@ -374,7 +374,7 @@ export function ComandaAbertaPage() {
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2 font-medium">
-                          {ic.quantidade} × {ic.item_nome}
+                          {formatQuantidade(ic.quantidade)} × {ic.item_nome}
                           {ic.cortesia && (
                             <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-600">
                               cortesia
@@ -420,7 +420,7 @@ export function ComandaAbertaPage() {
               <p className="mb-1 text-xs text-gray-400">Itens cancelados</p>
               {itensCancelados.map((ic) => (
                 <div key={ic.id} className="rounded border border-dashed p-2 text-sm text-gray-400 line-through">
-                  {ic.quantidade} × {ic.item_nome}
+                  {formatQuantidade(ic.quantidade)} × {ic.item_nome}
                 </div>
               ))}
             </div>
