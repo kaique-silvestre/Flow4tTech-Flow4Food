@@ -156,14 +156,19 @@ export function ComandaAbertaPage() {
       {/* Header */}
       <div className="border-b bg-white px-6 py-3">
         <div className="flex items-center justify-between">
-          <div>
-            <span className="text-lg font-semibold">
-              #{comanda.id} — {comanda.tipo_identificacao === "mesa" ? "Mesa" : ""}{" "}
-              {comanda.identificacao}
-            </span>
-            <span className="ml-3 text-sm text-gray-500">
-              Garçom: {comanda.garcom_nome} · Aberta há {comanda.tempo_aberta_minutos} min
-            </span>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={() => navigate("/comandas")}>
+              ← Voltar
+            </Button>
+            <div>
+              <span className="text-lg font-semibold">
+                #{comanda.id} — {comanda.tipo_identificacao === "mesa" ? "Mesa" : ""}{" "}
+                {comanda.identificacao}
+              </span>
+              <span className="ml-3 text-sm text-gray-500">
+                Garçom: {comanda.garcom_nome} · Aberta há {comanda.tempo_aberta_minutos} min
+              </span>
+            </div>
           </div>
           <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
             {comanda.status}
