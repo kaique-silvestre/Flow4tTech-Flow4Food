@@ -477,7 +477,7 @@ Modelo atual de `Categoria` tem apenas `id` e `nome` — sem hierarquia.
 
 ## M013 — Comandas: alternância visual entre lista e cards
 
-**Status:** Planejado
+**Status:** Concluído ✓ (2026-05-08)
 **Origem:** Cards facilitam leitura rápida em dias de pico.
 
 ### Solução
@@ -494,7 +494,7 @@ Toggle `[≡ Lista] / [⊞ Cards]` no topo da tela. Cards exibem 3 por linha em 
 
 ## M014 — Separação de Histórico: comandas do dia vs. todas as anteriores
 
-**Status:** Planejado
+**Status:** Concluído ✓ (2026-05-08)
 **Origem:** "Histórico" em Comandas deve mostrar somente o dia atual; histórico geral deve ser aba separada.
 
 ### Solução

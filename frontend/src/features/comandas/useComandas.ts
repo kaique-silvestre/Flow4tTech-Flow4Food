@@ -161,12 +161,16 @@ export function useCancelarItem(comanda_id: number | string) {
   });
 }
 
-export function useComandasFechadas(busca?: string) {
+export function useComandasFechadas(params?: {
+  busca?: string;
+  data_inicio?: string;
+  data_fim?: string;
+}) {
   return useQuery<ComandaResponse[]>({
-    queryKey: ["comandas", "fechadas", busca],
+    queryKey: ["comandas", "fechadas", params],
     queryFn: () =>
       api
-        .get<ComandaResponse[]>("/api/comandas/fechadas", { params: busca ? { busca } : {} })
+        .get<ComandaResponse[]>("/api/comandas/fechadas", { params: params ?? {} })
         .then((r) => r.data),
   });
 }

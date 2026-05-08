@@ -33,10 +33,19 @@ def abrir_comanda(
 @router.get("/fechadas", response_model=list[ComandaResponse])
 def list_fechadas(
     busca: Optional[str] = Query(None),
+    data_inicio: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
+    data_fim: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ) -> list[ComandaResponse]:
-    comandas = _cr.list_fechadas(db, busca)
+    import datetime as dt
+    dt_inicio = dt.datetime.strptime(data_inicio, "%Y-%m-%d") if data_inicio else None
+    dt_fim = (
+        dt.datetime.strptime(data_fim, "%Y-%m-%d") + dt.timedelta(days=1) - dt.timedelta(seconds=1)
+        if data_fim
+        else None
+    )
+    comandas = _cr.list_fechadas(db, busca, dt_inicio, dt_fim)
     return [_build_response(db, c) for c in comandas]  # type: ignore[return-value]
 
 

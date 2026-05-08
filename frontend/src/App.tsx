@@ -25,6 +25,7 @@ import { CmvPorProdutoPage } from "@/features/relatorios/CmvPorProdutoPage";
 import { PerdasCortesiasPage } from "@/features/relatorios/PerdasCortesiasPage";
 import { VendasPorGarcomPage } from "@/features/relatorios/VendasPorGarcomPage";
 import { RelatoriosIndexPage } from "@/features/relatorios/RelatoriosIndexPage";
+import { HistoricoPage } from "@/features/historico/HistoricoPage";
 import { ConfiguracoesPage } from "@/features/configuracoes/ConfiguracoesPage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { CardapioPage } from "@/features/cardapio/CardapioPage";
@@ -53,6 +54,7 @@ export function App() {
               <Route path="/cadastros/fornecedores" element={<FornecedoresPage />} />
               <Route path="/cadastros/garcons" element={<GarconsPage />} />
               <Route path="/cadastros/metodos-pagamento" element={<MetodosPagamentoPage />} />
+              <Route path="/historico" element={<HistoricoPage />} />
               <Route path="/relatorios" element={<RelatoriosIndexPage />} />
               <Route path="/relatorios/vendas-do-dia" element={<VendasDoDiaPage />} />
               <Route path="/relatorios/historico" element={<HistoricoComandasPage />} />

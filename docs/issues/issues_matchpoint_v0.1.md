@@ -332,7 +332,8 @@ Substituir `PlaceholderPage` em `/relatorios` por página índice com cards nave
 
 ## Issue 13 — M013: Toggle lista/cards em Comandas com localStorage
 
-**Tipo:** AFK  
+**Tipo:** AFK
+**Status:** Concluída ✓ (2026-05-08)
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
 
 ### O que construir
@@ -341,12 +342,12 @@ Toggle `[≡ Lista] / [⊞ Cards]` na tela de Comandas. Cards: CSS grid 3 coluna
 
 ### Critérios de aceite
 
-- [ ] Toggle visível no canto superior direito da seção de comandas
-- [ ] Modo lista: exibe tabela (comportamento atual)
-- [ ] Modo cards: grid com 3 colunas em tela larga, 2 em menor
-- [ ] Card exibe: nome/mesa, garçom, tempo aberto, total acumulado
-- [ ] Clicar no card abre `/comandas/:id`
-- [ ] Preferência persiste entre sessões via `localStorage`
+- [x] Toggle visível no canto superior direito da seção de comandas
+- [x] Modo lista: exibe tabela (comportamento atual)
+- [x] Modo cards: grid com 3 colunas em tela larga, 2 em menor
+- [x] Card exibe: nome/mesa, garçom, tempo aberto, total acumulado
+- [x] Clicar no card abre `/comandas/:id`
+- [x] Preferência persiste entre sessões via `localStorage`
 - [ ] Teste: toggle list/cards → `localStorage` atualizado e view muda
 
 ### User stories endereçadas
@@ -357,7 +358,8 @@ Toggle `[≡ Lista] / [⊞ Cards]` na tela de Comandas. Cards: CSS grid 3 coluna
 
 ## Issue 14 — M014: Separação Histórico do dia vs Histórico geral
 
-**Tipo:** AFK  
+**Tipo:** AFK
+**Status:** Concluída ✓ (2026-05-08)
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
 
 ### O que construir
@@ -366,12 +368,12 @@ Em `ComandasPage`: seção "Histórico do dia" filtra apenas `status=fechada AND
 
 ### Critérios de aceite
 
-- [ ] Seção "Histórico do dia" em `ComandasPage` exibe apenas comandas fechadas hoje
-- [ ] Rota `/historico` acessível pelo link no sidebar
-- [ ] `HistoricoPage` lista todas as comandas fechadas (qualquer data)
-- [ ] Filtro por período (data início/fim) funcional em `HistoricoPage`
-- [ ] `GET /api/comandas?status=fechada&data_inicio=&data_fim=` retorna dados filtrados
-- [ ] "Histórico do dia" e "Histórico geral" não se sobrepõem
+- [x] Seção "Histórico do dia" em `ComandasPage` exibe apenas comandas fechadas hoje
+- [x] Rota `/historico` acessível pelo link no sidebar
+- [x] `HistoricoPage` lista todas as comandas fechadas (qualquer data)
+- [x] Filtro por período (data início/fim) funcional em `HistoricoPage`
+- [x] `GET /api/comandas/fechadas?data_inicio=&data_fim=` retorna dados filtrados
+- [x] "Histórico do dia" e "Histórico geral" não se sobrepõem
 - [ ] Teste: GET com filtro do dia → retorna apenas comandas fechadas hoje
 
 ### User stories endereçadas

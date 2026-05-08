@@ -36,10 +36,19 @@ def list_abertas(db: Session, busca: Optional[str] = None) -> list[Comanda]:
     return q.order_by(Comanda.created_at.desc()).all()
 
 
-def list_fechadas(db: Session, busca: Optional[str] = None) -> list[Comanda]:
+def list_fechadas(
+    db: Session,
+    busca: Optional[str] = None,
+    data_inicio: Optional[datetime.datetime] = None,
+    data_fim: Optional[datetime.datetime] = None,
+) -> list[Comanda]:
     q = db.query(Comanda).filter(Comanda.status == StatusComanda.FECHADA.value)
     if busca:
         q = q.filter(Comanda.identificacao.ilike(f"%{busca}%"))
+    if data_inicio:
+        q = q.filter(Comanda.data_fechamento >= data_inicio)
+    if data_fim:
+        q = q.filter(Comanda.data_fechamento <= data_fim)
     return q.order_by(Comanda.data_fechamento.desc()).all()
 
 

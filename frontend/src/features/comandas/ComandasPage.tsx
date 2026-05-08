@@ -1,10 +1,23 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { LayoutList, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/format";
 import { NovaComandaModal } from "./NovaComandaModal";
 import { useComandas, useComandasFechadas } from "./useComandas";
+
+type ViewMode = "lista" | "cards";
+
+function getInitialViewMode(): ViewMode {
+  try {
+    const v = localStorage.getItem("comandas_view_mode");
+    if (v === "lista" || v === "cards") return v;
+  } catch {
+    // ignore
+  }
+  return "lista";
+}
 
 const fmtData = (iso: string | null | undefined) => {
   if (!iso) return "—";
@@ -17,23 +30,64 @@ const fmtData = (iso: string | null | undefined) => {
   });
 };
 
+function todayISODate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function ComandasPage() {
   const navigate = useNavigate();
   const [busca, setBusca] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [showHistorico, setShowHistorico] = useState(false);
-  const [buscaFechadas, setBuscaFechadas] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>(getInitialViewMode);
+
+  const today = todayISODate();
 
   const { data: comandas = [], isLoading } = useComandas(busca || undefined);
-  const { data: fechadas = [], isLoading: loadingFechadas } = useComandasFechadas(
-    showHistorico ? buscaFechadas || undefined : undefined
+  const { data: fechadasHoje = [], isLoading: loadingFechadas } = useComandasFechadas(
+    showHistorico ? { data_inicio: today, data_fim: today } : undefined
   );
+
+  function toggleView(mode: ViewMode) {
+    setViewMode(mode);
+    try {
+      localStorage.setItem("comandas_view_mode", mode);
+    } catch {
+      // ignore
+    }
+  }
 
   return (
     <div className="p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Comandas Abertas</h1>
-        <Button onClick={() => setShowModal(true)}>+ Nova Comanda</Button>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded border">
+            <button
+              onClick={() => toggleView("lista")}
+              title="Visualização lista"
+              className={`flex items-center gap-1 px-2 py-1.5 text-sm transition-colors ${
+                viewMode === "lista"
+                  ? "bg-gray-100 text-gray-900"
+                  : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <LayoutList size={16} />
+            </button>
+            <button
+              onClick={() => toggleView("cards")}
+              title="Visualização cards"
+              className={`flex items-center gap-1 px-2 py-1.5 text-sm transition-colors ${
+                viewMode === "cards"
+                  ? "bg-gray-100 text-gray-900"
+                  : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <LayoutGrid size={16} />
+            </button>
+          </div>
+          <Button onClick={() => setShowModal(true)}>+ Nova Comanda</Button>
+        </div>
       </div>
 
       <div className="mb-4">
@@ -46,14 +100,14 @@ export function ComandasPage() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">
+        <div className={viewMode === "cards" ? "grid grid-cols-2 gap-3 lg:grid-cols-3" : "space-y-2"}>
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-20 animate-pulse rounded bg-gray-100" />
           ))}
         </div>
       ) : comandas.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhuma comanda aberta.</p>
-      ) : (
+      ) : viewMode === "lista" ? (
         <div className="space-y-2">
           {comandas.map((c) => {
             const ativos = c.itens_ativos.filter((i) => !i.cancelado);
@@ -87,37 +141,66 @@ export function ComandasPage() {
             );
           })}
         </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+          {comandas.map((c) => {
+            const ativos = c.itens_ativos.filter((i) => !i.cancelado);
+            return (
+              <button
+                key={c.id}
+                onClick={() => navigate(`/comandas/${c.id}`)}
+                className="flex flex-col gap-2 rounded border bg-white p-4 text-left shadow-sm transition-shadow hover:shadow-md"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-gray-900">
+                    {c.tipo_identificacao === "mesa" ? "Mesa " : ""}{c.identificacao}
+                  </span>
+                  {c.status === "reaberta" && (
+                    <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">
+                      reaberta
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm text-gray-500">
+                  {c.garcom_nome}
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">
+                    {ativos.length} {ativos.length === 1 ? "item" : "itens"} · {c.tempo_aberta_minutos} min
+                  </span>
+                  <span className="font-medium text-gray-900">
+                    {formatCurrency(Number(c.total_parcial))}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       )}
 
-      {/* Histórico */}
+      {/* Histórico do dia */}
       <div className="mt-8">
         <button
           onClick={() => setShowHistorico((v) => !v)}
           className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900"
         >
           <span>{showHistorico ? "▲" : "▼"}</span>
-          Histórico (Fechadas)
+          Histórico do dia
         </button>
 
         {showHistorico && (
           <div className="mt-3">
-            <Input
-              placeholder="Buscar no histórico..."
-              value={buscaFechadas}
-              onChange={(e) => setBuscaFechadas(e.target.value)}
-              className="mb-3 max-w-sm"
-            />
             {loadingFechadas ? (
               <div className="space-y-2">
                 {[1, 2].map((i) => (
                   <div key={i} className="h-16 animate-pulse rounded bg-gray-100" />
                 ))}
               </div>
-            ) : fechadas.length === 0 ? (
-              <p className="text-sm text-gray-500">Nenhuma comanda fechada.</p>
+            ) : fechadasHoje.length === 0 ? (
+              <p className="text-sm text-gray-500">Nenhuma comanda fechada hoje.</p>
             ) : (
               <div className="space-y-2">
-                {fechadas.map((c) => (
+                {fechadasHoje.map((c) => (
                   <button
                     key={c.id}
                     onClick={() => navigate(`/comandas/${c.id}`)}
