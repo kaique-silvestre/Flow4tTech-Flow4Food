@@ -16,11 +16,11 @@ Adicionar botão "← Voltar" no cabeçalho de `ComandaAbertaPage` que navega pa
 
 ### Critérios de aceite
 
-- [ ] Botão "← Voltar" visível no cabeçalho de `/comandas/:id`
-- [ ] Clicar no botão navega para `/comandas` (URL muda)
-- [ ] Comanda permanece com `status=aberta` após clicar em voltar (verificável via GET)
-- [ ] Botão não aparece em `FechamentoPage`
-- [ ] Nenhum endpoint de fechamento/cancelamento é chamado ao clicar em voltar
+- [x] Botão "← Voltar" visível no cabeçalho de `/comandas/:id`
+- [x] Clicar no botão navega para `/comandas` (URL muda)
+- [x] Comanda permanece com `status=aberta` após clicar em voltar (verificável via GET)
+- [x] Botão não aparece em `FechamentoPage`
+- [x] Nenhum endpoint de fechamento/cancelamento é chamado ao clicar em voltar
 
 ### User stories endereçadas
 
@@ -41,12 +41,12 @@ Criar função `formatQuantidade(value: number): string` em `lib/format.ts`. Int
 
 ### Critérios de aceite
 
-- [ ] Função `formatQuantidade` existe em `lib/format.ts`
-- [ ] `formatQuantidade(3)` retorna `"3"` (sem decimais)
-- [ ] `formatQuantidade(3.000)` retorna `"3"` (sem decimais)
-- [ ] `formatQuantidade(0.25)` retorna valor com casas decimais (ex: `"0.25"` ou `"0.250"`)
-- [ ] Quantidades na listagem de itens de `ComandaAbertaPage` usam a nova função
-- [ ] Teste de unidade para a função pura com entradas inteiras e fracionárias
+- [x] Função `formatQuantidade` existe em `lib/format.ts`
+- [x] `formatQuantidade(3)` retorna `"3"` (sem decimais)
+- [x] `formatQuantidade(3.000)` retorna `"3"` (sem decimais)
+- [x] `formatQuantidade(0.25)` retorna valor com casas decimais (ex: `"0.25"` ou `"0.250"`)
+- [x] Quantidades na listagem de itens de `ComandaAbertaPage` usam a nova função
+- [x] Teste de unidade para a função pura com entradas inteiras e fracionárias
 
 ### User stories endereçadas
 
@@ -66,10 +66,10 @@ Adicionar prop `end` em cada `<NavLink>` da lista `NAV_ITEMS` em `Sidebar.tsx`. 
 
 ### Critérios de aceite
 
-- [ ] Cada `NavLink` em `NAV_ITEMS` tem prop `end`
-- [ ] Navegar para `/historico` destaca apenas aba "Histórico" (não "Estoque" nem outra)
-- [ ] Navegar para qualquer rota destaca exatamente um link no sidebar
-- [ ] Teste: navegar para sub-rota → verificar que apenas um `NavLink` tem classe de estado ativo
+- [x] Cada `NavLink` em `NAV_ITEMS` tem prop `end`
+- [x] Navegar para `/historico` destaca apenas aba "Histórico" (não "Estoque" nem outra)
+- [x] Navegar para qualquer rota destaca exatamente um link no sidebar
+- [x] Teste: navegar para sub-rota → verificar que apenas um `NavLink` tem classe de estado ativo
 
 ### User stories endereçadas
 

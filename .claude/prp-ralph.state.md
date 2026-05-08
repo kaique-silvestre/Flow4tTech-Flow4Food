@@ -1,10 +1,28 @@
 ---
-iteration: 1
+iteration: 2
 max_iterations: 10
 plan_path: ".claude/PRPs/plans/issue-14-ux-sweep.md"
 started_at: "2026-05-08T18:00:00Z"
 ---
 
+## Iteration 2 - 2026-05-08T19:10:00Z — Issues 1, 2, 3 (matchpoint v0.1) sincronizadas
+
+### Completed
+- Verificou Issues 1 (M003), 2 (M004), 3 (M015) já implementadas em commits anteriores
+- Marcou todos critérios de aceite como concluídos em docs/issues/issues_matchpoint_v0.1.md
+- Tests: 8/8 passando (`formatQuantidade` + `formatCurrency` + `formatDate`)
+
+### Validation Status
+- type-check: N/A (só docs)
+- lint: N/A
+- Tests: PASS (8 testes)
+- Build: N/A
+
+### Learnings
+- Issues matchpoint v0.1 foram implementadas antes de docs serem criados — sempre checar git log antes de implementar
+- `format.ts` já tem `formatQuantidade` com lógica correta: `Number.isInteger` + `parseFloat(toFixed(3))`
+
+---
 # Ralph Progress Log
 
 ## Codebase Patterns
