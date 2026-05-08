@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/lib/toast";
 import { api, type ApiErrorBody } from "@/lib/api";
-import type { ItemResponse } from "@/features/cadastros/itens/useItens";
+import type { ProdutoResponse } from "@/features/cadastros/produtos/useProdutos";
 import type { CancelarItemValues, LancarItemValues, NovaComandaValues } from "./comandaSchemas";
 
 export interface ItemComandaResponse {
@@ -190,11 +190,11 @@ export function useReopenComanda(comanda_id: number | string) {
 }
 
 export function useTopItens(dias = 7, limit = 6) {
-  return useQuery<ItemResponse[]>({
-    queryKey: ["itens", "top", { dias, limit }],
+  return useQuery<ProdutoResponse[]>({
+    queryKey: ["produtos", "top", { dias, limit }],
     queryFn: () =>
       api
-        .get<ItemResponse[]>("/api/itens/top", { params: { dias, limit } })
+        .get<ProdutoResponse[]>("/api/produtos/top", { params: { dias, limit } })
         .then((r) => r.data),
   });
 }

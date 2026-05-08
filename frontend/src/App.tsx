@@ -6,7 +6,6 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { CategoriasPage } from "@/features/cadastros/categorias/CategoriasPage";
-import { ItensPage } from "@/features/cadastros/itens/ItensPage";
 import { FornecedoresPage } from "@/features/cadastros/fornecedores/FornecedoresPage";
 import { GarconsPage } from "@/features/cadastros/garcons/GarconsPage";
 import { MetodosPagamentoPage } from "@/features/cadastros/metodos_pagamento/MetodosPagamentoPage";
@@ -48,7 +47,6 @@ export function App() {
               <Route path="/compras/nova" element={<NovaCompraPage />} />
               <Route path="/estoque" element={<EstoquePage />} />
               <Route path="/estoque/movimentos" element={<MovimentosPage />} />
-              <Route path="/cadastros/itens" element={<ItensPage />} />
               <Route path="/cadastros/categorias" element={<CategoriasPage />} />
               <Route path="/cadastros/fornecedores" element={<FornecedoresPage />} />
               <Route path="/cadastros/garcons" element={<GarconsPage />} />

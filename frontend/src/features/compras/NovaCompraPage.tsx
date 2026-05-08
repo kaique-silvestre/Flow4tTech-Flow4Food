@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFornecedores, useCreateFornecedor } from "@/features/cadastros/fornecedores/useFornecedores";
-import { useItensSimples } from "@/features/cadastros/itens/useItens";
+import { useInsumos } from "@/features/estoque/useInsumos";
 import { formatCurrency } from "@/lib/format";
 import { compraSchema, type CompraFormValues } from "./compraSchemas";
 import { useCreateCompra } from "./useCompras";
@@ -15,7 +15,7 @@ export function NovaCompraPage() {
   const navigate = useNavigate();
   const createCompra = useCreateCompra();
   const { data: fornecedores = [], refetch: refetchFornecedores } = useFornecedores();
-  const { data: itensSimples = [] } = useItensSimples();
+  const { data: itensSimples = [] } = useInsumos();
   const createFornecedor = useCreateFornecedor();
 
   const [novoFornNome, setNovoFornNome] = useState("");

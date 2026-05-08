@@ -8,7 +8,6 @@ const NAV_ITEMS = [
   { label: "Histórico", to: "/estoque/movimentos" },
   { label: "Relatórios", to: "/relatorios" },
   { label: "─ Cadastros ─", to: null },
-  { label: "Itens", to: "/cadastros/itens" },
   { label: "Categorias", to: "/cadastros/categorias" },
   { label: "Fornecedores", to: "/cadastros/fornecedores" },
   { label: "Garçons", to: "/cadastros/garcons" },

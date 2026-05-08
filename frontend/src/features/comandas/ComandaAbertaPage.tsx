@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useItens } from "@/features/cadastros/itens/useItens";
+import { useProdutos } from "@/features/cadastros/produtos/useProdutos";
 import { formatCurrency, formatQuantidade } from "@/lib/format";
 import { CancelarItemModal } from "./CancelarItemModal";
 import { useComanda, useEditarItem, useLancarItem, useReopenComanda, useTopItens, type ItemComandaResponse } from "./useComandas";
@@ -20,7 +20,7 @@ export function ComandaAbertaPage() {
   const { data: topItens = [] } = useTopItens(7, 6);
 
   const [busca, setBusca] = useState("");
-  const { data: itens = [] } = useItens({ busca: busca || undefined, vendavel: true });
+  const { data: itens = [] } = useProdutos(busca || undefined);
 
   const [itemSelecionado, setItemSelecionado] = useState<number | null>(null);
   const [quantidade, setQuantidade] = useState("1");
