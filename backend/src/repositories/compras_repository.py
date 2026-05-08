@@ -29,14 +29,14 @@ def create_compra(
 def add_item_compra(
     db: Session,
     compra_id: int,
-    item_id: int,
+    insumo_id: int,
     quantidade: Decimal,
     custo_unitario: Decimal,
     custo_total: Decimal,
 ) -> ItemCompra:
     item = ItemCompra(
         compra_id=compra_id,
-        item_id=item_id,
+        insumo_id=insumo_id,
         quantidade=quantidade,
         custo_unitario=custo_unitario,
         custo_total=custo_total,

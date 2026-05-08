@@ -8,18 +8,17 @@ from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
 from src.models.comandas import Comanda, StatusComanda
-from src.models.componentes_ficha import ComponenteFicha
 from src.models.eventos_comanda import TipoEvento
-from src.models.fichas_tecnicas import FichaTecnica
-from src.models.itens import Item, TipoItem
+from src.models.ficha_tecnica import FichaTecnica
+from src.models.insumos import Insumo
 from src.models.itens_comanda import ItemComanda
 from src.models.metodos_pagamento import MetodoPagamento
 from src.models.movimentos_estoque import TipoMovimento
+from src.models.produtos import Produto
 from src.repositories import (
     comandas_repository,
     estoque_repository,
     garcons_repository,
-    itens_repository,
     pagamentos_repository,
 )
 from src.schemas.comandas import (
@@ -31,8 +30,8 @@ from src.schemas.comandas import (
     LancarItemRequest,
 )
 from src.schemas.fechamento import AplicarDescontoRequest, FecharComandaRequest, PagamentoResponse
-from src.schemas.itens import ItemResponse
-from src.services import itens_service
+from src.schemas.produtos import ProdutoResponse
+from src.services import produtos_service
 
 
 def _parse_pessoas(pessoas_json: Optional[str]) -> list[str]:
@@ -45,12 +44,12 @@ def _parse_pessoas(pessoas_json: Optional[str]) -> list[str]:
 
 
 def _build_item_response(db: Session, ic: ItemComanda) -> ItemComandaResponse:
-    item = itens_repository.get_by_id(db, ic.item_id)
-    item_nome = item.nome if item else f"Item {ic.item_id}"
+    produto = db.execute(select(Produto).where(Produto.id == ic.produto_id)).scalar_one_or_none()
+    item_nome = produto.nome if produto else f"Produto {ic.produto_id}"
     subtotal = ic.quantidade * ic.preco_unitario
     return ItemComandaResponse(
         id=ic.id,
-        item_id=ic.item_id,
+        item_id=ic.produto_id,
         item_nome=item_nome,
         quantidade=ic.quantidade,
         preco_unitario=ic.preco_unitario,
@@ -154,11 +153,11 @@ def lancar_item(db: Session, comanda_id: int, data: LancarItemRequest) -> Comand
     if comanda.status not in _ABERTA_STATUSES:
         raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
 
-    item = itens_repository.get_by_id(db, data.item_id)
-    if item is None or not item.vendavel:
-        raise AppError(ErrorCode.NOT_FOUND, "Item não encontrado ou não vendável", http_status=404)
+    produto = db.execute(select(Produto).where(Produto.id == data.item_id, Produto.ativo == True)).scalar_one_or_none()  # noqa: E712
+    if produto is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Produto não encontrado ou inativo", http_status=404)
 
-    preco_unitario = Decimal("0") if data.cortesia else (item.preco_venda or Decimal("0"))
+    preco_unitario = Decimal("0") if data.cortesia else (produto.preco_venda or Decimal("0"))
 
     ok = comandas_repository.increment_version(db, comanda_id, data.version)
     if not ok:
@@ -279,14 +278,8 @@ def cancelar_item(
     return _build_response(db, comanda)  # type: ignore[arg-type]
 
 
-def get_top_itens(db: Session, dias: int, limit: int) -> list[ItemResponse]:
-    rows = comandas_repository.top_itens(db, dias, limit)
-    result = []
-    for item_id, _cnt in rows:
-        item = itens_repository.get_by_id(db, item_id)
-        if item:
-            result.append(itens_service._build_response(db, item))
-    return result
+def get_top_itens(db: Session, dias: int, limit: int) -> list[ProdutoResponse]:
+    return produtos_service.get_top_produtos(db, dias, limit)
 
 
 def aplicar_desconto(db: Session, comanda_id: int, data: AplicarDescontoRequest) -> ComandaResponse:
@@ -324,7 +317,6 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
     total_pago: Decimal = sum((p.valor for p in data.pagamentos), Decimal("0"))
     pagamento_parcial = data.modo_divisao == "parcial"
 
-    # Calcular total com desconto (usado apenas no fechamento total)
     if comanda.desconto_percentual is not None:
         total_com_desconto: Decimal = subtotal * (Decimal("1") - comanda.desconto_percentual / Decimal("100"))
     elif comanda.desconto_valor is not None:
@@ -333,7 +325,6 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
         total_com_desconto = subtotal
 
     if pagamento_parcial:
-        # base = saldo pendente de pagamento parcial anterior, ou subtotal SEM desconto
         base_parcial: Decimal = comanda.saldo_pendente if comanda.saldo_pendente is not None else subtotal
         if total_pago >= base_parcial:
             raise AppError(
@@ -342,7 +333,6 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
                 http_status=400,
             )
     else:
-        # base = saldo pendente anterior (se houver) ou total com desconto
         base_total: Decimal = comanda.saldo_pendente if comanda.saldo_pendente is not None else total_com_desconto
         if abs(total_pago - base_total) > Decimal("0.01"):
             raise AppError(
@@ -364,7 +354,7 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
         comandas_repository.atualizar_saldo_pendente(db, comanda_id, novo_saldo)
     else:
         for ic in itens:
-            negativos = _dar_baixa_estoque(db, ic.item_id, ic.quantidade)
+            negativos = _dar_baixa_estoque(db, ic.produto_id, ic.quantidade)
             itens_negativos.extend(negativos)
         comandas_repository.fechar_comanda_repo(db, comanda_id, total_com_desconto)
 
@@ -375,43 +365,33 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
     return response
 
 
-def _dar_baixa_estoque(db: Session, item_id: int, quantidade: Decimal) -> list[str]:
-    item = db.get(Item, item_id)
-    if item is None:
+def _dar_baixa_estoque(db: Session, produto_id: int, quantidade: Decimal) -> list[str]:
+    componentes = db.execute(
+        select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)
+    ).scalars().all()
+    if not componentes:
         return []
-    if item.tipo == TipoItem.SIMPLES.value:
-        return _baixar_insumo(db, item, quantidade)
-    ficha = db.execute(
-        select(FichaTecnica).where(FichaTecnica.item_composto_id == item_id)
-    ).scalar_one_or_none()
-    if ficha is None:
-        return []
-    componentes = list(
-        db.execute(
-            select(ComponenteFicha).where(ComponenteFicha.ficha_tecnica_id == ficha.id)
-        ).scalars().all()
-    )
     negativos: list[str] = []
     for comp in componentes:
-        insumo = db.get(Item, comp.insumo_id)
+        insumo = db.execute(select(Insumo).where(Insumo.id == comp.insumo_id)).scalar_one_or_none()
         if insumo:
             negativos.extend(_baixar_insumo(db, insumo, comp.quantidade * quantidade))
     return negativos
 
 
-def _baixar_insumo(db: Session, item: Item, quantidade: Decimal) -> list[str]:
-    novo_estoque = item.estoque_atual - quantidade
-    item.estoque_atual = novo_estoque
+def _baixar_insumo(db: Session, insumo: Insumo, quantidade: Decimal) -> list[str]:
+    novo_estoque = insumo.estoque_atual - quantidade
+    insumo.estoque_atual = novo_estoque
     estoque_repository.registrar_movimento(
         db,
-        item_id=item.id,
+        insumo_id=insumo.id,
         tipo=TipoMovimento.SAIDA_VENDA,
         quantidade=quantidade,
-        custo_unitario=item.custo_medio,
+        custo_unitario=insumo.custo_medio,
         saldo_apos=novo_estoque,
     )
     db.flush()
-    return [item.nome] if novo_estoque < 0 else []
+    return [insumo.nome] if novo_estoque < 0 else []
 
 
 def reabrir_comanda(db: Session, comanda_id: int) -> ComandaResponse:
@@ -427,7 +407,7 @@ def reabrir_comanda(db: Session, comanda_id: int) -> ComandaResponse:
 
     itens = comandas_repository.get_itens_para_fechar(db, comanda_id)
     for ic in itens:
-        _estornar_estoque(db, ic.item_id, ic.quantidade)
+        _estornar_estoque(db, ic.produto_id, ic.quantidade)
 
     comandas_repository.reabrir_comanda_repo(db, comanda_id)
     comandas_repository.add_evento(
@@ -439,37 +419,25 @@ def reabrir_comanda(db: Session, comanda_id: int) -> ComandaResponse:
     return _build_response(db, comanda)
 
 
-def _estornar_estoque(db: Session, item_id: int, quantidade: Decimal) -> None:
-    item = db.get(Item, item_id)
-    if item is None:
-        return
-    if item.tipo == TipoItem.SIMPLES.value:
-        _estornar_insumo(db, item, quantidade)
-    else:
-        ficha = db.execute(
-            select(FichaTecnica).where(FichaTecnica.item_composto_id == item_id)
-        ).scalar_one_or_none()
-        if ficha is not None:
-            componentes = list(
-                db.execute(
-                    select(ComponenteFicha).where(ComponenteFicha.ficha_tecnica_id == ficha.id)
-                ).scalars().all()
-            )
-            for comp in componentes:
-                insumo = db.get(Item, comp.insumo_id)
-                if insumo is not None:
-                    _estornar_insumo(db, insumo, comp.quantidade * quantidade)
+def _estornar_estoque(db: Session, produto_id: int, quantidade: Decimal) -> None:
+    componentes = db.execute(
+        select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)
+    ).scalars().all()
+    for comp in componentes:
+        insumo = db.execute(select(Insumo).where(Insumo.id == comp.insumo_id)).scalar_one_or_none()
+        if insumo is not None:
+            _estornar_insumo(db, insumo, comp.quantidade * quantidade)
 
 
-def _estornar_insumo(db: Session, item: Item, quantidade: Decimal) -> None:
-    novo_estoque = item.estoque_atual + quantidade
-    item.estoque_atual = novo_estoque
+def _estornar_insumo(db: Session, insumo: Insumo, quantidade: Decimal) -> None:
+    novo_estoque = insumo.estoque_atual + quantidade
+    insumo.estoque_atual = novo_estoque
     estoque_repository.registrar_movimento(
         db,
-        item_id=item.id,
+        insumo_id=insumo.id,
         tipo=TipoMovimento.ENTRADA_ESTORNO,
         quantidade=quantidade,
-        custo_unitario=item.custo_medio,
+        custo_unitario=insumo.custo_medio,
         saldo_apos=novo_estoque,
     )
     db.flush()

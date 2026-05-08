@@ -81,9 +81,9 @@ def build_comprovante(db: Session, comanda_id: int) -> ComprovanteResponse:
 
 
 def _get_item_nome(db: Session, ic: ItemComanda) -> str:
-    from src.repositories import itens_repository
-    item = itens_repository.get_by_id(db, ic.item_id)
-    return item.nome if item else f"Item {ic.item_id}"
+    from src.repositories import produtos_repository
+    item = produtos_repository.get_by_id(db, ic.produto_id)
+    return item.nome if item else f"Produto {ic.produto_id}"
 
 
 def _get_metodo_nome(db: Session, metodo_id: int) -> str:

@@ -54,8 +54,8 @@ def crud_client():
 # ---------------------------------------------------------------------------
 
 def _criar_item(c, nome="Item A", tipo="simples", vendavel=False):
-    payload = {"nome": nome, "tipo": tipo, "vendavel": vendavel, "unidade_base": "un"}
-    resp = c.post("/api/itens", json=payload)
+    payload = {"nome": nome, "unidade_base": "un"}
+    resp = c.post("/api/insumos", json=payload)
     assert resp.status_code == 201, resp.text
     return resp.json()
 
@@ -71,7 +71,7 @@ def _comprar(c, item_id, quantidade, custo_total, data="2026-05-07"):
 
 
 def _get_item(c, item_id):
-    resp = c.get(f"/api/itens/{item_id}")
+    resp = c.get(f"/api/insumos/{item_id}")
     assert resp.status_code == 200
     return resp.json()
 

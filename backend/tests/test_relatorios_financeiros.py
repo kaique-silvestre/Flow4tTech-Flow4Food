@@ -61,11 +61,14 @@ def _criar_garcom(c, nome="Garcom"):
     return resp.json()
 
 
+def _criar_insumo(c, nome="Insumo"):
+    resp = c.post("/api/insumos", json={"nome": nome, "unidade_base": "un"})
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
 def _criar_item(c, nome="Item", preco="50.00"):
-    resp = c.post(
-        "/api/itens",
-        json={"nome": nome, "tipo": "simples", "vendavel": True, "unidade_base": "un", "preco_venda": preco},
-    )
+    resp = c.post("/api/produtos", json={"nome": nome, "preco_venda": preco})
     assert resp.status_code == 201, resp.text
     return resp.json()
 
@@ -103,11 +106,11 @@ def _fechar(c, comanda_id, metodo_id, valor):
     return resp.json()
 
 
-def _set_custo_medio(item_id: int, custo: Decimal) -> None:
-    from src.models.itens import Item
+def _set_custo_medio(insumo_id: int, custo: Decimal) -> None:
+    from src.models.insumos import Insumo
     db: Session = _TestingSession()
     try:
-        db.execute(update(Item).where(Item.id == item_id).values(custo_medio=custo))
+        db.execute(update(Insumo).where(Insumo.id == insumo_id).values(custo_medio=custo))
         db.commit()
     finally:
         db.close()
@@ -154,24 +157,26 @@ def test_dre_produto_sem_custo_gera_alerta(c):
 def test_dre_cortesia_entra_cmv_nao_receita(c):
     """Cortesia: CMV inclui custo do item cortesia; faturamento_liquido não inclui."""
     garcom = _criar_garcom(c)
-    item = _criar_item(c, nome="Bebida", preco="20.00")
-    _set_custo_medio(item["id"], Decimal("8.00"))
     metodo = _criar_metodo(c)
+
+    insumo = _criar_insumo(c, nome="Insumo Bebida")
+    _set_custo_medio(insumo["id"], Decimal("8.00"))
+
+    item = c.post("/api/produtos", json={
+        "nome": "Bebida", "preco_venda": "20.00",
+        "ficha_tecnica": [{"insumo_id": insumo["id"], "quantidade": "1"}],
+    }).json()
 
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    # 1 item normal
     resp1 = _lancar_item(c, cid, item["id"], comanda["version"])
-    # 1 item cortesia
     _lancar_item(c, cid, item["id"], resp1["version"], cortesia=True)
-    # total: apenas o item normal = 20.00
     _fechar(c, cid, metodo["id"], "20.00")
 
     resp = c.get(f"/api/relatorios/dre?mes={_mes_atual()}")
     assert resp.status_code == 200, resp.text
     data = resp.json()
 
-    # faturamento_liquido = caixa recebido = 20.00
     assert float(data["faturamento_liquido"]) == pytest.approx(20.0)
     # cmv = 8 (normal) + 8 (cortesia) = 16
     assert float(data["cmv"]) == pytest.approx(16.0)
@@ -182,14 +187,19 @@ def test_dre_cortesia_entra_cmv_nao_receita(c):
 def test_cmv_classificacao_faixas(c):
     """Itens com margens 50%, 30%, 10% recebem verde, amarelo, vermelho."""
     # verde: preco=10, custo=5 → margem=50%
-    i1 = _criar_item(c, nome="Verde", preco="10.00")
-    _set_custo_medio(i1["id"], Decimal("5.00"))
+    ins1 = _criar_insumo(c, nome="Insumo Verde")
+    _set_custo_medio(ins1["id"], Decimal("5.00"))
+    c.post("/api/produtos", json={"nome": "Verde", "preco_venda": "10.00", "ficha_tecnica": [{"insumo_id": ins1["id"], "quantidade": "1"}]})
+
     # amarelo: preco=10, custo=7 → margem=30%
-    i2 = _criar_item(c, nome="Amarelo", preco="10.00")
-    _set_custo_medio(i2["id"], Decimal("7.00"))
+    ins2 = _criar_insumo(c, nome="Insumo Amarelo")
+    _set_custo_medio(ins2["id"], Decimal("7.00"))
+    c.post("/api/produtos", json={"nome": "Amarelo", "preco_venda": "10.00", "ficha_tecnica": [{"insumo_id": ins2["id"], "quantidade": "1"}]})
+
     # vermelho: preco=10, custo=9 → margem=10%
-    i3 = _criar_item(c, nome="Vermelho", preco="10.00")
-    _set_custo_medio(i3["id"], Decimal("9.00"))
+    ins3 = _criar_insumo(c, nome="Insumo Vermelho")
+    _set_custo_medio(ins3["id"], Decimal("9.00"))
+    c.post("/api/produtos", json={"nome": "Vermelho", "preco_venda": "10.00", "ficha_tecnica": [{"insumo_id": ins3["id"], "quantidade": "1"}]})
 
     resp = c.get("/api/relatorios/cmv-por-produto")
     assert resp.status_code == 200, resp.text
@@ -202,11 +212,11 @@ def test_cmv_classificacao_faixas(c):
 
 def test_perdas_agrupadas_por_motivo(c):
     """2 baixas sem venda com motivos distintos → 2 grupos separados com totais."""
-    item = _criar_item(c, nome="Insumo", preco="5.00")
-    _set_custo_medio(item["id"], Decimal("3.00"))
+    insumo = _criar_insumo(c, nome="Insumo Perda")
+    _set_custo_medio(insumo["id"], Decimal("3.00"))
 
-    _baixa_sem_venda(c, item["id"], "2", "perda")
-    _baixa_sem_venda(c, item["id"], "1", "quebra")
+    _baixa_sem_venda(c, insumo["id"], "2", "perda")
+    _baixa_sem_venda(c, insumo["id"], "1", "quebra")
 
     hoje = datetime.date.today().isoformat()
     resp = c.get(f"/api/relatorios/perdas-cortesias?data_inicio={hoje}&data_fim={hoje}")

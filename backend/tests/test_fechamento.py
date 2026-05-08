@@ -78,12 +78,30 @@ def _criar_garcom(c, nome="Garcom"):
 
 
 def _criar_item(c, nome="Item", preco="50.00", tipo="simples", vendavel=True):
-    body: dict = {"nome": nome, "tipo": tipo, "vendavel": vendavel, "unidade_base": "un"}
+    body: dict = {"nome": nome}
     if preco is not None:
         body["preco_venda"] = preco
-    resp = c.post("/api/itens", json=body)
+    resp = c.post("/api/produtos", json=body)
     assert resp.status_code == 201, resp.text
     return resp.json()
+
+
+def _criar_insumo(c, nome="Insumo", custo_medio=None):
+    from src.models.insumos import Insumo as InsumoModel
+
+    resp = c.post("/api/insumos", json={"nome": nome, "unidade_base": "un"})
+    assert resp.status_code == 201, resp.text
+    insumo = resp.json()
+    if custo_medio is not None:
+        db = _TestingSession()
+        try:
+            obj = db.get(InsumoModel, insumo["id"])
+            if obj:
+                obj.custo_medio = Decimal(str(custo_medio))
+                db.commit()
+        finally:
+            db.close()
+    return insumo
 
 
 def _criar_metodo(c, nome="PIX"):
@@ -156,33 +174,42 @@ def test_cortesia_nao_some_subtotal_mas_baixa_estoque(c):
     from src.models.movimentos_estoque import MovimentoEstoque, TipoMovimento
 
     garcom = _criar_garcom(c)
-    item_cortesia = _criar_item(c, nome="Cortesia", preco="10.00")
-    item_normal = _criar_item(c, nome="Normal", preco="30.00")
     metodo = _criar_metodo(c)
+
+    insumo_cortesia = _criar_insumo(c, nome="Insumo Cortesia")
+    insumo_normal = _criar_insumo(c, nome="Insumo Normal")
+
+    item_cortesia = c.post("/api/produtos", json={
+        "nome": "Cortesia", "preco_venda": "10.00",
+        "ficha_tecnica": [{"insumo_id": insumo_cortesia["id"], "quantidade": "1"}],
+    }).json()
+    item_normal = c.post("/api/produtos", json={
+        "nome": "Normal", "preco_venda": "30.00",
+        "ficha_tecnica": [{"insumo_id": insumo_normal["id"], "quantidade": "1"}],
+    }).json()
+
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
 
     r1 = _lancar_item(c, cid, item_cortesia["id"], comanda["version"], cortesia=True)
-    assert float(r1["total_parcial"]) == 0.0  # cortesia nao some
+    assert float(r1["total_parcial"]) == 0.0
 
     r2 = _lancar_item(c, cid, item_normal["id"], r1["version"])
-    assert float(r2["total_parcial"]) == 30.0  # so o normal
+    assert float(r2["total_parcial"]) == 30.0
 
-    # Fechar: subtotal = 30 (cortesia nao conta)
     resp = _fechar(c, cid, metodo["id"], "30.00")
     assert resp.status_code == 200, resp.text
     assert resp.json()["status"] == "fechada"
 
-    # Verificar que ambos os itens tiveram baixa de estoque (incluindo cortesia)
     db: Session = _TestingSession()
     try:
         movimentos = db.query(MovimentoEstoque).filter(
             MovimentoEstoque.tipo == TipoMovimento.SAIDA_VENDA.value
         ).all()
-        assert len(movimentos) == 2  # cortesia + item normal
-        item_ids_baixados = {m.item_id for m in movimentos}
-        assert item_cortesia["id"] in item_ids_baixados
-        assert item_normal["id"] in item_ids_baixados
+        assert len(movimentos) == 2
+        insumo_ids_baixados = {m.insumo_id for m in movimentos}
+        assert insumo_cortesia["id"] in insumo_ids_baixados
+        assert insumo_normal["id"] in insumo_ids_baixados
     finally:
         db.close()
 
@@ -287,36 +314,44 @@ def test_divisao_por_pessoa_sem_pessoas_retorna_400(c):
 
 
 def test_baixa_estoque_item_simples(c):
-    from src.models.itens import Item
+    from src.models.insumos import Insumo as InsumoModel
     from src.models.movimentos_estoque import MovimentoEstoque, TipoMovimento
 
     garcom = _criar_garcom(c)
     metodo = _criar_metodo(c)
-    item_resp = _criar_item(c, preco="30.00")
-    item_id = item_resp["id"]
+
+    insumo = _criar_insumo(c, nome="Insumo Simples")
+    insumo_id = insumo["id"]
+
+    produto_resp = c.post("/api/produtos", json={
+        "nome": "Produto Simples", "preco_venda": "30.00",
+        "ficha_tecnica": [{"insumo_id": insumo_id, "quantidade": "1"}],
+    })
+    assert produto_resp.status_code == 201, produto_resp.text
+    produto_id = produto_resp.json()["id"]
 
     db: Session = _TestingSession()
     try:
-        it = db.get(Item, item_id)
-        it.estoque_atual = Decimal("10")
+        insumo_obj = db.get(InsumoModel, insumo_id)
+        insumo_obj.estoque_atual = Decimal("10")
         db.commit()
     finally:
         db.close()
 
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, item_id, comanda["version"], quantidade=3)
+    _lancar_item(c, cid, produto_id, comanda["version"], quantidade=3)
 
     resp = _fechar(c, cid, metodo["id"], "90.00")
     assert resp.status_code == 200, resp.text
 
     db = _TestingSession()
     try:
-        it = db.get(Item, item_id)
-        assert float(it.estoque_atual) == pytest.approx(7.0, abs=0.001)
+        insumo_obj = db.get(InsumoModel, insumo_id)
+        assert float(insumo_obj.estoque_atual) == pytest.approx(7.0, abs=0.001)
         mov = (
             db.query(MovimentoEstoque)
-            .filter(MovimentoEstoque.item_id == item_id, MovimentoEstoque.tipo == TipoMovimento.SAIDA_VENDA.value)
+            .filter(MovimentoEstoque.insumo_id == insumo_id, MovimentoEstoque.tipo == TipoMovimento.SAIDA_VENDA.value)
             .first()
         )
         assert mov is not None
@@ -326,49 +361,48 @@ def test_baixa_estoque_item_simples(c):
 
 
 def test_baixa_estoque_composto_explode_ficha(c):
-    from src.models.itens import Item
+    from src.models.insumos import Insumo as InsumoModel
     from src.models.movimentos_estoque import MovimentoEstoque, TipoMovimento
 
     garcom = _criar_garcom(c)
     metodo = _criar_metodo(c)
 
-    insumo1 = _criar_item(c, nome="Pao", preco=None, vendavel=False)
-    insumo2 = _criar_item(c, nome="Carne", preco=None, vendavel=False)
-    # Criar composto com ficha inline (obrigatorio para tipo=composto)
-    resp_composto = c.post("/api/itens", json={
-        "nome": "Burguer", "tipo": "composto", "vendavel": True,
-        "unidade_base": "un", "preco_venda": "20.00",
+    insumo1 = _criar_insumo(c, nome="Pao")
+    insumo2 = _criar_insumo(c, nome="Carne")
+
+    resp_produto = c.post("/api/produtos", json={
+        "nome": "Burguer", "preco_venda": "20.00",
         "ficha_tecnica": [
             {"insumo_id": insumo1["id"], "quantidade": "1"},
             {"insumo_id": insumo2["id"], "quantidade": "0.2"},
         ],
     })
-    assert resp_composto.status_code == 201, resp_composto.text
-    composto = resp_composto.json()
+    assert resp_produto.status_code == 201, resp_produto.text
+    produto = resp_produto.json()
 
     db: Session = _TestingSession()
     try:
-        it1 = db.get(Item, insumo1["id"])
-        it2 = db.get(Item, insumo2["id"])
-        it1.estoque_atual = Decimal("10")
-        it2.estoque_atual = Decimal("5")
+        obj1 = db.get(InsumoModel, insumo1["id"])
+        obj2 = db.get(InsumoModel, insumo2["id"])
+        obj1.estoque_atual = Decimal("10")
+        obj2.estoque_atual = Decimal("5")
         db.commit()
     finally:
         db.close()
 
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, composto["id"], comanda["version"], quantidade=2)
+    _lancar_item(c, cid, produto["id"], comanda["version"], quantidade=2)
 
     resp = _fechar(c, cid, metodo["id"], "40.00")
     assert resp.status_code == 200, resp.text
 
     db = _TestingSession()
     try:
-        it1 = db.get(Item, insumo1["id"])
-        it2 = db.get(Item, insumo2["id"])
-        assert float(it1.estoque_atual) == pytest.approx(8.0, abs=0.001)
-        assert float(it2.estoque_atual) == pytest.approx(4.6, abs=0.001)
+        obj1 = db.get(InsumoModel, insumo1["id"])
+        obj2 = db.get(InsumoModel, insumo2["id"])
+        assert float(obj1.estoque_atual) == pytest.approx(8.0, abs=0.001)
+        assert float(obj2.estoque_atual) == pytest.approx(4.6, abs=0.001)
         movimentos = (
             db.query(MovimentoEstoque)
             .filter(MovimentoEstoque.tipo == TipoMovimento.SAIDA_VENDA.value)

@@ -61,7 +61,7 @@ def _criar_garcom(c, nome="Garcom"):
 
 
 def _criar_item(c, nome="Item", preco="50.00"):
-    resp = c.post("/api/itens", json={"nome": nome, "tipo": "simples", "vendavel": True, "unidade_base": "un", "preco_venda": preco})
+    resp = c.post("/api/produtos", json={"nome": nome, "preco_venda": preco})
     assert resp.status_code == 201, resp.text
     return resp.json()
 

@@ -61,11 +61,17 @@ def _criar_garcom(c, nome="Garcom"):
     return resp.json()
 
 
-def _criar_item(c, nome="Item", preco="50.00", tipo="simples", vendavel=True):
-    body: dict = {"nome": nome, "tipo": tipo, "vendavel": vendavel, "unidade_base": "un"}
-    if preco is not None:
-        body["preco_venda"] = preco
-    resp = c.post("/api/itens", json=body)
+def _criar_insumo(c, nome="Insumo"):
+    resp = c.post("/api/insumos", json={"nome": nome, "unidade_base": "un"})
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+def _criar_produto(c, nome="Produto", preco="50.00", ficha_tecnica=None):
+    body: dict = {"nome": nome, "preco_venda": preco}
+    if ficha_tecnica:
+        body["ficha_tecnica"] = ficha_tecnica
+    resp = c.post("/api/produtos", json=body)
     assert resp.status_code == 201, resp.text
     return resp.json()
 
@@ -100,23 +106,25 @@ def _fechar(c, comanda_id, metodo_id, valor):
     return resp.json()
 
 
-def _set_estoque(item_id: int, valor: float) -> None:
-    from src.models.itens import Item
+def _set_estoque(insumo_id: int, valor: float) -> None:
+    from src.models.insumos import Insumo
+
     db: Session = _TestingSession()
     try:
-        it = db.get(Item, item_id)
-        it.estoque_atual = Decimal(str(valor))  # type: ignore[union-attr]
+        obj = db.get(Insumo, insumo_id)
+        obj.estoque_atual = Decimal(str(valor))  # type: ignore[union-attr]
         db.commit()
     finally:
         db.close()
 
 
-def _get_estoque_db(item_id: int) -> float:
-    from src.models.itens import Item
+def _get_estoque_db(insumo_id: int) -> float:
+    from src.models.insumos import Insumo
+
     db: Session = _TestingSession()
     try:
-        it = db.get(Item, item_id)
-        return float(it.estoque_atual) if it else 0.0  # type: ignore[union-attr]
+        obj = db.get(Insumo, insumo_id)
+        return float(obj.estoque_atual) if obj else 0.0  # type: ignore[union-attr]
     finally:
         db.close()
 
@@ -130,17 +138,19 @@ def test_reabrir_comanda_fechada_ok(c):
     from src.models.movimentos_estoque import MovimentoEstoque, TipoMovimento
 
     garcom = _criar_garcom(c)
-    item = _criar_item(c, preco="30.00")
     metodo = _criar_metodo(c)
 
-    _set_estoque(item["id"], 10.0)
+    insumo = _criar_insumo(c, nome="Insumo A")
+    _set_estoque(insumo["id"], 10.0)
+
+    produto = _criar_produto(c, preco="30.00", ficha_tecnica=[{"insumo_id": insumo["id"], "quantidade": "1"}])
 
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, item["id"], comanda["version"])
+    _lancar_item(c, cid, produto["id"], comanda["version"])
     _fechar(c, cid, metodo["id"], "30.00")
 
-    assert pytest.approx(_get_estoque_db(item["id"]), abs=0.001) == 9.0
+    assert pytest.approx(_get_estoque_db(insumo["id"]), abs=0.001) == 9.0
 
     resp = c.post(f"/api/comandas/{cid}/reabrir")
     assert resp.status_code == 200, resp.text
@@ -149,15 +159,14 @@ def test_reabrir_comanda_fechada_ok(c):
     assert data["total"] is None
     assert data["data_fechamento"] is None
 
-    assert pytest.approx(_get_estoque_db(item["id"]), abs=0.001) == 10.0
+    assert pytest.approx(_get_estoque_db(insumo["id"]), abs=0.001) == 10.0
 
-    # Deve haver movimento de estorno
     db: Session = _TestingSession()
     try:
         mov = (
             db.query(MovimentoEstoque)
             .filter(
-                MovimentoEstoque.item_id == item["id"],
+                MovimentoEstoque.insumo_id == insumo["id"],
                 MovimentoEstoque.tipo == TipoMovimento.ENTRADA_ESTORNO.value,
             )
             .first()
@@ -170,38 +179,29 @@ def test_reabrir_comanda_fechada_ok(c):
 
 def test_reabrir_estorna_item_composto(c):
     garcom = _criar_garcom(c)
-    insumo1 = _criar_item(c, nome="Insumo1", preco=None, tipo="simples", vendavel=False)
-    insumo2 = _criar_item(c, nome="Insumo2", preco=None, tipo="simples", vendavel=False)
-
-    # Composto criado com ficha_tecnica inline
-    resp_composto = c.post("/api/itens", json={
-        "nome": "Composto", "tipo": "composto", "vendavel": True,
-        "unidade_base": "un", "preco_venda": "50.00",
-        "ficha_tecnica": [
-            {"insumo_id": insumo1["id"], "quantidade": "1"},
-            {"insumo_id": insumo2["id"], "quantidade": "2"},
-        ],
-    })
-    assert resp_composto.status_code == 201, resp_composto.text
-    composto = resp_composto.json()
     metodo = _criar_metodo(c)
 
+    insumo1 = _criar_insumo(c, nome="Insumo1")
+    insumo2 = _criar_insumo(c, nome="Insumo2")
     _set_estoque(insumo1["id"], 10.0)
     _set_estoque(insumo2["id"], 10.0)
 
+    produto = _criar_produto(c, nome="Composto", preco="50.00", ficha_tecnica=[
+        {"insumo_id": insumo1["id"], "quantidade": "1"},
+        {"insumo_id": insumo2["id"], "quantidade": "2"},
+    ])
+
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, composto["id"], comanda["version"], quantidade=2)
+    _lancar_item(c, cid, produto["id"], comanda["version"], quantidade=2)
     _fechar(c, cid, metodo["id"], "100.00")
 
-    # Após fechar: insumo1 -= 2 (1*2), insumo2 -= 4 (2*2)
     assert pytest.approx(_get_estoque_db(insumo1["id"]), abs=0.001) == 8.0
     assert pytest.approx(_get_estoque_db(insumo2["id"]), abs=0.001) == 6.0
 
     resp = c.post(f"/api/comandas/{cid}/reabrir")
     assert resp.status_code == 200, resp.text
 
-    # Após reabrir: estoques restaurados
     assert pytest.approx(_get_estoque_db(insumo1["id"]), abs=0.001) == 10.0
     assert pytest.approx(_get_estoque_db(insumo2["id"]), abs=0.001) == 10.0
 
@@ -216,13 +216,12 @@ def test_reabrir_comanda_aberta_retorna_400(c):
 
 def test_reabrir_comanda_parcial_retorna_400(c):
     garcom = _criar_garcom(c)
-    item = _criar_item(c, preco="100.00")
+    produto = _criar_produto(c, preco="100.00")
     metodo = _criar_metodo(c)
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, item["id"], comanda["version"])
+    _lancar_item(c, cid, produto["id"], comanda["version"])
 
-    # Pagamento parcial → status permanece "aberta"
     resp = c.post(
         f"/api/comandas/{cid}/fechar",
         json={"pagamentos": [{"metodo_id": metodo["id"], "valor": "50.00"}], "modo_divisao": "parcial"},
@@ -242,20 +241,17 @@ def test_reabrir_comanda_inexistente_retorna_404(c):
 
 def test_reaberta_aparece_na_lista_abertas(c):
     garcom = _criar_garcom(c)
-    item = _criar_item(c, preco="50.00")
+    produto = _criar_produto(c, preco="50.00")
     metodo = _criar_metodo(c)
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, item["id"], comanda["version"])
+    _lancar_item(c, cid, produto["id"], comanda["version"])
     _fechar(c, cid, metodo["id"], "50.00")
 
-    # Não deve aparecer na lista de abertas após fechar
     lista = c.get("/api/comandas").json()
-    assert all(c["id"] != cid for c in lista)
+    assert all(cmd["id"] != cid for cmd in lista)
 
-    # Reabrir
     c.post(f"/api/comandas/{cid}/reabrir")
 
-    # Deve aparecer na lista de abertas após reabrir
     lista = c.get("/api/comandas").json()
-    assert any(c["id"] == cid for c in lista)
+    assert any(cmd["id"] == cid for cmd in lista)

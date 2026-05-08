@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from src.core.database import Base
 from src.models.comandas import Comanda
-from src.models.itens import Item
+from src.models.insumos import Insumo
 from src.models.movimentos_estoque import MovimentoEstoque
 
 
@@ -48,7 +48,7 @@ def backup_xlsx(db: Session) -> bytes:
 
     for sheet_name, cls in [
         ("comandas", Comanda),
-        ("itens", Item),
+        ("insumos", Insumo),
         ("movimento_estoque", MovimentoEstoque),
     ]:
         cols, data = _table_rows(db, cls)

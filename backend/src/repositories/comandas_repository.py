@@ -71,7 +71,7 @@ def add_item(
 ) -> ItemComanda:
     item_comanda = ItemComanda(
         comanda_id=comanda_id,
-        item_id=item_id,
+        produto_id=item_id,
         quantidade=quantidade,
         preco_unitario=preco_unitario,
         pessoa_associada=pessoa_associada,
@@ -203,12 +203,12 @@ def reabrir_comanda_repo(db: Session, comanda_id: int) -> None:
 def top_itens(db: Session, dias: int, limit: int) -> list[tuple[int, int]]:
     result = db.execute(
         text(
-            "SELECT ic.item_id, COUNT(*) as cnt "
+            "SELECT ic.produto_id, COUNT(*) as cnt "
             "FROM itens_comanda ic "
             "JOIN comandas c ON c.id = ic.comanda_id "
             "WHERE ic.cancelado = 0 "
             "AND ic.created_at >= :since "
-            "GROUP BY ic.item_id "
+            "GROUP BY ic.produto_id "
             "ORDER BY cnt DESC "
             "LIMIT :limit"
         ),

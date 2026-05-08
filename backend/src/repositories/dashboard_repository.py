@@ -6,9 +6,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.models.comandas import Comanda, StatusComanda
-from src.models.itens import Item
 from src.models.itens_comanda import ItemComanda
-from src.repositories.relatorio_repository import _day_utc_range
+from src.models.produtos import Produto
+from src.repositories.relatorio_repository import _day_utc_range, cmv_total
 
 TZ = ZoneInfo("America/Sao_Paulo")
 
@@ -46,19 +46,7 @@ def comandas_fechadas_hoje(db: Session) -> list[Comanda]:
 
 
 def cmv_hoje(db: Session, comanda_ids: list[int]) -> Decimal:
-    if not comanda_ids:
-        return Decimal("0")
-    row = db.execute(
-        select(func.sum(Item.custo_medio * ItemComanda.quantidade))
-        .select_from(ItemComanda)
-        .join(Item, ItemComanda.item_id == Item.id)
-        .where(
-            ItemComanda.comanda_id.in_(comanda_ids),
-            ItemComanda.cancelado.is_(False),
-            Item.custo_medio.isnot(None),
-        )
-    ).scalar()
-    return row or Decimal("0")
+    return cmv_total(db, comanda_ids)
 
 
 def faturamento_por_hora_hoje(db: Session, comanda_ids: list[int]) -> list[dict]:
@@ -82,14 +70,14 @@ def top_10_produtos_30d(db: Session) -> list[dict]:
     _, end = _day_utc_range(today)
     rows = db.execute(
         select(
-            Item.id,
-            Item.nome,
+            Produto.id,
+            Produto.nome,
             func.sum(ItemComanda.quantidade).label("quantidade"),
             func.sum(ItemComanda.preco_unitario * ItemComanda.quantidade).label("faturamento"),
         )
         .select_from(ItemComanda)
         .join(Comanda, ItemComanda.comanda_id == Comanda.id)
-        .join(Item, ItemComanda.item_id == Item.id)
+        .join(Produto, ItemComanda.produto_id == Produto.id)
         .where(
             Comanda.status == StatusComanda.FECHADA.value,
             Comanda.data_fechamento >= start,
@@ -97,7 +85,7 @@ def top_10_produtos_30d(db: Session) -> list[dict]:
             ItemComanda.cancelado.is_(False),
             ItemComanda.cortesia.is_(False),
         )
-        .group_by(Item.id, Item.nome)
+        .group_by(Produto.id, Produto.nome)
         .order_by(func.sum(ItemComanda.quantidade).desc())
         .limit(10)
     ).all()

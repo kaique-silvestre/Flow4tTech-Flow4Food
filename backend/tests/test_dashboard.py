@@ -63,10 +63,7 @@ def _criar_garcom(c, nome="Garcom"):
 
 
 def _criar_item(c, nome="Item", preco="50.00"):
-    resp = c.post(
-        "/api/itens",
-        json={"nome": nome, "tipo": "simples", "vendavel": True, "unidade_base": "un", "preco_venda": preco},
-    )
+    resp = c.post("/api/produtos", json={"nome": nome, "preco_venda": preco})
     assert resp.status_code == 201, resp.text
     return resp.json()
 
@@ -104,12 +101,12 @@ def _fechar(c, comanda_id, metodo_id, valor):
     return resp.json()
 
 
-def _set_custo_medio(item_id: int, custo: Decimal) -> None:
-    from src.models.itens import Item
+def _set_custo_medio(insumo_id: int, custo: Decimal) -> None:
+    from src.models.insumos import Insumo
 
     db: Session = _TestingSession()
     try:
-        db.execute(update(Item).where(Item.id == item_id).values(custo_medio=custo))
+        db.execute(update(Insumo).where(Insumo.id == insumo_id).values(custo_medio=custo))
         db.commit()
     finally:
         db.close()
@@ -151,14 +148,24 @@ def test_dashboard_cards_hoje(c):
 
 
 def test_dashboard_lucro_estimado(c):
-    """Item com custo_medio=30, preco=100 → lucro_estimado = 70."""
+    """Produto com insumo custo_medio=30, preco=100 → lucro_estimado = 70."""
     garcom = _criar_garcom(c)
-    item = _criar_item(c, preco="100.00")
-    _set_custo_medio(item["id"], Decimal("30.00"))
     metodo = _criar_metodo(c)
 
+    insumo_resp = c.post("/api/insumos", json={"nome": "Insumo CMV", "unidade_base": "un"})
+    assert insumo_resp.status_code == 201
+    insumo_id = insumo_resp.json()["id"]
+    _set_custo_medio(insumo_id, Decimal("30.00"))
+
+    produto_resp = c.post("/api/produtos", json={
+        "nome": "Produto CMV", "preco_venda": "100.00",
+        "ficha_tecnica": [{"insumo_id": insumo_id, "quantidade": "1"}],
+    })
+    assert produto_resp.status_code == 201
+    produto = produto_resp.json()
+
     comanda = _abrir_comanda(c, garcom["id"])
-    _lancar_item(c, comanda["id"], item["id"], comanda["version"])
+    _lancar_item(c, comanda["id"], produto["id"], comanda["version"])
     _fechar(c, comanda["id"], metodo["id"], "100.00")
 
     resp = c.get("/api/dashboard")

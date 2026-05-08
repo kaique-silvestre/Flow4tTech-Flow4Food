@@ -54,8 +54,8 @@ def crud_client():
 # ---------------------------------------------------------------------------
 
 def _criar_item(c, nome="Item A", tipo="simples", vendavel=False):
-    payload = {"nome": nome, "tipo": tipo, "vendavel": vendavel, "unidade_base": "un"}
-    resp = c.post("/api/itens", json=payload)
+    payload = {"nome": nome, "unidade_base": "un"}
+    resp = c.post("/api/insumos", json=payload)
     assert resp.status_code == 201, resp.text
     return resp.json()
 
@@ -108,24 +108,13 @@ def test_baixa_saldo_negativo_permitido(crud_client):
     assert float(data["movimento"]["saldo_apos"]) == pytest.approx(-5.0)
 
 
-def test_baixa_item_composto_bloqueado(crud_client):
-    # Criar insumo simples para a ficha
-    insumo = _criar_item(crud_client, "Insumo X")
-    # Criar item composto com ficha
-    payload = {
-        "nome": "Composto Y",
-        "tipo": "composto",
-        "vendavel": True,
-        "unidade_base": "un",
-        "preco_venda": 10.0,
-        "ficha_tecnica": [{"insumo_id": insumo["id"], "quantidade": 1}],
-    }
-    resp = crud_client.post("/api/itens", json=payload)
+def test_baixa_produto_nao_encontrado(crud_client):
+    resp = crud_client.post("/api/produtos", json={"nome": "Produto Y", "preco_venda": 10.0})
     assert resp.status_code == 201
-    composto = resp.json()
+    produto = resp.json()
 
-    resp = _baixa(crud_client, composto["id"], 1)
-    assert resp.status_code == 400
+    resp = _baixa(crud_client, produto["id"], 1)
+    assert resp.status_code == 404
 
 
 def test_historico_ordenado_desc(crud_client):
@@ -154,23 +143,15 @@ def test_historico_filtro_tipo(crud_client):
     assert data["itens"][0]["tipo"] == "entrada"
 
 
-def test_saldo_exclui_compostos(crud_client):
-    insumo = _criar_item(crud_client, "Insumo Saldo")
-    payload = {
-        "nome": "Composto Saldo",
-        "tipo": "composto",
-        "vendavel": True,
-        "unidade_base": "un",
-        "preco_venda": 15.0,
-        "ficha_tecnica": [{"insumo_id": insumo["id"], "quantidade": 1}],
-    }
-    crud_client.post("/api/itens", json=payload)
+def test_saldo_exclui_produtos(crud_client):
+    _criar_item(crud_client, "Insumo Saldo")
+    crud_client.post("/api/produtos", json={"nome": "Produto Saldo", "preco_venda": 15.0})
 
     resp = crud_client.get("/api/estoque/saldo")
     assert resp.status_code == 200
     nomes = [s["nome"] for s in resp.json()]
     assert "Insumo Saldo" in nomes
-    assert "Composto Saldo" not in nomes
+    assert "Produto Saldo" not in nomes
 
 
 def test_saldo_filtro_busca(crud_client):

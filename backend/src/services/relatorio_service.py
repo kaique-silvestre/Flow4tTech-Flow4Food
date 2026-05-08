@@ -157,24 +157,25 @@ def dre(db: Session, mes: str) -> DREResponse:
 
 
 def cmv_por_produto(db: Session) -> CMVPorProdutoResponse:
-    itens = rr.todos_itens_vendaveis(db)
+    produtos = rr.todos_produtos_ativos(db)
     resultado = []
-    for item in itens:
-        if item.custo_medio is None or item.preco_venda is None:
+    for produto in produtos:
+        custo = rr.calcular_custo_produto(db, produto.id)
+        if custo is None or produto.preco_venda is None:
             resultado.append(
                 CMVProdutoItem(
-                    item_id=item.id,
-                    nome=item.nome,
-                    preco_venda=item.preco_venda,
-                    custo_medio=item.custo_medio,
+                    item_id=produto.id,
+                    nome=produto.nome,
+                    preco_venda=produto.preco_venda,
+                    custo_medio=None,
                     margem_valor=None,
                     margem_percentual=None,
                     classificacao="sem_custo",
                 )
             )
         else:
-            margem_val = item.preco_venda - item.custo_medio
-            margem_pct = (margem_val / item.preco_venda * Decimal("100")).quantize(Decimal("0.01"))
+            margem_val = produto.preco_venda - custo
+            margem_pct = (margem_val / produto.preco_venda * Decimal("100")).quantize(Decimal("0.01"))
             if margem_pct > Decimal("40"):
                 classif = "verde"
             elif margem_pct >= Decimal("20"):
@@ -183,10 +184,10 @@ def cmv_por_produto(db: Session) -> CMVPorProdutoResponse:
                 classif = "vermelho"
             resultado.append(
                 CMVProdutoItem(
-                    item_id=item.id,
-                    nome=item.nome,
-                    preco_venda=item.preco_venda,
-                    custo_medio=item.custo_medio,
+                    item_id=produto.id,
+                    nome=produto.nome,
+                    preco_venda=produto.preco_venda,
+                    custo_medio=custo,
                     margem_valor=margem_val,
                     margem_percentual=margem_pct,
                     classificacao=classif,

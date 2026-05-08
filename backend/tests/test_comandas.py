@@ -66,11 +66,8 @@ def _criar_garcom(c, nome="Joao", ativo=True):
 
 
 def _criar_item_vendavel(c, nome="Coca", preco="10.00"):
-    resp = c.post("/api/itens", json={
+    resp = c.post("/api/produtos", json={
         "nome": nome,
-        "tipo": "simples",
-        "vendavel": True,
-        "unidade_base": "un",
         "preco_venda": preco,
     })
     assert resp.status_code == 201, resp.text
@@ -272,7 +269,7 @@ def test_top_itens(crud_client):
         resp = _lancar_item(crud_client, comanda["id"], item["id"], version)
         version = resp.json()["version"]
 
-    resp = crud_client.get("/api/itens/top?dias=7&limit=6")
+    resp = crud_client.get("/api/produtos/top?dias=7&limit=6")
     assert resp.status_code == 200
     nomes = [i["nome"] for i in resp.json()]
     assert "Cerveja" in nomes

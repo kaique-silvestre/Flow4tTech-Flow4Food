@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
 from src.models.fornecedores import Fornecedor
-from src.models.itens import Item
+from src.models.insumos import Insumo
 from src.models.movimentos_estoque import TipoMovimento
 from src.repositories import compras_repository, estoque_repository
 from src.schemas.compras import (
@@ -29,21 +29,6 @@ def _calcular_custo_medio(
     return numerador / denominador
 
 
-def _build_item_response(
-    db: Session, item_compra_id: int, item_id: int, quantidade: Decimal,
-    custo_unitario: Decimal, custo_total: Decimal
-) -> ItemCompraResponse:
-    item = db.execute(select(Item).where(Item.id == item_id)).scalar_one_or_none()
-    nome = item.nome if item else ""
-    return ItemCompraResponse(
-        item_id=item_id,
-        item_nome=nome,
-        quantidade=quantidade,
-        custo_unitario=custo_unitario,
-        custo_total=custo_total,
-    )
-
-
 def _get_fornecedor_nome(db: Session, fornecedor_id: Optional[int]) -> Optional[str]:
     if fornecedor_id is None:
         return None
@@ -56,29 +41,29 @@ def criar_compra(db: Session, data: CompraCreateRequest) -> CompraResponse:
     itens_processados = []
 
     for item_req in data.itens:
-        item = estoque_repository.get_item_for_update(db, item_req.item_id)
-        if item is None:
+        insumo = estoque_repository.get_insumo_for_update(db, item_req.item_id)
+        if insumo is None:
             raise AppError(
                 ErrorCode.NOT_FOUND,
-                f"Item {item_req.item_id} não encontrado",
+                f"Insumo {item_req.item_id} não encontrado",
                 http_status=404,
             )
 
         custo_unitario = item_req.custo_total / item_req.quantidade
         novo_custo_medio = _calcular_custo_medio(
-            item.estoque_atual,
-            item.custo_medio,
+            insumo.estoque_atual,
+            insumo.custo_medio,
             item_req.quantidade,
             custo_unitario,
         )
-        novo_estoque = item.estoque_atual + item_req.quantidade
+        novo_estoque = insumo.estoque_atual + item_req.quantidade
 
         estoque_repository.update_estoque_e_custo(
-            db, item.id, novo_estoque, novo_custo_medio
+            db, insumo.id, novo_estoque, novo_custo_medio
         )
         total += item_req.custo_total
 
-        itens_processados.append((item, item_req, custo_unitario, novo_estoque))
+        itens_processados.append((insumo, item_req, custo_unitario, novo_estoque))
 
     compra = compras_repository.create_compra(
         db=db,
@@ -89,18 +74,18 @@ def criar_compra(db: Session, data: CompraCreateRequest) -> CompraResponse:
     )
 
     itens_response = []
-    for item, item_req, custo_unitario, novo_estoque in itens_processados:
+    for insumo, item_req, custo_unitario, novo_estoque in itens_processados:
         compras_repository.add_item_compra(
             db=db,
             compra_id=compra.id,
-            item_id=item.id,
+            insumo_id=insumo.id,
             quantidade=item_req.quantidade,
             custo_unitario=custo_unitario,
             custo_total=item_req.custo_total,
         )
         estoque_repository.registrar_movimento(
             db=db,
-            item_id=item.id,
+            insumo_id=insumo.id,
             tipo=TipoMovimento.ENTRADA,
             quantidade=item_req.quantidade,
             custo_unitario=custo_unitario,
@@ -109,8 +94,8 @@ def criar_compra(db: Session, data: CompraCreateRequest) -> CompraResponse:
         )
         itens_response.append(
             ItemCompraResponse(
-                item_id=item.id,
-                item_nome=item.nome,
+                item_id=insumo.id,
+                item_nome=insumo.nome,
                 quantidade=item_req.quantidade,
                 custo_unitario=custo_unitario,
                 custo_total=item_req.custo_total,
@@ -139,11 +124,11 @@ def get_compra(db: Session, compra_id: int) -> CompraResponse:
     itens_db = compras_repository.get_itens_compra(db, compra_id)
     itens_response = []
     for ic in itens_db:
-        item = db.execute(select(Item).where(Item.id == ic.item_id)).scalar_one_or_none()
+        insumo = db.execute(select(Insumo).where(Insumo.id == ic.insumo_id)).scalar_one_or_none()
         itens_response.append(
             ItemCompraResponse(
-                item_id=ic.item_id,
-                item_nome=item.nome if item else "",
+                item_id=ic.insumo_id,
+                item_nome=insumo.nome if insumo else "",
                 quantidade=ic.quantidade,
                 custo_unitario=ic.custo_unitario,
                 custo_total=ic.custo_total,
@@ -179,11 +164,11 @@ def list_compras(
         itens_db = compras_repository.get_itens_compra(db, compra.id)
         itens_response = []
         for ic in itens_db:
-            item = db.execute(select(Item).where(Item.id == ic.item_id)).scalar_one_or_none()
+            insumo = db.execute(select(Insumo).where(Insumo.id == ic.insumo_id)).scalar_one_or_none()
             itens_response.append(
                 ItemCompraResponse(
-                    item_id=ic.item_id,
-                    item_nome=item.nome if item else "",
+                    item_id=ic.insumo_id,
+                    item_nome=insumo.nome if insumo else "",
                     quantidade=ic.quantidade,
                     custo_unitario=ic.custo_unitario,
                     custo_total=ic.custo_total,

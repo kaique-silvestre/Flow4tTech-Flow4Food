@@ -21,7 +21,7 @@ class ItemComanda(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     comanda_id: Mapped[int] = mapped_column(nullable=False)
-    item_id: Mapped[int] = mapped_column(nullable=False)
+    produto_id: Mapped[int] = mapped_column(nullable=False)
     quantidade: Mapped[Decimal] = mapped_column(nullable=False)
     preco_unitario: Mapped[Decimal] = mapped_column(nullable=False)
     pessoa_associada: Mapped[Optional[str]] = mapped_column(nullable=True)

@@ -12,8 +12,10 @@ from src.api.routes import estoque as estoque_routes
 from src.api.routes import fornecedores as fornecedores_routes
 from src.api.routes import garcons as garcons_routes
 from src.api.routes import health
+from src.api.routes import insumos as insumos_routes
 from src.api.routes import itens as itens_routes
 from src.api.routes import metodos_pagamento as metodos_pagamento_routes
+from src.api.routes import produtos as produtos_routes
 from src.api.routes import relatorios as relatorios_routes
 from src.core.config import get_settings
 from src.core.errors import register_exception_handlers
@@ -52,7 +54,9 @@ def create_app() -> FastAPI:
     app.include_router(fornecedores_routes.router, prefix="/api/fornecedores", tags=["fornecedores"])
     app.include_router(garcons_routes.router, prefix="/api/garcons", tags=["garcons"])
     app.include_router(metodos_pagamento_routes.router, prefix="/api/metodos-pagamento", tags=["metodos_pagamento"])
+    app.include_router(insumos_routes.router, prefix="/api/insumos", tags=["insumos"])
     app.include_router(itens_routes.router, prefix="/api/itens", tags=["itens"])
+    app.include_router(produtos_routes.router, prefix="/api/produtos", tags=["produtos"])
     app.include_router(compras_routes.router, prefix="/api/compras", tags=["compras"])
     app.include_router(estoque_routes.router, prefix="/api/estoque", tags=["estoque"])
     app.include_router(relatorios_routes.router, prefix="/api/relatorios", tags=["relatorios"])
