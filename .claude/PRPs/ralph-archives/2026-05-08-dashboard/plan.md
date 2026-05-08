@@ -4,7 +4,7 @@
 **Parent Issue:** `docs/issues_matchpoint_mvp.md` → Issue 12
 **Documento mestre:** `docs/matchpoint_documentacao.md` §8.2
 **Type:** AFK
-**Status:** Concluída ✓ (2026-05-08)
+**Status:** Em andamento
 **Criado em:** 2026-05-08
 **Depende de:** Issue #7 (Fechamento) — concluída
 
