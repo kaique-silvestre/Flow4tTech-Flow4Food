@@ -17,6 +17,9 @@ import { ComandasPage } from "@/features/comandas/ComandasPage";
 import { ComandaAbertaPage } from "@/features/comandas/ComandaAbertaPage";
 import FechamentoPage from "@/features/comandas/FechamentoPage";
 import { ComprovantePage } from "@/features/comandas/ComprovantePage";
+import { VendasDoDiaPage } from "@/features/relatorios/VendasDoDiaPage";
+import { HistoricoComandasPage } from "@/features/relatorios/HistoricoComandasPage";
+import { FechamentoCaixaPage } from "@/features/relatorios/FechamentoCaixaPage";
 import { queryClient } from "@/lib/queryClient";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
@@ -42,6 +45,9 @@ export function App() {
               <Route path="/cadastros/fornecedores" element={<FornecedoresPage />} />
               <Route path="/cadastros/garcons" element={<GarconsPage />} />
               <Route path="/cadastros/metodos-pagamento" element={<MetodosPagamentoPage />} />
+              <Route path="/relatorios/vendas-do-dia" element={<VendasDoDiaPage />} />
+              <Route path="/relatorios/historico" element={<HistoricoComandasPage />} />
+              <Route path="/relatorios/fechamento-caixa" element={<FechamentoCaixaPage />} />
               <Route path="*" element={<PlaceholderPage />} />
             </Route>
           </Route>
