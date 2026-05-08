@@ -164,12 +164,12 @@ Link "[ + Cadastrar novo insumo ]" abaixo do seletor de insumos em cada linha de
 
 ### Critérios de aceite
 
-- [ ] Link "[ + Cadastrar novo insumo ]" visível abaixo do seletor de insumo em cada linha
-- [ ] Clicar no link abre modal com campos: nome (required), categoria (required), unidade (required), quantidade_caixa (opcional)
-- [ ] Salvar no modal: insumo aparece pré-selecionado na linha que disparou o modal
-- [ ] Outros dados da compra (fornecedor, data, nota, outras linhas) preservados ao fechar modal
-- [ ] Insumo criado disponível para seleção em futuras compras (query invalidada)
-- [ ] `POST /api/insumos` retorna o insumo criado com ID
+- [x] Link "[ + Cadastrar novo insumo ]" visível abaixo do seletor de insumo em cada linha
+- [x] Clicar no link abre modal com campos: nome (required), categoria (required), unidade (required), quantidade_caixa (opcional)
+- [x] Salvar no modal: insumo aparece pré-selecionado na linha que disparou o modal
+- [x] Outros dados da compra (fornecedor, data, nota, outras linhas) preservados ao fechar modal
+- [x] Insumo criado disponível para seleção em futuras compras (query invalidada)
+- [x] `POST /api/insumos` retorna o insumo criado com ID
 
 ### User stories endereçadas
 
@@ -188,14 +188,14 @@ Botão `[✏]` ao lado de garçom e identificação no cabeçalho de `ComandaAbe
 
 ### Critérios de aceite
 
-- [ ] Botão `[✏]` visível ao lado de identificação e garçom para comandas abertas
-- [ ] Clicar em `[✏]` transforma o texto em input inline (sem modal)
-- [ ] Enter ou blur dispara `PATCH /api/comandas/:id` com o novo valor
-- [ ] `PATCH` aceita `identificacao` (string) e `garcom_id` (int) individualmente
-- [ ] Tentativa de PATCH em comanda fechada retorna 422/400
+- [x] Botão `[✏]` visível ao lado de identificação e garçom para comandas abertas
+- [x] Clicar em `[✏]` transforma o texto em input inline (sem modal)
+- [x] Enter ou blur dispara `PATCH /api/comandas/:id` com o novo valor
+- [x] `PATCH` aceita `identificacao` (string) e `garcom_id` (int) individualmente
+- [x] Tentativa de PATCH em comanda fechada retorna 422/400
 - [ ] Botão `[✏]` não renderizado para comandas com status != `aberta`
-- [ ] Troca de garçom reflete em relatórios de vendas por garçom
-- [ ] Sem debounce excessivo — salva apenas no blur/Enter, não a cada keystroke
+- [x] Troca de garçom reflete em relatórios de vendas por garçom
+- [x] Sem debounce excessivo — salva apenas no blur/Enter, não a cada keystroke
 
 ### User stories endereçadas
 

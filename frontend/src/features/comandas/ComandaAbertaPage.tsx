@@ -181,6 +181,7 @@ export function ComandaAbertaPage() {
     );
   }
 
+  const isEditable = comanda.status === "aberta" || comanda.status === "reaberta";
   const itensAtivos = comanda.itens_ativos.filter((i) => !i.cancelado);
   const itensCancelados = comanda.itens_ativos.filter((i) => i.cancelado);
 
@@ -210,14 +211,16 @@ export function ComandaAbertaPage() {
                     {comanda.tipo_identificacao === "mesa" ? "Mesa " : ""}{comanda.identificacao}
                   </span>
                 )}
-                <button
-                  type="button"
-                  className="text-gray-400 hover:text-gray-600 text-sm"
-                  onClick={startEditIdentificacao}
-                  title="Editar identificação"
-                >
-                  ✏
-                </button>
+                {isEditable && (
+                  <button
+                    type="button"
+                    className="text-gray-400 hover:text-gray-600 text-sm"
+                    onClick={startEditIdentificacao}
+                    title="Editar identificação"
+                  >
+                    ✏
+                  </button>
+                )}
               </div>
               <div className="flex items-center gap-1 text-sm text-gray-500">
                 <span>Garçom:</span>
@@ -238,14 +241,16 @@ export function ComandaAbertaPage() {
                 ) : (
                   <span>{comanda.garcom_nome}</span>
                 )}
-                <button
-                  type="button"
-                  className="text-gray-400 hover:text-gray-600 text-xs ml-0.5"
-                  onClick={startEditGarcom}
-                  title="Editar garçom"
-                >
-                  ✏
-                </button>
+                {isEditable && (
+                  <button
+                    type="button"
+                    className="text-gray-400 hover:text-gray-600 text-xs ml-0.5"
+                    onClick={startEditGarcom}
+                    title="Editar garçom"
+                  >
+                    ✏
+                  </button>
+                )}
                 <span>· Aberta há {comanda.tempo_aberta_minutos} min</span>
               </div>
             </div>
