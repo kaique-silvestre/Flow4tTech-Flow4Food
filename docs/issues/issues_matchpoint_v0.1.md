@@ -102,20 +102,20 @@ Separar a entidade `Item` (com flag `vendavel`) em dois modelos distintos: `Insu
 
 ### Critérios de aceite
 
-- [ ] Tabelas `insumos`, `produtos`, `ficha_tecnica` existem com schema conforme PRD
-- [ ] Todos os dados de `itens` migrados corretamente (verificável via fixture)
-- [ ] `GET /api/insumos` retorna insumos ativos
-- [ ] `GET /api/produtos` retorna produtos ativos
-- [ ] `GET /api/itens` retorna 404
-- [ ] `NovaCompraPage`: seletor usa `GET /api/insumos`
-- [ ] `EstoquePage`: lista usa `insumos`
-- [ ] `ComandaAbertaPage`: seletor usa `GET /api/produtos`
-- [ ] Link "Itens" removido do menu Cadastros no `Sidebar`
-- [ ] Fechar comanda com produto com ficha técnica desconta insumos corretamente
-- [ ] Fechar comanda com produto sem ficha técnica fecha sem baixar estoque
-- [ ] Compra registrada atualiza `custo_medio` de `insumo` via média ponderada
-- [ ] Migrations executam em sequência completa em DB com fixture sem erro
-- [ ] Cada migration é reversível individualmente
+- [x] Tabelas `insumos`, `produtos`, `ficha_tecnica` existem com schema conforme PRD
+- [x] Todos os dados de `itens` migrados corretamente (verificável via fixture)
+- [x] `GET /api/insumos` retorna insumos ativos
+- [x] `GET /api/produtos` retorna produtos ativos
+- [x] `GET /api/itens` retorna 404
+- [x] `NovaCompraPage`: seletor usa `GET /api/insumos`
+- [x] `EstoquePage`: lista usa `insumos`
+- [x] `ComandaAbertaPage`: seletor usa `GET /api/produtos`
+- [x] Link "Itens" removido do menu Cadastros no `Sidebar`
+- [x] Fechar comanda com produto com ficha técnica desconta insumos corretamente
+- [x] Fechar comanda com produto sem ficha técnica fecha sem baixar estoque
+- [x] Compra registrada atualiza `custo_medio` de `insumo` via média ponderada
+- [x] Migrations executam em sequência completa em DB com fixture sem erro
+- [x] Cada migration é reversível individualmente
 
 ### User stories endereçadas
 

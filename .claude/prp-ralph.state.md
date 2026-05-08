@@ -1,8 +1,29 @@
 ---
-iteration: 2
+iteration: 3
 max_iterations: 10
 plan_path: ".claude/PRPs/plans/issue-14-ux-sweep.md"
 started_at: "2026-05-08T18:00:00Z"
+---
+
+## Iteration 3 - 2026-05-08T22:35:00Z — Issue 4 (M000) sincronizada
+
+### Completed
+- Verificou Issue 4 (M000) já implementada: commits 87e4861 + 662ffde + 92280a3
+- Migrations 0009–0017 presentes (9 steps M000)
+- 95 testes backend passando, TypeScript sem erros
+- Marcou todos 14 critérios de aceite como `[x]` em docs/issues/issues_matchpoint_v0.1.md
+
+### Validation Status
+- type-check: PASS (tsc --noEmit zero erros)
+- lint: N/A
+- Tests: PASS (95 backend, 11 produto/insumo/compra)
+- Build: N/A
+
+### Learnings
+- `ItensPage.tsx` + `ItemModal.tsx` ainda existem como dead code mas sem rota — não quebram nada
+- `custo_medio` implementado em `src/services/compras_service.py:_calcular_custo_medio` com média ponderada
+- `/api/itens` retorna 404 via `src/api/routes/itens.py` stub
+
 ---
 
 ## Iteration 2 - 2026-05-08T19:10:00Z — Issues 1, 2, 3 (matchpoint v0.1) sincronizadas
