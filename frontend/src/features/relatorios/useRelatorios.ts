@@ -87,3 +87,102 @@ export function useFechamentoCaixa(data: string) {
     enabled: !!data,
   });
 }
+
+export interface ItemSemCusto {
+  item_id: number;
+  nome: string;
+}
+
+export interface DREResponse {
+  mes: string;
+  faturamento_bruto: number;
+  descontos: number;
+  cortesias_valor: number;
+  faturamento_liquido: number;
+  cmv: number;
+  perdas: number;
+  total_custos: number;
+  lucro_bruto: number;
+  margem_percentual: number;
+  produtos_sem_custo: ItemSemCusto[];
+}
+
+export interface CMVProdutoItem {
+  item_id: number;
+  nome: string;
+  preco_venda: number | null;
+  custo_medio: number | null;
+  margem_valor: number | null;
+  margem_percentual: number | null;
+  classificacao: "verde" | "amarelo" | "vermelho" | "sem_custo";
+}
+
+export interface CMVPorProdutoResponse {
+  itens: CMVProdutoItem[];
+}
+
+export interface PerdasGrupo {
+  motivo: string;
+  qtd_movimentos: number;
+  total_valor: number;
+}
+
+export interface PerdasCortesiasResponse {
+  data_inicio: string;
+  data_fim: string;
+  total_geral: number;
+  grupos: PerdasGrupo[];
+}
+
+export interface VendasGarcomItem {
+  garcom_id: number;
+  garcom_nome: string;
+  qtd_comandas: number;
+  faturamento: number;
+  ticket_medio: number;
+}
+
+export interface VendasPorGarcomResponse {
+  data_inicio: string;
+  data_fim: string;
+  garcons: VendasGarcomItem[];
+}
+
+export function useDRE(mes: string) {
+  return useQuery<DREResponse>({
+    queryKey: ["relatorios", "dre", mes],
+    queryFn: () =>
+      api.get<DREResponse>("/api/relatorios/dre", { params: { mes } }).then((r) => r.data),
+    enabled: !!mes,
+  });
+}
+
+export function useCMVPorProduto() {
+  return useQuery<CMVPorProdutoResponse>({
+    queryKey: ["relatorios", "cmv-por-produto"],
+    queryFn: () =>
+      api.get<CMVPorProdutoResponse>("/api/relatorios/cmv-por-produto").then((r) => r.data),
+  });
+}
+
+export function usePerdasCortesias(params: { data_inicio: string; data_fim: string }) {
+  return useQuery<PerdasCortesiasResponse>({
+    queryKey: ["relatorios", "perdas-cortesias", params],
+    queryFn: () =>
+      api
+        .get<PerdasCortesiasResponse>("/api/relatorios/perdas-cortesias", { params })
+        .then((r) => r.data),
+    enabled: !!params.data_inicio && !!params.data_fim,
+  });
+}
+
+export function useVendasPorGarcom(params: { data_inicio: string; data_fim: string }) {
+  return useQuery<VendasPorGarcomResponse>({
+    queryKey: ["relatorios", "vendas-por-garcom", params],
+    queryFn: () =>
+      api
+        .get<VendasPorGarcomResponse>("/api/relatorios/vendas-por-garcom", { params })
+        .then((r) => r.data),
+    enabled: !!params.data_inicio && !!params.data_fim,
+  });
+}

@@ -6,11 +6,19 @@ from sqlalchemy.orm import Session
 
 from src.repositories import relatorio_repository as rr
 from src.schemas.relatorio_schemas import (
+    CMVPorProdutoResponse,
+    CMVProdutoItem,
     ComandaRelatorioItem,
+    DREResponse,
     FechamentoCaixaResponse,
     HistoricoResponse,
+    ItemSemCusto,
     PagamentoResumo,
+    PerdasCortesiasResponse,
+    PerdasGrupo,
     VendasDoDiaResponse,
+    VendasGarcomItem,
+    VendasPorGarcomResponse,
 )
 
 
@@ -107,4 +115,129 @@ def fechamento_caixa(db: Session, data: datetime.date) -> FechamentoCaixaRespons
         cortesias=cortesias_total,
         faturamento_liquido=bruto - descontos,
         por_metodo=[PagamentoResumo(**p) for p in por_metodo],
+    )
+
+
+def dre(db: Session, mes: str) -> DREResponse:
+    start, end = rr._month_utc_range(mes)
+    comandas = rr.list_fechadas_no_periodo(db, start, end)
+    ids = [c.id for c in comandas]
+
+    net = sum((c.total or Decimal("0") for c in comandas), Decimal("0"))
+    descontos = sum((c.desconto_valor or Decimal("0") for c in comandas), Decimal("0"))
+    cortesias_val = rr.cortesias_valor_total(db, ids)
+    faturamento_bruto = net + descontos  # pré-desconto; cortesias têm preco=0 e não entram
+    faturamento_liquido = net  # caixa efetivo recebido
+
+    cmv = rr.cmv_total(db, ids)
+    perdas = rr.perdas_total(db, start, end)
+    total_custos = cmv + perdas
+    lucro_bruto = faturamento_liquido - total_custos
+    margem = (
+        (lucro_bruto / faturamento_liquido * Decimal("100")).quantize(Decimal("0.01"))
+        if faturamento_liquido > 0
+        else Decimal("0")
+    )
+
+    sem_custo = [ItemSemCusto(**p) for p in rr.produtos_sem_custo(db, ids)]
+
+    return DREResponse(
+        mes=mes,
+        faturamento_bruto=faturamento_bruto,
+        descontos=descontos,
+        cortesias_valor=cortesias_val,
+        faturamento_liquido=faturamento_liquido,
+        cmv=cmv,
+        perdas=perdas,
+        total_custos=total_custos,
+        lucro_bruto=lucro_bruto,
+        margem_percentual=margem,
+        produtos_sem_custo=sem_custo,
+    )
+
+
+def cmv_por_produto(db: Session) -> CMVPorProdutoResponse:
+    itens = rr.todos_itens_vendaveis(db)
+    resultado = []
+    for item in itens:
+        if item.custo_medio is None or item.preco_venda is None:
+            resultado.append(
+                CMVProdutoItem(
+                    item_id=item.id,
+                    nome=item.nome,
+                    preco_venda=item.preco_venda,
+                    custo_medio=item.custo_medio,
+                    margem_valor=None,
+                    margem_percentual=None,
+                    classificacao="sem_custo",
+                )
+            )
+        else:
+            margem_val = item.preco_venda - item.custo_medio
+            margem_pct = (margem_val / item.preco_venda * Decimal("100")).quantize(Decimal("0.01"))
+            if margem_pct > Decimal("40"):
+                classif = "verde"
+            elif margem_pct >= Decimal("20"):
+                classif = "amarelo"
+            else:
+                classif = "vermelho"
+            resultado.append(
+                CMVProdutoItem(
+                    item_id=item.id,
+                    nome=item.nome,
+                    preco_venda=item.preco_venda,
+                    custo_medio=item.custo_medio,
+                    margem_valor=margem_val,
+                    margem_percentual=margem_pct,
+                    classificacao=classif,
+                )
+            )
+    return CMVPorProdutoResponse(itens=resultado)
+
+
+def perdas_cortesias(
+    db: Session, data_inicio: datetime.date, data_fim: datetime.date
+) -> PerdasCortesiasResponse:
+    start, _ = rr._day_utc_range(data_inicio)
+    _, end = rr._day_utc_range(data_fim)
+    grupos_raw = rr.perdas_no_periodo(db, start, end)
+    grupos = [
+        PerdasGrupo(motivo=g["motivo"], qtd_movimentos=g["qtd"], total_valor=g["total"])
+        for g in grupos_raw
+    ]
+    total = sum((g.total_valor for g in grupos), Decimal("0"))
+    return PerdasCortesiasResponse(
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        total_geral=total,
+        grupos=grupos,
+    )
+
+
+def vendas_por_garcom(
+    db: Session, data_inicio: datetime.date, data_fim: datetime.date
+) -> VendasPorGarcomResponse:
+    start, _ = rr._day_utc_range(data_inicio)
+    _, end = rr._day_utc_range(data_fim)
+    rows = rr.vendas_por_garcom_periodo(db, start, end)
+    garcom_ids = [r["garcom_id"] for r in rows]
+    nomes = rr._garcom_names(db, garcom_ids)
+    garcons = []
+    for r in rows:
+        fat = r["faturamento"]
+        qtd = r["qtd_comandas"]
+        ticket = (fat / qtd).quantize(Decimal("0.01")) if qtd > 0 else Decimal("0")
+        garcons.append(
+            VendasGarcomItem(
+                garcom_id=r["garcom_id"],
+                garcom_nome=nomes.get(r["garcom_id"], "—"),
+                qtd_comandas=qtd,
+                faturamento=fat,
+                ticket_medio=ticket,
+            )
+        )
+    return VendasPorGarcomResponse(
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        garcons=garcons,
     )

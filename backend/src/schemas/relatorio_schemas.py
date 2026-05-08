@@ -48,3 +48,63 @@ class FechamentoCaixaResponse(BaseModel):
     cortesias: Decimal
     faturamento_liquido: Decimal
     por_metodo: list[PagamentoResumo]
+
+
+class ItemSemCusto(BaseModel):
+    item_id: int
+    nome: str
+
+
+class DREResponse(BaseModel):
+    mes: str
+    faturamento_bruto: Decimal
+    descontos: Decimal
+    cortesias_valor: Decimal
+    faturamento_liquido: Decimal
+    cmv: Decimal
+    perdas: Decimal
+    total_custos: Decimal
+    lucro_bruto: Decimal
+    margem_percentual: Decimal
+    produtos_sem_custo: list[ItemSemCusto]
+
+
+class CMVProdutoItem(BaseModel):
+    item_id: int
+    nome: str
+    preco_venda: Optional[Decimal]
+    custo_medio: Optional[Decimal]
+    margem_valor: Optional[Decimal]
+    margem_percentual: Optional[Decimal]
+    classificacao: str
+
+
+class CMVPorProdutoResponse(BaseModel):
+    itens: list[CMVProdutoItem]
+
+
+class PerdasGrupo(BaseModel):
+    motivo: str
+    qtd_movimentos: int
+    total_valor: Decimal
+
+
+class PerdasCortesiasResponse(BaseModel):
+    data_inicio: datetime.date
+    data_fim: datetime.date
+    total_geral: Decimal
+    grupos: list[PerdasGrupo]
+
+
+class VendasGarcomItem(BaseModel):
+    garcom_id: int
+    garcom_nome: str
+    qtd_comandas: int
+    faturamento: Decimal
+    ticket_medio: Decimal
+
+
+class VendasPorGarcomResponse(BaseModel):
+    data_inicio: datetime.date
+    data_fim: datetime.date
+    garcons: list[VendasGarcomItem]

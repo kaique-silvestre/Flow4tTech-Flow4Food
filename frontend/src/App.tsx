@@ -20,6 +20,10 @@ import { ComprovantePage } from "@/features/comandas/ComprovantePage";
 import { VendasDoDiaPage } from "@/features/relatorios/VendasDoDiaPage";
 import { HistoricoComandasPage } from "@/features/relatorios/HistoricoComandasPage";
 import { FechamentoCaixaPage } from "@/features/relatorios/FechamentoCaixaPage";
+import { DrePage } from "@/features/relatorios/DrePage";
+import { CmvPorProdutoPage } from "@/features/relatorios/CmvPorProdutoPage";
+import { PerdasCortesiasPage } from "@/features/relatorios/PerdasCortesiasPage";
+import { VendasPorGarcomPage } from "@/features/relatorios/VendasPorGarcomPage";
 import { queryClient } from "@/lib/queryClient";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
@@ -48,6 +52,10 @@ export function App() {
               <Route path="/relatorios/vendas-do-dia" element={<VendasDoDiaPage />} />
               <Route path="/relatorios/historico" element={<HistoricoComandasPage />} />
               <Route path="/relatorios/fechamento-caixa" element={<FechamentoCaixaPage />} />
+              <Route path="/relatorios/dre" element={<DrePage />} />
+              <Route path="/relatorios/cmv" element={<CmvPorProdutoPage />} />
+              <Route path="/relatorios/perdas-cortesias" element={<PerdasCortesiasPage />} />
+              <Route path="/relatorios/vendas-por-garcom" element={<VendasPorGarcomPage />} />
               <Route path="*" element={<PlaceholderPage />} />
             </Route>
           </Route>
