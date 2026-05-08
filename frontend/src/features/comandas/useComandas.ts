@@ -21,19 +21,33 @@ export interface ItemComandaResponse {
   created_at: string;
 }
 
+export interface PagamentoResponse {
+  id: number;
+  metodo_id: number;
+  metodo_nome: string;
+  valor: number;
+}
+
 export interface ComandaResponse {
   id: number;
   identificacao: string;
   tipo_identificacao: "nome" | "mesa";
   garcom_id: number;
   garcom_nome: string;
-  status: "aberta" | "fechada" | "cancelada";
+  status: "aberta" | "fechada" | "cancelada" | "reaberta";
   version: number;
   pessoas: string[];
   total_parcial: number;
   itens_ativos: ItemComandaResponse[];
   created_at: string;
   tempo_aberta_minutos: number;
+  desconto_percentual: number | null;
+  desconto_valor: number | null;
+  total: number | null;
+  saldo_pendente: number | null;
+  data_fechamento: string | null;
+  pagamentos: PagamentoResponse[];
+  itens_negativos: string[];
 }
 
 function handle409(err: unknown, comanda_id: number | string, qc: ReturnType<typeof useQueryClient>) {
@@ -144,6 +158,34 @@ export function useCancelarItem(comanda_id: number | string) {
       qc.invalidateQueries({ queryKey: ["comandas", comanda_id] });
     },
     onError: (err: unknown) => handle409(err, comanda_id, qc),
+  });
+}
+
+export function useComandasFechadas(busca?: string) {
+  return useQuery<ComandaResponse[]>({
+    queryKey: ["comandas", "fechadas", busca],
+    queryFn: () =>
+      api
+        .get<ComandaResponse[]>("/api/comandas/fechadas", { params: busca ? { busca } : {} })
+        .then((r) => r.data),
+  });
+}
+
+export function useReopenComanda(comanda_id: number | string) {
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  return useMutation({
+    mutationFn: () =>
+      api.post<ComandaResponse>(`/api/comandas/${comanda_id}/reabrir`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["comandas"] });
+      navigate(`/comandas/${comanda_id}`);
+      toast.success("Comanda reaberta com sucesso");
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.message;
+      toast.error(msg ?? "Erro ao reabrir comanda");
+    },
   });
 }
 

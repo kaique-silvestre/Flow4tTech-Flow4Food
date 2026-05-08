@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_current_user, get_db
+from src.repositories import comandas_repository as _cr
 from src.schemas.comandas import (
     CancelarItemRequest,
     ComandaCreateRequest,
@@ -11,7 +12,10 @@ from src.schemas.comandas import (
     EditarItemRequest,
     LancarItemRequest,
 )
-from src.services import comandas_service
+from src.schemas.comprovante import ComprovanteResponse
+from src.schemas.fechamento import AplicarDescontoRequest, FecharComandaRequest
+from src.services import comandas_service, comprovante_service
+from src.services.comandas_service import _build_response
 
 router = APIRouter()
 
@@ -23,6 +27,16 @@ def abrir_comanda(
     _user: dict = Depends(get_current_user),
 ) -> ComandaResponse:
     return comandas_service.abrir_comanda(db, body)  # type: ignore[return-value]
+
+
+@router.get("/fechadas", response_model=list[ComandaResponse])
+def list_fechadas(
+    busca: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> list[ComandaResponse]:
+    comandas = _cr.list_fechadas(db, busca)
+    return [_build_response(db, c) for c in comandas]  # type: ignore[return-value]
 
 
 @router.get("", response_model=list[ComandaResponse])
@@ -76,3 +90,41 @@ def cancelar_item(
     _user: dict = Depends(get_current_user),
 ) -> ComandaResponse:
     return comandas_service.cancelar_item(db, comanda_id, item_id, body)  # type: ignore[return-value]
+
+
+@router.post("/{comanda_id}/desconto", response_model=ComandaResponse)
+def aplicar_desconto(
+    comanda_id: int,
+    body: AplicarDescontoRequest,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> ComandaResponse:
+    return comandas_service.aplicar_desconto(db, comanda_id, body)  # type: ignore[return-value]
+
+
+@router.post("/{comanda_id}/fechar", response_model=ComandaResponse)
+def fechar_comanda(
+    comanda_id: int,
+    body: FecharComandaRequest,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> ComandaResponse:
+    return comandas_service.fechar_comanda(db, comanda_id, body)  # type: ignore[return-value]
+
+
+@router.post("/{comanda_id}/reabrir", response_model=ComandaResponse)
+def reabrir_comanda(
+    comanda_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> ComandaResponse:
+    return comandas_service.reabrir_comanda(db, comanda_id)  # type: ignore[return-value]
+
+
+@router.get("/{comanda_id}/comprovante", response_model=ComprovanteResponse)
+def get_comprovante(
+    comanda_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> ComprovanteResponse:
+    return comprovante_service.build_comprovante(db, comanda_id)  # type: ignore[return-value]

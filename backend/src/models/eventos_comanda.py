@@ -13,6 +13,7 @@ class TipoEvento(str, enum.Enum):
     ITEM_LANCADO = "item_lancado"
     ITEM_EDITADO = "item_editado"
     ITEM_CANCELADO = "item_cancelado"
+    COMANDA_REABERTA = "comanda_reaberta"
 
 
 class EventoComanda(Base):

@@ -28,10 +28,19 @@ def create_comanda(db: Session, data: ComandaCreateRequest) -> Comanda:
 
 
 def list_abertas(db: Session, busca: Optional[str] = None) -> list[Comanda]:
-    q = db.query(Comanda).filter(Comanda.status == StatusComanda.ABERTA.value)
+    q = db.query(Comanda).filter(
+        Comanda.status.in_([StatusComanda.ABERTA.value, StatusComanda.REABERTA.value])
+    )
     if busca:
         q = q.filter(Comanda.identificacao.ilike(f"%{busca}%"))
     return q.order_by(Comanda.created_at.desc()).all()
+
+
+def list_fechadas(db: Session, busca: Optional[str] = None) -> list[Comanda]:
+    q = db.query(Comanda).filter(Comanda.status == StatusComanda.FECHADA.value)
+    if busca:
+        q = q.filter(Comanda.identificacao.ilike(f"%{busca}%"))
+    return q.order_by(Comanda.data_fechamento.desc()).all()
 
 
 def get_by_id(db: Session, comanda_id: int) -> Optional[Comanda]:
@@ -141,6 +150,54 @@ def add_evento(
     db.add(evento)
     db.flush()
     return evento
+
+
+def atualizar_desconto(
+    db: Session,
+    comanda_id: int,
+    desconto_percentual: Optional[Decimal],
+    desconto_valor: Optional[Decimal],
+) -> None:
+    comanda = db.query(Comanda).filter(Comanda.id == comanda_id).first()
+    if comanda is not None:
+        comanda.desconto_percentual = desconto_percentual
+        comanda.desconto_valor = desconto_valor
+    db.flush()
+
+
+def fechar_comanda_repo(db: Session, comanda_id: int, total: Decimal) -> None:
+    comanda = db.query(Comanda).filter(Comanda.id == comanda_id).first()
+    if comanda is not None:
+        comanda.status = StatusComanda.FECHADA.value
+        comanda.total = total
+        comanda.data_fechamento = datetime.datetime.utcnow()
+    db.flush()
+
+
+def atualizar_saldo_pendente(db: Session, comanda_id: int, saldo: Decimal) -> None:
+    comanda = db.query(Comanda).filter(Comanda.id == comanda_id).first()
+    if comanda is not None:
+        comanda.saldo_pendente = saldo
+    db.flush()
+
+
+def get_itens_para_fechar(db: Session, comanda_id: int) -> list[ItemComanda]:
+    return (
+        db.query(ItemComanda)
+        .filter(ItemComanda.comanda_id == comanda_id, ItemComanda.cancelado == False)  # noqa: E712
+        .order_by(ItemComanda.created_at.asc())
+        .all()
+    )
+
+
+def reabrir_comanda_repo(db: Session, comanda_id: int) -> None:
+    comanda = db.query(Comanda).filter(Comanda.id == comanda_id).first()
+    if comanda is not None:
+        comanda.status = StatusComanda.REABERTA.value
+        comanda.total = None
+        comanda.data_fechamento = None
+        comanda.saldo_pendente = None
+    db.flush()
 
 
 def top_itens(db: Session, dias: int, limit: int) -> list[tuple[int, int]]:

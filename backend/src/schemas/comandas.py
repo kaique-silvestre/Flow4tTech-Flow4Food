@@ -5,6 +5,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.models.itens_comanda import MotivoCancelamento
+from src.schemas.fechamento import PagamentoResponse
 
 
 class ComandaCreateRequest(BaseModel):
@@ -69,3 +70,10 @@ class ComandaResponse(BaseModel):
     itens_ativos: list[ItemComandaResponse]
     created_at: datetime.datetime
     tempo_aberta_minutos: int
+    desconto_percentual: Optional[Decimal] = None
+    desconto_valor: Optional[Decimal] = None
+    total: Optional[Decimal] = None
+    saldo_pendente: Optional[Decimal] = None
+    data_fechamento: Optional[datetime.datetime] = None
+    pagamentos: list[PagamentoResponse] = []
+    itens_negativos: list[str] = []

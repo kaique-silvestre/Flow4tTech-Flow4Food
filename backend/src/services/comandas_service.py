@@ -3,13 +3,25 @@ import json
 from decimal import Decimal
 from typing import Optional
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
 from src.models.comandas import Comanda, StatusComanda
+from src.models.componentes_ficha import ComponenteFicha
 from src.models.eventos_comanda import TipoEvento
+from src.models.fichas_tecnicas import FichaTecnica
+from src.models.itens import Item, TipoItem
 from src.models.itens_comanda import ItemComanda
-from src.repositories import comandas_repository, garcons_repository, itens_repository
+from src.models.metodos_pagamento import MetodoPagamento
+from src.models.movimentos_estoque import TipoMovimento
+from src.repositories import (
+    comandas_repository,
+    estoque_repository,
+    garcons_repository,
+    itens_repository,
+    pagamentos_repository,
+)
 from src.schemas.comandas import (
     CancelarItemRequest,
     ComandaCreateRequest,
@@ -18,6 +30,7 @@ from src.schemas.comandas import (
     ItemComandaResponse,
     LancarItemRequest,
 )
+from src.schemas.fechamento import AplicarDescontoRequest, FecharComandaRequest, PagamentoResponse
 from src.schemas.itens import ItemResponse
 from src.services import itens_service
 
@@ -73,6 +86,15 @@ def _build_response(db: Session, comanda: Comanda) -> ComandaResponse:
         delta = datetime.timedelta(0)
     tempo_aberta_minutos = int(delta.total_seconds() // 60)
 
+    pagamentos_db = pagamentos_repository.list_by_comanda(db, comanda.id)
+    pagamentos_resp = []
+    for p in pagamentos_db:
+        metodo = db.get(MetodoPagamento, p.metodo_id)
+        metodo_nome = metodo.nome if metodo else f"Método {p.metodo_id}"
+        pagamentos_resp.append(
+            PagamentoResponse(id=p.id, metodo_id=p.metodo_id, metodo_nome=metodo_nome, valor=p.valor)
+        )
+
     return ComandaResponse(
         id=comanda.id,
         identificacao=comanda.identificacao,
@@ -86,6 +108,12 @@ def _build_response(db: Session, comanda: Comanda) -> ComandaResponse:
         itens_ativos=itens_resp,
         created_at=comanda.created_at,
         tempo_aberta_minutos=tempo_aberta_minutos,
+        desconto_percentual=comanda.desconto_percentual,
+        desconto_valor=comanda.desconto_valor,
+        total=comanda.total,
+        saldo_pendente=comanda.saldo_pendente,
+        data_fechamento=comanda.data_fechamento,
+        pagamentos=pagamentos_resp,
     )
 
 
@@ -116,11 +144,14 @@ def get_comanda(db: Session, comanda_id: int) -> ComandaResponse:
     return _build_response(db, comanda)
 
 
+_ABERTA_STATUSES = {StatusComanda.ABERTA.value, StatusComanda.REABERTA.value}
+
+
 def lancar_item(db: Session, comanda_id: int, data: LancarItemRequest) -> ComandaResponse:
     comanda = comandas_repository.get_by_id(db, comanda_id)
     if comanda is None:
         raise AppError(ErrorCode.NOT_FOUND, "Comanda não encontrada", http_status=404)
-    if comanda.status != StatusComanda.ABERTA.value:
+    if comanda.status not in _ABERTA_STATUSES:
         raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
 
     item = itens_repository.get_by_id(db, data.item_id)
@@ -172,7 +203,7 @@ def editar_item(
     comanda = comandas_repository.get_by_id(db, comanda_id)
     if comanda is None:
         raise AppError(ErrorCode.NOT_FOUND, "Comanda não encontrada", http_status=404)
-    if comanda.status != StatusComanda.ABERTA.value:
+    if comanda.status not in _ABERTA_STATUSES:
         raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
 
     item_c = comandas_repository.get_item(db, item_comanda_id)
@@ -215,7 +246,7 @@ def cancelar_item(
     comanda = comandas_repository.get_by_id(db, comanda_id)
     if comanda is None:
         raise AppError(ErrorCode.NOT_FOUND, "Comanda não encontrada", http_status=404)
-    if comanda.status != StatusComanda.ABERTA.value:
+    if comanda.status not in _ABERTA_STATUSES:
         raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
 
     item_c = comandas_repository.get_item(db, item_comanda_id)
@@ -256,3 +287,189 @@ def get_top_itens(db: Session, dias: int, limit: int) -> list[ItemResponse]:
         if item:
             result.append(itens_service._build_response(db, item))
     return result
+
+
+def aplicar_desconto(db: Session, comanda_id: int, data: AplicarDescontoRequest) -> ComandaResponse:
+    comanda = comandas_repository.get_by_id(db, comanda_id)
+    if comanda is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Comanda não encontrada", http_status=404)
+    if comanda.status not in _ABERTA_STATUSES:
+        raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
+
+    comandas_repository.atualizar_desconto(db, comanda_id, data.desconto_percentual, data.desconto_valor)
+    db.commit()
+    db.refresh(comanda)
+    return _build_response(db, comanda)
+
+
+def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> ComandaResponse:
+    comanda = comandas_repository.get_by_id(db, comanda_id)
+    if comanda is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Comanda não encontrada", http_status=404)
+    if comanda.status not in _ABERTA_STATUSES:
+        raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
+
+    if data.modo_divisao == "por_pessoa":
+        pessoas = _parse_pessoas(comanda.pessoas)
+        if len(pessoas) < 2:
+            raise AppError(
+                ErrorCode.PESSOAS_INSUFICIENTES,
+                "Divisão por pessoa exige ao menos 2 pessoas cadastradas na comanda",
+                http_status=400,
+            )
+
+    itens = comandas_repository.get_itens_para_fechar(db, comanda_id)
+    subtotal: Decimal = sum((ic.preco_unitario * ic.quantidade for ic in itens), Decimal("0"))
+
+    total_pago: Decimal = sum((p.valor for p in data.pagamentos), Decimal("0"))
+    pagamento_parcial = data.modo_divisao == "parcial"
+
+    # Calcular total com desconto (usado apenas no fechamento total)
+    if comanda.desconto_percentual is not None:
+        total_com_desconto: Decimal = subtotal * (Decimal("1") - comanda.desconto_percentual / Decimal("100"))
+    elif comanda.desconto_valor is not None:
+        total_com_desconto = subtotal - comanda.desconto_valor
+    else:
+        total_com_desconto = subtotal
+
+    if pagamento_parcial:
+        # base = saldo pendente de pagamento parcial anterior, ou subtotal SEM desconto
+        base_parcial: Decimal = comanda.saldo_pendente if comanda.saldo_pendente is not None else subtotal
+        if total_pago >= base_parcial:
+            raise AppError(
+                ErrorCode.PAGAMENTO_NAO_BATE,
+                "Pagamento parcial deve ser menor que o total",
+                http_status=400,
+            )
+    else:
+        # base = saldo pendente anterior (se houver) ou total com desconto
+        base_total: Decimal = comanda.saldo_pendente if comanda.saldo_pendente is not None else total_com_desconto
+        if abs(total_pago - base_total) > Decimal("0.01"):
+            raise AppError(
+                ErrorCode.PAGAMENTO_NAO_BATE,
+                f"Soma dos pagamentos (R$ {total_pago}) nao confere com o total (R$ {base_total})",
+                http_status=400,
+            )
+
+    for p in data.pagamentos:
+        metodo = db.get(MetodoPagamento, p.metodo_id)
+        if metodo is None:
+            raise AppError(ErrorCode.NOT_FOUND, f"Metodo de pagamento {p.metodo_id} nao encontrado", http_status=404)
+        pagamentos_repository.create_pagamento(db, comanda_id, p.metodo_id, p.valor)
+
+    itens_negativos: list[str] = []
+
+    if pagamento_parcial:
+        novo_saldo: Decimal = base_parcial - total_pago
+        comandas_repository.atualizar_saldo_pendente(db, comanda_id, novo_saldo)
+    else:
+        for ic in itens:
+            negativos = _dar_baixa_estoque(db, ic.item_id, ic.quantidade)
+            itens_negativos.extend(negativos)
+        comandas_repository.fechar_comanda_repo(db, comanda_id, total_com_desconto)
+
+    db.commit()
+    db.refresh(comanda)
+    response = _build_response(db, comanda)
+    response.itens_negativos = itens_negativos
+    return response
+
+
+def _dar_baixa_estoque(db: Session, item_id: int, quantidade: Decimal) -> list[str]:
+    item = db.get(Item, item_id)
+    if item is None:
+        return []
+    if item.tipo == TipoItem.SIMPLES.value:
+        return _baixar_insumo(db, item, quantidade)
+    ficha = db.execute(
+        select(FichaTecnica).where(FichaTecnica.item_composto_id == item_id)
+    ).scalar_one_or_none()
+    if ficha is None:
+        return []
+    componentes = list(
+        db.execute(
+            select(ComponenteFicha).where(ComponenteFicha.ficha_tecnica_id == ficha.id)
+        ).scalars().all()
+    )
+    negativos: list[str] = []
+    for comp in componentes:
+        insumo = db.get(Item, comp.insumo_id)
+        if insumo:
+            negativos.extend(_baixar_insumo(db, insumo, comp.quantidade * quantidade))
+    return negativos
+
+
+def _baixar_insumo(db: Session, item: Item, quantidade: Decimal) -> list[str]:
+    novo_estoque = item.estoque_atual - quantidade
+    item.estoque_atual = novo_estoque
+    estoque_repository.registrar_movimento(
+        db,
+        item_id=item.id,
+        tipo=TipoMovimento.SAIDA_VENDA,
+        quantidade=quantidade,
+        custo_unitario=item.custo_medio,
+        saldo_apos=novo_estoque,
+    )
+    db.flush()
+    return [item.nome] if novo_estoque < 0 else []
+
+
+def reabrir_comanda(db: Session, comanda_id: int) -> ComandaResponse:
+    comanda = comandas_repository.get_by_id(db, comanda_id)
+    if comanda is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Comanda não encontrada", http_status=404)
+    if comanda.status != StatusComanda.FECHADA.value:
+        raise AppError(
+            ErrorCode.COMANDA_NAO_FECHADA,
+            "Apenas comandas fechadas podem ser reabertas",
+            http_status=400,
+        )
+
+    itens = comandas_repository.get_itens_para_fechar(db, comanda_id)
+    for ic in itens:
+        _estornar_estoque(db, ic.item_id, ic.quantidade)
+
+    comandas_repository.reabrir_comanda_repo(db, comanda_id)
+    comandas_repository.add_evento(
+        db, comanda_id, TipoEvento.COMANDA_REABERTA, {}, comanda.garcom_id
+    )
+
+    db.commit()
+    db.refresh(comanda)
+    return _build_response(db, comanda)
+
+
+def _estornar_estoque(db: Session, item_id: int, quantidade: Decimal) -> None:
+    item = db.get(Item, item_id)
+    if item is None:
+        return
+    if item.tipo == TipoItem.SIMPLES.value:
+        _estornar_insumo(db, item, quantidade)
+    else:
+        ficha = db.execute(
+            select(FichaTecnica).where(FichaTecnica.item_composto_id == item_id)
+        ).scalar_one_or_none()
+        if ficha is not None:
+            componentes = list(
+                db.execute(
+                    select(ComponenteFicha).where(ComponenteFicha.ficha_tecnica_id == ficha.id)
+                ).scalars().all()
+            )
+            for comp in componentes:
+                insumo = db.get(Item, comp.insumo_id)
+                if insumo is not None:
+                    _estornar_insumo(db, insumo, comp.quantidade * quantidade)
+
+
+def _estornar_insumo(db: Session, item: Item, quantidade: Decimal) -> None:
+    novo_estoque = item.estoque_atual + quantidade
+    item.estoque_atual = novo_estoque
+    estoque_repository.registrar_movimento(
+        db,
+        item_id=item.id,
+        tipo=TipoMovimento.ENTRADA_ESTORNO,
+        quantidade=quantidade,
+        custo_unitario=item.custo_medio,
+        saldo_apos=novo_estoque,
+    )
+    db.flush()

@@ -15,6 +15,8 @@ import { EstoquePage } from "@/features/estoque/EstoquePage";
 import { MovimentosPage } from "@/features/estoque/MovimentosPage";
 import { ComandasPage } from "@/features/comandas/ComandasPage";
 import { ComandaAbertaPage } from "@/features/comandas/ComandaAbertaPage";
+import FechamentoPage from "@/features/comandas/FechamentoPage";
+import { ComprovantePage } from "@/features/comandas/ComprovantePage";
 import { queryClient } from "@/lib/queryClient";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
@@ -25,10 +27,12 @@ export function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route element={<RequireAuth />}>
+            <Route path="/comprovante/:id" element={<ComprovantePage />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<PlaceholderPage />} />
               <Route path="/comandas" element={<ComandasPage />} />
               <Route path="/comandas/:id" element={<ComandaAbertaPage />} />
+              <Route path="/comandas/:id/fechar" element={<FechamentoPage />} />
               <Route path="/compras" element={<ComprasPage />} />
               <Route path="/compras/nova" element={<NovaCompraPage />} />
               <Route path="/estoque" element={<EstoquePage />} />
