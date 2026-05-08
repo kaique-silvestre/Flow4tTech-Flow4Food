@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
 import type { LoginFormValues } from "./authSchemas";
@@ -23,9 +23,7 @@ export function useLogin() {
       navigate("/", { replace: true });
     },
     onError: () => {
-      toast.error("Senha incorreta. Verifique e tente novamente.", {
-        duration: Infinity,
-      });
+      toast.error("Senha incorreta. Verifique e tente novamente.");
     },
   });
 }

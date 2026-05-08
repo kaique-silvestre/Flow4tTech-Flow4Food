@@ -25,7 +25,11 @@ export function ComprovantePage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <p className="text-gray-500">Carregando comprovante...</p>
+        <div className="w-80 space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-8 animate-pulse rounded bg-gray-200" />
+          ))}
+        </div>
       </div>
     );
   }

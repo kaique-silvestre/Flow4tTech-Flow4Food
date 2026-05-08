@@ -1,4 +1,4 @@
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 
@@ -16,7 +16,7 @@ export function PlaceholderPage() {
           </Button>
           <Button
             variant="outline"
-            onClick={() => toast.warning("Toast de aviso", { duration: 4500 })}
+            onClick={() => toast.warning("Toast de aviso")}
           >
             Aviso
           </Button>

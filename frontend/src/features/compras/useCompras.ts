@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { api } from "@/lib/api";
 import type { CompraFormValues } from "./compraSchemas";
 
@@ -62,7 +62,7 @@ export function useCreateCompra() {
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
-      toast.error(msg ?? "Erro ao registrar compra.", { duration: Infinity });
+      toast.error(msg ?? "Erro ao registrar compra.");
     },
   });
 }

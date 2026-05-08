@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FornecedorModal } from "./FornecedorModal";
 import { useFornecedores, useDeleteFornecedor, type Fornecedor } from "./useFornecedores";
 
@@ -9,6 +10,7 @@ export function FornecedoresPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Fornecedor | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   function openCreate() {
     setEditing(null);
@@ -21,9 +23,7 @@ export function FornecedoresPage() {
   }
 
   function handleDelete(id: number) {
-    if (confirm("Remover fornecedor?")) {
-      deleteMutation.mutate(id);
-    }
+    setConfirmDelete(id);
   }
 
   return (
@@ -80,6 +80,17 @@ export function FornecedoresPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         editing={editing}
+      />
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        title="Remover fornecedor?"
+        confirmLabel="Remover"
+        onConfirm={() => {
+          deleteMutation.mutate(confirmDelete!);
+          setConfirmDelete(null);
+        }}
+        onCancel={() => setConfirmDelete(null)}
+        isPending={deleteMutation.isPending}
       />
     </div>
   );

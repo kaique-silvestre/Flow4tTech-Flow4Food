@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CategoriaModal } from "./CategoriaModal";
 import { useCategorias, useDeleteCategoria, type Categoria } from "./useCategorias";
 
@@ -9,6 +10,7 @@ export function CategoriasPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Categoria | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   function openCreate() {
     setEditing(null);
@@ -21,9 +23,7 @@ export function CategoriasPage() {
   }
 
   function handleDelete(id: number) {
-    if (confirm("Remover categoria?")) {
-      deleteMutation.mutate(id);
-    }
+    setConfirmDelete(id);
   }
 
   return (
@@ -76,6 +76,17 @@ export function CategoriasPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         editing={editing}
+      />
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        title="Remover categoria?"
+        confirmLabel="Remover"
+        onConfirm={() => {
+          deleteMutation.mutate(confirmDelete!);
+          setConfirmDelete(null);
+        }}
+        onCancel={() => setConfirmDelete(null)}
+        isPending={deleteMutation.isPending}
       />
     </div>
   );
