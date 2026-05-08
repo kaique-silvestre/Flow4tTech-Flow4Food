@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useGarcons } from "@/features/cadastros/garcons/useGarcons";
 import { useProdutos } from "@/features/cadastros/produtos/useProdutos";
 import { formatCurrency, formatQuantidade } from "@/lib/format";
 import { CancelarItemModal } from "./CancelarItemModal";
-import { useComanda, useEditarItem, useLancarItem, useReopenComanda, useTopItens, type ItemComandaResponse } from "./useComandas";
+import { useComanda, useEditarItem, useLancarItem, usePatchComanda, useReopenComanda, useTopItens, type ItemComandaResponse } from "./useComandas";
 
 export function ComandaAbertaPage() {
   const { id } = useParams<{ id: string }>();
@@ -17,7 +18,39 @@ export function ComandaAbertaPage() {
   const { data: comanda, isLoading } = useComanda(comanda_id);
   const lancarItem = useLancarItem(comanda_id);
   const editarItem = useEditarItem(comanda_id);
+  const patchComanda = usePatchComanda(comanda_id);
   const { data: topItens = [] } = useTopItens(7, 6);
+  const { data: garcons = [] } = useGarcons();
+
+  const [editingField, setEditingField] = useState<"identificacao" | "garcom" | null>(null);
+  const [editIdentificacao, setEditIdentificacao] = useState("");
+  const [editGarcomId, setEditGarcomId] = useState<number>(0);
+
+  function startEditIdentificacao() {
+    setEditIdentificacao(comanda?.identificacao ?? "");
+    setEditingField("identificacao");
+  }
+
+  function startEditGarcom() {
+    setEditGarcomId(comanda?.garcom_id ?? 0);
+    setEditingField("garcom");
+  }
+
+  function saveIdentificacao() {
+    if (!editIdentificacao.trim()) { setEditingField(null); return; }
+    patchComanda.mutate(
+      { identificacao: editIdentificacao.trim() },
+      { onSuccess: () => setEditingField(null) },
+    );
+  }
+
+  function saveGarcom() {
+    if (!editGarcomId) { setEditingField(null); return; }
+    patchComanda.mutate(
+      { garcom_id: editGarcomId },
+      { onSuccess: () => setEditingField(null) },
+    );
+  }
 
   const [busca, setBusca] = useState("");
   const { data: itens = [] } = useProdutos(busca || undefined);
@@ -161,13 +194,60 @@ export function ComandaAbertaPage() {
               ← Voltar
             </Button>
             <div>
-              <span className="text-lg font-semibold">
-                #{comanda.id} — {comanda.tipo_identificacao === "mesa" ? "Mesa" : ""}{" "}
-                {comanda.identificacao}
-              </span>
-              <span className="ml-3 text-sm text-gray-500">
-                Garçom: {comanda.garcom_nome} · Aberta há {comanda.tempo_aberta_minutos} min
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold">#{comanda.id} —</span>
+                {editingField === "identificacao" ? (
+                  <Input
+                    autoFocus
+                    className="h-7 w-40 text-base font-semibold"
+                    value={editIdentificacao}
+                    onChange={(e) => setEditIdentificacao(e.target.value)}
+                    onBlur={saveIdentificacao}
+                    onKeyDown={(e) => { if (e.key === "Enter") saveIdentificacao(); if (e.key === "Escape") setEditingField(null); }}
+                  />
+                ) : (
+                  <span className="text-lg font-semibold">
+                    {comanda.tipo_identificacao === "mesa" ? "Mesa " : ""}{comanda.identificacao}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="text-gray-400 hover:text-gray-600 text-sm"
+                  onClick={startEditIdentificacao}
+                  title="Editar identificação"
+                >
+                  ✏
+                </button>
+              </div>
+              <div className="flex items-center gap-1 text-sm text-gray-500">
+                <span>Garçom:</span>
+                {editingField === "garcom" ? (
+                  <select
+                    autoFocus
+                    className="rounded border px-1 py-0.5 text-sm"
+                    value={editGarcomId}
+                    onChange={(e) => setEditGarcomId(Number(e.target.value))}
+                    onBlur={saveGarcom}
+                    onKeyDown={(e) => { if (e.key === "Enter") saveGarcom(); if (e.key === "Escape") setEditingField(null); }}
+                  >
+                    <option value={0}>Selecione...</option>
+                    {garcons.filter((g) => g.ativo).map((g) => (
+                      <option key={g.id} value={g.id}>{g.nome}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span>{comanda.garcom_nome}</span>
+                )}
+                <button
+                  type="button"
+                  className="text-gray-400 hover:text-gray-600 text-xs ml-0.5"
+                  onClick={startEditGarcom}
+                  title="Editar garçom"
+                >
+                  ✏
+                </button>
+                <span>· Aberta há {comanda.tempo_aberta_minutos} min</span>
+              </div>
             </div>
           </div>
           <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">

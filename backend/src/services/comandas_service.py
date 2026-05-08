@@ -28,6 +28,7 @@ from src.schemas.comandas import (
     EditarItemRequest,
     ItemComandaResponse,
     LancarItemRequest,
+    PatchComandaRequest,
 )
 from src.schemas.fechamento import AplicarDescontoRequest, FecharComandaRequest, PagamentoResponse
 from src.schemas.produtos import ProdutoResponse
@@ -144,6 +145,38 @@ def get_comanda(db: Session, comanda_id: int) -> ComandaResponse:
 
 
 _ABERTA_STATUSES = {StatusComanda.ABERTA.value, StatusComanda.REABERTA.value}
+
+
+def patch_comanda(db: Session, comanda_id: int, data: PatchComandaRequest) -> ComandaResponse:
+    comanda = comandas_repository.get_by_id(db, comanda_id)
+    if comanda is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Comanda não encontrada", http_status=404)
+    if comanda.status not in _ABERTA_STATUSES:
+        raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
+
+    if data.garcom_id is not None:
+        garcom = garcons_repository.get_by_id(db, data.garcom_id)
+        if garcom is None:
+            raise AppError(ErrorCode.NOT_FOUND, "Garçom não encontrado", http_status=404)
+        if not garcom.ativo:
+            raise AppError(ErrorCode.GARCOM_INATIVO, "Garçom inativo", http_status=400)
+        comanda.garcom_id = data.garcom_id
+
+    if data.identificacao is not None:
+        comanda.identificacao = data.identificacao
+
+    comandas_repository.add_evento(
+        db,
+        comanda_id,
+        TipoEvento.COMANDA_EDITADA,
+        {
+            "identificacao": data.identificacao,
+            "garcom_id": data.garcom_id,
+        },
+    )
+    db.commit()
+    db.refresh(comanda)
+    return _build_response(db, comanda)
 
 
 def lancar_item(db: Session, comanda_id: int, data: LancarItemRequest) -> ComandaResponse:

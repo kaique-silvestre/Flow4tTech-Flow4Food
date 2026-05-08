@@ -10,6 +10,7 @@ from src.core.database import Base
 
 class TipoEvento(str, enum.Enum):
     COMANDA_ABERTA = "comanda_aberta"
+    COMANDA_EDITADA = "comanda_editada"
     ITEM_LANCADO = "item_lancado"
     ITEM_EDITADO = "item_editado"
     ITEM_CANCELADO = "item_cancelado"

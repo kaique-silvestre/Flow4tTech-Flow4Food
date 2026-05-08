@@ -189,6 +189,24 @@ export function useReopenComanda(comanda_id: number | string) {
   });
 }
 
+export function usePatchComanda(comanda_id: number | string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { identificacao?: string; garcom_id?: number }) =>
+      api
+        .patch<ComandaResponse>(`/api/comandas/${comanda_id}`, data)
+        .then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["comandas", comanda_id] });
+      toast.success("Comanda atualizada.");
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.message;
+      toast.error(msg ?? "Erro ao atualizar comanda");
+    },
+  });
+}
+
 export function useTopItens(dias = 7, limit = 6) {
   return useQuery<ProdutoResponse[]>({
     queryKey: ["produtos", "top", { dias, limit }],

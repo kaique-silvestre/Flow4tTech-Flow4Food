@@ -11,6 +11,7 @@ from src.schemas.comandas import (
     ComandaResponse,
     EditarItemRequest,
     LancarItemRequest,
+    PatchComandaRequest,
 )
 from src.schemas.comprovante import ComprovanteResponse
 from src.schemas.fechamento import AplicarDescontoRequest, FecharComandaRequest
@@ -49,6 +50,16 @@ def list_comandas(
     from src.services.comandas_service import _build_response
     comandas = comandas_repository.list_abertas(db, busca)
     return [_build_response(db, c) for c in comandas]  # type: ignore[return-value]
+
+
+@router.patch("/{comanda_id}", response_model=ComandaResponse)
+def patch_comanda(
+    comanda_id: int,
+    body: PatchComandaRequest,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> ComandaResponse:
+    return comandas_service.patch_comanda(db, comanda_id, body)  # type: ignore[return-value]
 
 
 @router.get("/{comanda_id}", response_model=ComandaResponse)

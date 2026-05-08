@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFornecedores, useCreateFornecedor } from "@/features/cadastros/fornecedores/useFornecedores";
-import { useInsumos } from "@/features/estoque/useInsumos";
+import { useInsumos, type InsumoResponse } from "@/features/estoque/useInsumos";
 import { formatCurrency } from "@/lib/format";
 import { compraSchema, type CompraFormValues } from "./compraSchemas";
 import { useCreateCompra } from "./useCompras";
+import { InsumoModal } from "./InsumoModal";
 
 export function NovaCompraPage() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export function NovaCompraPage() {
 
   const [novoFornNome, setNovoFornNome] = useState("");
   const [showNovoForn, setShowNovoForn] = useState(false);
+  const [insumoModalIndex, setInsumoModalIndex] = useState<number | null>(null);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -27,6 +29,7 @@ export function NovaCompraPage() {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors },
   } = useForm<CompraFormValues>({
     resolver: zodResolver(compraSchema),
@@ -55,6 +58,13 @@ export function NovaCompraPage() {
         },
       }
     );
+  }
+
+  function handleInsumoCreated(insumo: InsumoResponse) {
+    if (insumoModalIndex !== null) {
+      setValue(`itens.${insumoModalIndex}.item_id`, insumo.id);
+    }
+    setInsumoModalIndex(null);
   }
 
   function onSubmit(data: CompraFormValues) {
@@ -164,6 +174,13 @@ export function NovaCompraPage() {
                   {errors.itens?.[index]?.item_id && (
                     <p className="text-xs text-red-500">{errors.itens[index]?.item_id?.message}</p>
                   )}
+                  <button
+                    type="button"
+                    className="text-xs text-blue-600 hover:underline mt-0.5"
+                    onClick={() => setInsumoModalIndex(index)}
+                  >
+                    [ + Cadastrar novo insumo ]
+                  </button>
                 </div>
                 <div>
                   <Input type="number" step="0.001" min="0" {...register(`itens.${index}.quantidade`)} />
@@ -218,6 +235,11 @@ export function NovaCompraPage() {
           </Button>
         </div>
       </form>
+      <InsumoModal
+        open={insumoModalIndex !== null}
+        onClose={() => setInsumoModalIndex(null)}
+        onSuccess={handleInsumoCreated}
+      />
     </div>
   );
 }
