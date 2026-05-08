@@ -1,19 +1,41 @@
 import { NavLink } from "react-router-dom";
+import {
+  LayoutDashboard,
+  ClipboardList,
+  UtensilsCrossed,
+  ShoppingCart,
+  Package,
+  History,
+  BarChart3,
+  Tag,
+  Truck,
+  Users,
+  CreditCard,
+  Settings,
+  Menu,
+  type LucideIcon,
+} from "lucide-react";
 
-const NAV_ITEMS = [
-  { label: "Dashboard", to: "/" },
-  { label: "Comandas", to: "/comandas" },
-  { label: "Cardápio", to: "/cardapio" },
-  { label: "Compras", to: "/compras" },
-  { label: "Estoque", to: "/estoque" },
-  { label: "Histórico", to: "/estoque/movimentos" },
-  { label: "Relatórios", to: "/relatorios" },
+interface NavItem {
+  label: string;
+  to: string | null;
+  icon?: LucideIcon;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { label: "Dashboard", to: "/", icon: LayoutDashboard },
+  { label: "Comandas", to: "/comandas", icon: ClipboardList },
+  { label: "Cardápio", to: "/cardapio", icon: UtensilsCrossed },
+  { label: "Compras", to: "/compras", icon: ShoppingCart },
+  { label: "Estoque", to: "/estoque", icon: Package },
+  { label: "Histórico", to: "/estoque/movimentos", icon: History },
+  { label: "Relatórios", to: "/relatorios", icon: BarChart3 },
   { label: "─ Cadastros ─", to: null },
-  { label: "Categorias", to: "/cadastros/categorias" },
-  { label: "Fornecedores", to: "/cadastros/fornecedores" },
-  { label: "Garçons", to: "/cadastros/garcons" },
-  { label: "Métodos Pgto.", to: "/cadastros/metodos-pagamento" },
-  { label: "Configurações", to: "/configuracoes" },
+  { label: "Categorias", to: "/cadastros/categorias", icon: Tag },
+  { label: "Fornecedores", to: "/cadastros/fornecedores", icon: Truck },
+  { label: "Garçons", to: "/cadastros/garcons", icon: Users },
+  { label: "Métodos Pgto.", to: "/cadastros/metodos-pagamento", icon: CreditCard },
+  { label: "Configurações", to: "/configuracoes", icon: Settings },
 ];
 
 interface SidebarProps {
@@ -25,7 +47,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <aside
       className={`flex flex-col border-r bg-white transition-all duration-200 ${
-        collapsed ? "w-12" : "w-48"
+        collapsed ? "w-14" : "w-52"
       }`}
     >
       <button
@@ -33,9 +55,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         onClick={onToggle}
         title={collapsed ? "Expandir menu" : "Colapsar menu"}
       >
-        {collapsed ? "›" : "‹"}
+        <Menu size={18} />
       </button>
-      <nav className="flex flex-col gap-1 overflow-hidden p-2 pt-2">
+      <nav className="flex flex-col gap-1 overflow-hidden p-2">
         {NAV_ITEMS.map((item) =>
           item.to === null ? (
             collapsed ? null : (
@@ -50,14 +72,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               end
               title={item.label}
               className={({ isActive }) =>
-                `rounded px-3 py-2 text-sm transition-colors truncate ${
+                `flex items-center gap-2 rounded px-2 py-2 text-sm transition-colors ${
+                  collapsed ? "justify-center" : ""
+                } ${
                   isActive
                     ? "bg-gray-100 font-medium text-gray-900"
                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 }`
               }
             >
-              {collapsed ? item.label.slice(0, 2) : item.label}
+              {item.icon && <item.icon size={18} className="shrink-0" />}
+              {!collapsed && <span className="truncate">{item.label}</span>}
             </NavLink>
           )
         )}

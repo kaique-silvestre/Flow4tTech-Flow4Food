@@ -252,9 +252,10 @@ No modo "Dividir entre N pessoas" em `FechamentoPage`: campo `n_pessoas` + exibi
 
 ---
 
-## Issue 10 — M008 + M011: Sidebar colapsável com ícones e botão toggle ☰
+## Issue 10 — M008 + M011: Sidebar colapsável com ícones e botão toggle ☰ ✓
 
 **Tipo:** AFK  
+**Status:** Concluída ✓ (2026-05-08)
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
 
 ### O que construir
@@ -263,14 +264,14 @@ Menu lateral com dois estados: expandido (ícone + texto) e colapsado (só ícon
 
 ### Critérios de aceite
 
-- [ ] Ícone `☰` visível no topo do sidebar em ambos os estados
-- [ ] Clicar em `☰` alterna collapsed/expanded
-- [ ] Estado expandido: ícone + texto lado a lado em cada item
-- [ ] Estado colapsado: apenas ícone de cada item (sem texto)
-- [ ] Tooltip com nome da seção ao hover no estado colapsado
-- [ ] Estado padrão: expandido (`sidebar_collapsed = false`)
-- [ ] Estado persiste entre sessões via `localStorage`
-- [ ] Largura do sidebar muda visualmente (ex: `w-16` colapsado, `w-56` expandido)
+- [x] Ícone `☰` visível no topo do sidebar em ambos os estados
+- [x] Clicar em `☰` alterna collapsed/expanded
+- [x] Estado expandido: ícone + texto lado a lado em cada item
+- [x] Estado colapsado: apenas ícone de cada item (sem texto)
+- [x] Tooltip com nome da seção ao hover no estado colapsado (via `title` attr)
+- [x] Estado padrão: expandido (`sidebar_collapsed = false`)
+- [x] Estado persiste entre sessões via `localStorage`
+- [x] Largura do sidebar muda visualmente (`w-14` colapsado, `w-52` expandido)
 - [ ] Teste: montar com `localStorage` vazio → expandido. Clicar `☰` → collapsed. Remontar → collapsed preservado.
 
 ### User stories endereçadas

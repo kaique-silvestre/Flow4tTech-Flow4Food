@@ -12,7 +12,7 @@ Fase 1 (UX triviais — independente):  M003 ✓, M004 ✓, M015 ✓
 Fase 2 (Base arquitetural):           M000 ✓
 Fase 3 (Dependem de M000):            M001 ✓, M002 ✓
 Fase 4 (Comanda UX):                  M005 ✓, M006 ✓, M007 ✓
-Fase 5 (Navbar):                      M008, M009, M011
+Fase 5 (Navbar):                      M008 ✓, M009, M011 ✓
 Fase 6 (Dashboard/Relatórios):        M010, M013, M014, M016
 Fase 7 (Dados avançados):             M012, M017
 ```
