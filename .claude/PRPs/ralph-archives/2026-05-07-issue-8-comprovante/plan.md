@@ -4,7 +4,7 @@
 **Parent Issue:** `docs/issues_matchpoint_mvp.md` → Issue 8
 **Documento mestre:** `docs/matchpoint_documentacao.md` §8.3.7
 **Type:** AFK
-**Status:** Concluída ✓ (2026-05-07)
+**Status:** Pronto para execução
 **Criado em:** 2026-05-07
 **Depende de:** Issue #7 (Fechamento) — concluída
 
@@ -88,14 +88,14 @@ Linha única (id=1). Não inserida automaticamente na migration — fallbacks no
 
 ### Bloco A — Migration
 
-- [x] **A1.** `alembic/versions/0008_estabelecimento.py`:
+- [ ] **A1.** `alembic/versions/0008_estabelecimento.py`:
   - `down_revision = "0007_fechamento"`.
   - `upgrade()`: `op.create_table("estabelecimento", ...)` com id, nome (default 'Estabelecimento'), cnpj, endereco, telefone.
   - `downgrade()`: `op.drop_table("estabelecimento")`.
 
 ### Bloco B — Model
 
-- [x] **B1.** `models/estabelecimento.py`:
+- [ ] **B1.** `models/estabelecimento.py`:
   ```python
   class Estabelecimento(Base):
       __tablename__ = "estabelecimento"
@@ -106,11 +106,11 @@ Linha única (id=1). Não inserida automaticamente na migration — fallbacks no
       telefone: Mapped[Optional[str]] = mapped_column(sa.String(30), nullable=True)
   ```
 
-- [x] **B2.** `models/__init__.py` — importar `Estabelecimento`.
+- [ ] **B2.** `models/__init__.py` — importar `Estabelecimento`.
 
 ### Bloco C — Schemas
 
-- [x] **C1.** `schemas/comprovante.py`:
+- [ ] **C1.** `schemas/comprovante.py`:
   ```python
   class EstabelecimentoInfo(BaseModel):
       nome: str
@@ -146,7 +146,7 @@ Linha única (id=1). Não inserida automaticamente na migration — fallbacks no
 
 ### Bloco D — Repository
 
-- [x] **D1.** `repositories/estabelecimento_repository.py`:
+- [ ] **D1.** `repositories/estabelecimento_repository.py`:
   ```python
   def get_estabelecimento(db) -> Optional[Estabelecimento]:
       return db.get(Estabelecimento, 1)
@@ -154,7 +154,7 @@ Linha única (id=1). Não inserida automaticamente na migration — fallbacks no
 
 ### Bloco E — Service
 
-- [x] **E1.** `services/comprovante_service.py`:
+- [ ] **E1.** `services/comprovante_service.py`:
   ```python
   def build_comprovante(db, comanda_id: int) -> ComprovanteResponse:
       from src.repositories import comandas_repository, pagamentos_repository, estabelecimento_repository
@@ -215,7 +215,7 @@ Linha única (id=1). Não inserida automaticamente na migration — fallbacks no
 
 ### Bloco F — Route
 
-- [x] **F1.** `api/routes/comandas.py` — adicionar endpoint:
+- [ ] **F1.** `api/routes/comandas.py` — adicionar endpoint:
   ```python
   @router.get("/{comanda_id}/comprovante", response_model=ComprovanteResponse)
   def get_comprovante(comanda_id: int, db=Depends(get_db), _=Depends(get_current_user)):
@@ -224,7 +224,7 @@ Linha única (id=1). Não inserida automaticamente na migration — fallbacks no
 
 ### Bloco G — Tests
 
-- [x] **G1.** `tests/test_comprovante.py` (4 testes):
+- [ ] **G1.** `tests/test_comprovante.py` (4 testes):
   - `test_comprovante_comanda_fechada` — comanda fechada retorna 200 com itens, subtotal, total, pagamentos.
   - `test_comprovante_sem_estabelecimento_usa_fallback` — sem linha em estabelecimento → nome="Estabelecimento".
   - `test_comprovante_com_estabelecimento` — com linha em estabelecimento → nome correto.
@@ -232,7 +232,7 @@ Linha única (id=1). Não inserida automaticamente na migration — fallbacks no
 
 ### Bloco H — Frontend: useFechamento
 
-- [x] **H1.** `features/comandas/useFechamento.ts` — atualizar `onSuccess`:
+- [ ] **H1.** `features/comandas/useFechamento.ts` — atualizar `onSuccess`:
   ```ts
   if (data.status === "fechada") {
     toast.success("Comanda fechada com sucesso");
@@ -242,7 +242,7 @@ Linha única (id=1). Não inserida automaticamente na migration — fallbacks no
 
 ### Bloco I — Frontend: useComprovante
 
-- [x] **I1.** `features/comandas/useComprovante.ts`:
+- [ ] **I1.** `features/comandas/useComprovante.ts`:
   ```ts
   export function useComprovante(id: number | string) {
     return useQuery<ComprovanteResponse>({
@@ -256,7 +256,7 @@ Linha única (id=1). Não inserida automaticamente na migration — fallbacks no
 
 ### Bloco J — Frontend: ComprovantePage
 
-- [x] **J1.** `features/comandas/ComprovantePage.tsx`:
+- [ ] **J1.** `features/comandas/ComprovantePage.tsx`:
   - **Layout**: div central largura ~80mm (320px), fundo branco, fonte monospace.
   - **Header**: nome do estabelecimento (fallback "Estabelecimento"), CNPJ/endereço/telefone se existir.
   - **Info comanda**: data_fechamento formatada `dd/mm/aaaa HH:mm`, `Comanda #ID — identificacao`.
@@ -280,7 +280,7 @@ Linha única (id=1). Não inserida automaticamente na migration — fallbacks no
 
 ### Bloco K — Frontend: App.tsx
 
-- [x] **K1.** `App.tsx` — adicionar rota `/comprovante/:id` **fora do AppLayout** mas dentro de `RequireAuth`:
+- [ ] **K1.** `App.tsx` — adicionar rota `/comprovante/:id` **fora do AppLayout** mas dentro de `RequireAuth`:
   ```tsx
   import { ComprovantePage } from "@/features/comandas/ComprovantePage";
   // ...
@@ -316,20 +316,20 @@ npm run build
 
 ## Critérios de Aceite
 
-- [x] Tabela `estabelecimento` criada na migration 0008.
-- [x] `GET /api/comandas/{id}/comprovante` retorna 200 com payload completo.
-- [x] Sem linha em `estabelecimento` → fallback "Estabelecimento" sem erro.
-- [x] 404 para comanda inexistente.
-- [x] FE: rota `/comprovante/:id` fora do AppLayout (sem sidebar/topbar na tela de comprovante).
-- [x] Layout ~80mm centralizado, fonte monospace.
-- [x] "*** NÃO É CUPOM FISCAL ***" visível.
-- [x] Itens com cortesia exibem `(cortesia)` e `R$ 0,00`.
-- [x] Desconto exibido apenas se presente.
-- [x] Botões ocultos em `@media print`.
-- [x] `[IMPRIMIR]` aciona `window.print()`.
-- [x] `[VOLTAR ÀS COMANDAS]` navega para `/comandas`.
-- [x] `useFechamento.ts` navega para `/comprovante/:id` após fechamento total.
-- [x] Testes backend: 4 cenários passando.
+- [ ] Tabela `estabelecimento` criada na migration 0008.
+- [ ] `GET /api/comandas/{id}/comprovante` retorna 200 com payload completo.
+- [ ] Sem linha em `estabelecimento` → fallback "Estabelecimento" sem erro.
+- [ ] 404 para comanda inexistente.
+- [ ] FE: rota `/comprovante/:id` fora do AppLayout (sem sidebar/topbar na tela de comprovante).
+- [ ] Layout ~80mm centralizado, fonte monospace.
+- [ ] "*** NÃO É CUPOM FISCAL ***" visível.
+- [ ] Itens com cortesia exibem `(cortesia)` e `R$ 0,00`.
+- [ ] Desconto exibido apenas se presente.
+- [ ] Botões ocultos em `@media print`.
+- [ ] `[IMPRIMIR]` aciona `window.print()`.
+- [ ] `[VOLTAR ÀS COMANDAS]` navega para `/comandas`.
+- [ ] `useFechamento.ts` navega para `/comprovante/:id` após fechamento total.
+- [ ] Testes backend: 4 cenários passando.
 
 ---
 
