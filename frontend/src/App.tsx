@@ -24,6 +24,7 @@ import { DrePage } from "@/features/relatorios/DrePage";
 import { CmvPorProdutoPage } from "@/features/relatorios/CmvPorProdutoPage";
 import { PerdasCortesiasPage } from "@/features/relatorios/PerdasCortesiasPage";
 import { VendasPorGarcomPage } from "@/features/relatorios/VendasPorGarcomPage";
+import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { queryClient } from "@/lib/queryClient";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
@@ -36,7 +37,7 @@ export function App() {
           <Route element={<RequireAuth />}>
             <Route path="/comprovante/:id" element={<ComprovantePage />} />
             <Route element={<AppLayout />}>
-              <Route path="/" element={<PlaceholderPage />} />
+              <Route path="/" element={<DashboardPage />} />
               <Route path="/comandas" element={<ComandasPage />} />
               <Route path="/comandas/:id" element={<ComandaAbertaPage />} />
               <Route path="/comandas/:id/fechar" element={<FechamentoPage />} />
