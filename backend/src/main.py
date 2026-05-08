@@ -2,9 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes import auth as auth_routes
+from src.api.routes import backup as backup_routes
 from src.api.routes import categorias as categorias_routes
 from src.api.routes import comandas as comandas_routes
 from src.api.routes import compras as compras_routes
+from src.api.routes import config as config_routes
 from src.api.routes import dashboard as dashboard_routes
 from src.api.routes import estoque as estoque_routes
 from src.api.routes import fornecedores as fornecedores_routes
@@ -44,7 +46,9 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
+    app.include_router(backup_routes.router, prefix="/api/backup", tags=["backup"])
     app.include_router(categorias_routes.router, prefix="/api/categorias", tags=["categorias"])
+    app.include_router(config_routes.router, prefix="/api/config", tags=["config"])
     app.include_router(fornecedores_routes.router, prefix="/api/fornecedores", tags=["fornecedores"])
     app.include_router(garcons_routes.router, prefix="/api/garcons", tags=["garcons"])
     app.include_router(metodos_pagamento_routes.router, prefix="/api/metodos-pagamento", tags=["metodos_pagamento"])

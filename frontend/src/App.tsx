@@ -24,6 +24,7 @@ import { DrePage } from "@/features/relatorios/DrePage";
 import { CmvPorProdutoPage } from "@/features/relatorios/CmvPorProdutoPage";
 import { PerdasCortesiasPage } from "@/features/relatorios/PerdasCortesiasPage";
 import { VendasPorGarcomPage } from "@/features/relatorios/VendasPorGarcomPage";
+import { ConfiguracoesPage } from "@/features/configuracoes/ConfiguracoesPage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { queryClient } from "@/lib/queryClient";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
@@ -57,6 +58,7 @@ export function App() {
               <Route path="/relatorios/cmv" element={<CmvPorProdutoPage />} />
               <Route path="/relatorios/perdas-cortesias" element={<PerdasCortesiasPage />} />
               <Route path="/relatorios/vendas-por-garcom" element={<VendasPorGarcomPage />} />
+              <Route path="/configuracoes" element={<ConfiguracoesPage />} />
               <Route path="*" element={<PlaceholderPage />} />
             </Route>
           </Route>
