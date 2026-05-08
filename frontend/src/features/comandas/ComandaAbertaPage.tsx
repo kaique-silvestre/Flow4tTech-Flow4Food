@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useItens } from "@/features/cadastros/itens/useItens";
 import { formatCurrency } from "@/lib/format";
 import { CancelarItemModal } from "./CancelarItemModal";
-import { useComanda, useEditarItem, useLancarItem, useTopItens, type ItemComandaResponse } from "./useComandas";
+import { useComanda, useEditarItem, useLancarItem, useReopenComanda, useTopItens, type ItemComandaResponse } from "./useComandas";
 
 export function ComandaAbertaPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +33,9 @@ export function ComandaAbertaPage() {
   const [editObs, setEditObs] = useState("");
 
   const [cancelando, setCancelando] = useState<ItemComandaResponse | null>(null);
+  const [confirmReabrir, setConfirmReabrir] = useState(false);
+
+  const reopenComanda = useReopenComanda(comanda_id);
 
   const itemSelecionadoObj = itemSelecionado != null
     ? (itens.find((i) => i.id === itemSelecionado) ?? topItens.find((i) => i.id === itemSelecionado))
@@ -85,6 +88,69 @@ export function ComandaAbertaPage() {
 
   if (isLoading || !comanda) {
     return <div className="p-6 text-sm text-gray-500">Carregando...</div>;
+  }
+
+  if (comanda.status === "fechada") {
+    const itensNaoCancelados = comanda.itens_ativos.filter((i) => !i.cancelado);
+    return (
+      <div className="p-6 max-w-2xl">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold">
+              #{comanda.id} — {comanda.tipo_identificacao === "mesa" ? "Mesa" : ""} {comanda.identificacao}
+            </h1>
+            <p className="text-sm text-gray-500">Garçom: {comanda.garcom_nome}</p>
+          </div>
+          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+            fechada
+          </span>
+        </div>
+
+        <div className="rounded border bg-white p-4 space-y-2 mb-4">
+          {itensNaoCancelados.map((ic) => (
+            <div key={ic.id} className="flex justify-between text-sm">
+              <span>{ic.quantidade} × {ic.item_nome}{ic.cortesia ? " (cortesia)" : ""}</span>
+              <span>{formatCurrency(Number(ic.subtotal))}</span>
+            </div>
+          ))}
+          <div className="border-t pt-2 flex justify-between font-semibold">
+            <span>Total</span>
+            <span>{comanda.total != null ? formatCurrency(Number(comanda.total)) : "—"}</span>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => navigate(`/comprovante/${comanda_id}`)}>
+            Ver Comprovante
+          </Button>
+          <Button onClick={() => setConfirmReabrir(true)}>
+            Reabrir Comanda
+          </Button>
+        </div>
+
+        {confirmReabrir && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="rounded-lg bg-white p-6 shadow-lg w-80">
+              <h2 className="text-base font-semibold mb-2">Reabrir comanda?</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Os pagamentos serão estornados e o estoque restaurado.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button variant="outline" onClick={() => setConfirmReabrir(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={() => reopenComanda.mutate()}
+                  disabled={reopenComanda.isPending}
+                >
+                  {reopenComanda.isPending ? "Reabrindo..." : "Confirmar"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   }
 
   const itensAtivos = comanda.itens_ativos.filter((i) => !i.cancelado);

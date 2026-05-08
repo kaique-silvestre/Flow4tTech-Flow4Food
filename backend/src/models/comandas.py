@@ -13,6 +13,7 @@ class StatusComanda(str, enum.Enum):
     ABERTA = "aberta"
     FECHADA = "fechada"
     CANCELADA = "cancelada"
+    REABERTA = "reaberta"
 
 
 class Comanda(Base):

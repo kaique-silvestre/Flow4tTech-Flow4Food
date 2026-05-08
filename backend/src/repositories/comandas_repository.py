@@ -28,10 +28,19 @@ def create_comanda(db: Session, data: ComandaCreateRequest) -> Comanda:
 
 
 def list_abertas(db: Session, busca: Optional[str] = None) -> list[Comanda]:
-    q = db.query(Comanda).filter(Comanda.status == StatusComanda.ABERTA.value)
+    q = db.query(Comanda).filter(
+        Comanda.status.in_([StatusComanda.ABERTA.value, StatusComanda.REABERTA.value])
+    )
     if busca:
         q = q.filter(Comanda.identificacao.ilike(f"%{busca}%"))
     return q.order_by(Comanda.created_at.desc()).all()
+
+
+def list_fechadas(db: Session, busca: Optional[str] = None) -> list[Comanda]:
+    q = db.query(Comanda).filter(Comanda.status == StatusComanda.FECHADA.value)
+    if busca:
+        q = q.filter(Comanda.identificacao.ilike(f"%{busca}%"))
+    return q.order_by(Comanda.data_fechamento.desc()).all()
 
 
 def get_by_id(db: Session, comanda_id: int) -> Optional[Comanda]:
@@ -179,6 +188,16 @@ def get_itens_para_fechar(db: Session, comanda_id: int) -> list[ItemComanda]:
         .order_by(ItemComanda.created_at.asc())
         .all()
     )
+
+
+def reabrir_comanda_repo(db: Session, comanda_id: int) -> None:
+    comanda = db.query(Comanda).filter(Comanda.id == comanda_id).first()
+    if comanda is not None:
+        comanda.status = StatusComanda.REABERTA.value
+        comanda.total = None
+        comanda.data_fechamento = None
+        comanda.saldo_pendente = None
+    db.flush()
 
 
 def top_itens(db: Session, dias: int, limit: int) -> list[tuple[int, int]]:
