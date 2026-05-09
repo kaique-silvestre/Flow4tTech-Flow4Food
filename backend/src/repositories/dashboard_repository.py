@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.models.comandas import Comanda, StatusComanda
+from src.models.compras import Compra
 from src.models.itens_comanda import ItemComanda
 from src.models.produtos import Produto
 from src.repositories.relatorio_repository import _day_utc_range, cmv_total
@@ -151,6 +152,84 @@ def heatmap_mes_atual(db: Session) -> list[dict]:
         result.append({"data": d, "faturamento": dia_map.get(d, Decimal("0"))})
         d += datetime.timedelta(days=1)
     return result
+
+
+def historico_periodo(db: Session, inicio: datetime.date, fim: datetime.date) -> list[dict]:
+    start_utc, _ = _day_utc_range(inicio)
+    _, end_utc = _day_utc_range(fim)
+    rows_fat = db.execute(
+        select(Comanda.data_fechamento, Comanda.total).where(
+            Comanda.status == StatusComanda.FECHADA.value,
+            Comanda.data_fechamento >= start_utc,
+            Comanda.data_fechamento <= end_utc,
+        )
+    ).all()
+    fat_map: dict[datetime.date, Decimal] = {}
+    for r in rows_fat:
+        if r.data_fechamento:
+            d = _local_date(r.data_fechamento)
+            fat_map[d] = fat_map.get(d, Decimal("0")) + (r.total or Decimal("0"))
+    rows_compras = db.execute(
+        select(Compra.data_compra, Compra.total).where(
+            Compra.data_compra >= inicio,
+            Compra.data_compra <= fim,
+        )
+    ).all()
+    compras_map: dict[datetime.date, Decimal] = {}
+    for r in rows_compras:
+        if r.data_compra:
+            compras_map[r.data_compra] = compras_map.get(r.data_compra, Decimal("0")) + (r.total or Decimal("0"))
+    result = []
+    current = inicio
+    while current <= fim:
+        result.append(
+            {
+                "data": current,
+                "faturamento": fat_map.get(current, Decimal("0")),
+                "total_compras": compras_map.get(current, Decimal("0")),
+            }
+        )
+        current += datetime.timedelta(days=1)
+    return result
+
+
+def resumo_anual(db: Session, ano: int) -> list[dict]:
+    inicio = datetime.date(ano, 1, 1)
+    fim = datetime.date(ano, 12, 31)
+    start_utc, _ = _day_utc_range(inicio)
+    _, end_utc = _day_utc_range(fim)
+    rows_fat = db.execute(
+        select(Comanda.data_fechamento, Comanda.total).where(
+            Comanda.status == StatusComanda.FECHADA.value,
+            Comanda.data_fechamento >= start_utc,
+            Comanda.data_fechamento <= end_utc,
+        )
+    ).all()
+    fat_map: dict[int, Decimal] = {}
+    for r in rows_fat:
+        if r.data_fechamento:
+            mes = _local_date(r.data_fechamento).month
+            fat_map[mes] = fat_map.get(mes, Decimal("0")) + (r.total or Decimal("0"))
+    rows_compras = db.execute(
+        select(Compra.data_compra, Compra.total).where(
+            Compra.data_compra >= inicio,
+            Compra.data_compra <= fim,
+        )
+    ).all()
+    compras_map: dict[int, Decimal] = {}
+    for r in rows_compras:
+        if r.data_compra:
+            compras_map[r.data_compra.month] = (
+                compras_map.get(r.data_compra.month, Decimal("0")) + (r.total or Decimal("0"))
+            )
+    return [
+        {
+            "mes": m,
+            "faturamento": fat_map.get(m, Decimal("0")),
+            "total_compras": compras_map.get(m, Decimal("0")),
+        }
+        for m in range(1, 13)
+    ]
 
 
 def comandas_abertas_com_detalhes(db: Session) -> list[dict]:

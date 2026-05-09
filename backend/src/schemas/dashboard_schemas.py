@@ -29,6 +29,18 @@ class ComandaAbertaItem(BaseModel):
     aberta_ha_minutos: int
 
 
+class DashboardHistoricoItem(BaseModel):
+    data: datetime.date
+    faturamento: Decimal
+    total_compras: Decimal
+
+
+class DashboardResumoAnualItem(BaseModel):
+    mes: int
+    faturamento: Decimal
+    total_compras: Decimal
+
+
 class DashboardResponse(BaseModel):
     faturamento_hoje: Decimal
     ticket_medio_hoje: Decimal

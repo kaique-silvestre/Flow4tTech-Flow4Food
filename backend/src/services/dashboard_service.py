@@ -1,3 +1,4 @@
+import datetime
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -5,7 +6,9 @@ from sqlalchemy.orm import Session
 from src.repositories import dashboard_repository as dr
 from src.schemas.dashboard_schemas import (
     ComandaAbertaItem,
+    DashboardHistoricoItem,
     DashboardResponse,
+    DashboardResumoAnualItem,
     DiaFaturamento,
     HoraBucket,
     ProdutoTop,
@@ -47,3 +50,15 @@ def dashboard(db: Session) -> DashboardResponse:
         heatmap_mes=heatmap,
         comandas_abertas_lista=abertas_lista,
     )
+
+
+def dashboard_historico(
+    db: Session, inicio: datetime.date, fim: datetime.date
+) -> list[DashboardHistoricoItem]:
+    rows = dr.historico_periodo(db, inicio, fim)
+    return [DashboardHistoricoItem(**r) for r in rows]
+
+
+def dashboard_resumo_anual(db: Session, ano: int) -> list[DashboardResumoAnualItem]:
+    rows = dr.resumo_anual(db, ano)
+    return [DashboardResumoAnualItem(**r) for r in rows]

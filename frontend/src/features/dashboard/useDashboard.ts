@@ -46,3 +46,36 @@ export function useDashboard() {
     refetchInterval: 60_000,
   });
 }
+
+export interface DashboardHistoricoItem {
+  data: string;
+  faturamento: number;
+  total_compras: number;
+}
+
+export interface DashboardResumoAnualItem {
+  mes: number;
+  faturamento: number;
+  total_compras: number;
+}
+
+export function useDashboardHistorico(inicio: string, fim: string) {
+  return useQuery<DashboardHistoricoItem[]>({
+    queryKey: ["dashboard", "historico", inicio, fim],
+    queryFn: () =>
+      api
+        .get<DashboardHistoricoItem[]>("/api/dashboard/historico", { params: { inicio, fim } })
+        .then((r) => r.data),
+    enabled: !!inicio && !!fim,
+  });
+}
+
+export function useDashboardResumoAnual(ano: number) {
+  return useQuery<DashboardResumoAnualItem[]>({
+    queryKey: ["dashboard", "resumo-anual", ano],
+    queryFn: () =>
+      api
+        .get<DashboardResumoAnualItem[]>("/api/dashboard/resumo-anual", { params: { ano } })
+        .then((r) => r.data),
+  });
+}
