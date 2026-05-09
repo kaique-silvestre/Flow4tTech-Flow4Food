@@ -460,4 +460,4 @@ Cada linha de `NovaCompraPage` tem três campos controlados: `quantidade`, `cust
 
 ### User stories endereçadas
 
-- US8–US12 da Fase 7 / M017 (PRD `docs/prds/prd_matchpoint_v0.1.md`).
+- US8–US12 da Fase 7 / M017 (PRD `docs/prds/prd_matchpoint_v0.1.md`)
