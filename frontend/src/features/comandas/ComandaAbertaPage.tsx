@@ -15,7 +15,7 @@ export function ComandaAbertaPage() {
   const navigate = useNavigate();
   const comanda_id = Number(id);
 
-  const { data: comanda, isLoading } = useComanda(comanda_id);
+  const { data: comanda, isLoading, isError } = useComanda(comanda_id);
   const lancarItem = useLancarItem(comanda_id);
   const editarItem = useEditarItem(comanda_id);
   const patchComanda = usePatchComanda(comanda_id);
@@ -117,6 +117,17 @@ export function ComandaAbertaPage() {
         observacao: editObs || undefined,
       },
       { onSuccess: () => setEditingId(null) },
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6">
+        <Button variant="outline" size="sm" onClick={() => navigate("/comandas")} className="mb-4">
+          ← Voltar
+        </Button>
+        <p className="text-sm text-red-500">Comanda não encontrada ou erro ao carregar. Verifique se ela ainda existe.</p>
+      </div>
     );
   }
 
