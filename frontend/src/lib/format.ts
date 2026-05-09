@@ -6,8 +6,8 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
-export function formatCurrency(value: number): string {
-  return currencyFormatter.format(value);
+export function formatCurrency(value: number | string): string {
+  return currencyFormatter.format(Number(value));
 }
 
 export function formatDate(d: Date | string, fmt = "dd/MM/yyyy HH:mm"): string {
@@ -15,7 +15,8 @@ export function formatDate(d: Date | string, fmt = "dd/MM/yyyy HH:mm"): string {
   return fnsFormat(date, fmt, { locale: ptBR });
 }
 
-export function formatQuantidade(value: number): string {
-  if (Number.isInteger(value)) return String(value);
-  return parseFloat(value.toFixed(3)).toString();
+export function formatQuantidade(value: number | string): string {
+  const n = Number(value);
+  if (Number.isInteger(n)) return String(n);
+  return parseFloat(n.toFixed(3)).toString();
 }
