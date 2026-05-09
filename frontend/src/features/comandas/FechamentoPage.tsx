@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,8 @@ export default function FechamentoPage() {
   const { fields, append, remove } = useFieldArray({ control, name: "pagamentos" });
   const modo = watch("modo_divisao");
   const pagamentos = watch("pagamentos");
-  const hasInvalidMethod = pagamentos.some((p) => !p.metodo_id);
+  const pagamentosWatched = useWatch({ control, name: "pagamentos" });
+  const hasInvalidMethod = pagamentosWatched.some((p) => !p.metodo_id);
 
   useEffect(() => {
     if (comanda) {
@@ -203,7 +204,7 @@ export default function FechamentoPage() {
                 <select
                   className={`mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring ${isSubmitted && !pagamentos[idx]?.metodo_id ? "border-destructive" : "border-input"}`}
                   value={pagamentos[idx]?.metodo_id || ""}
-                  onChange={(e) => setValue(`pagamentos.${idx}.metodo_id`, Number(e.target.value))}
+                  onChange={(e) => setValue(`pagamentos.${idx}.metodo_id`, Number(e.target.value), { shouldDirty: true, shouldTouch: true })}
                 >
                   <option value="">Selecione...</option>
                   {metodos?.filter((m) => m.ativo).map((m) => (
