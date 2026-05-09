@@ -86,7 +86,7 @@ export function InsumoModal({ open, onClose, onSuccess }: Props) {
               <option value="">Selecione...</option>
               {categorias.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.indent ? `  ${c.nome}` : c.nome}
+                  {c.indent ? `  ${c.nome}` : c.nome}
                 </option>
               ))}
             </select>
