@@ -18,20 +18,35 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     conn = op.get_bind()
-    # itens onde vendavel=false → insumos (preserva IDs)
-    conn.execute(sa.text("""
-        INSERT INTO insumos (id, nome, categoria_id, unidade_base, quantidade_caixa, custo_medio, estoque_atual, ativo)
-        SELECT id, nome, categoria_id, unidade_base, quantidade_caixa, custo_medio, estoque_atual, ativo
-        FROM itens
-        WHERE vendavel = false OR vendavel = 0
-    """))
-    # itens onde vendavel=true → produtos (preserva IDs)
-    conn.execute(sa.text("""
-        INSERT INTO produtos (id, nome, categoria_id, preco_venda, ativo)
-        SELECT id, nome, categoria_id, preco_venda, ativo
-        FROM itens
-        WHERE vendavel = true OR vendavel = 1
-    """))
+    dialect = conn.dialect.name
+    if dialect == "postgresql":
+        # Postgres has a strict boolean type — no integer comparisons allowed
+        conn.execute(sa.text("""
+            INSERT INTO insumos (id, nome, categoria_id, unidade_base, quantidade_caixa, custo_medio, estoque_atual, ativo)
+            SELECT id, nome, categoria_id, unidade_base, quantidade_caixa, custo_medio, estoque_atual, ativo
+            FROM itens
+            WHERE vendavel = false
+        """))
+        conn.execute(sa.text("""
+            INSERT INTO produtos (id, nome, categoria_id, preco_venda, ativo)
+            SELECT id, nome, categoria_id, preco_venda, ativo
+            FROM itens
+            WHERE vendavel = true
+        """))
+    else:
+        # SQLite stores booleans as 0/1 integers
+        conn.execute(sa.text("""
+            INSERT INTO insumos (id, nome, categoria_id, unidade_base, quantidade_caixa, custo_medio, estoque_atual, ativo)
+            SELECT id, nome, categoria_id, unidade_base, quantidade_caixa, custo_medio, estoque_atual, ativo
+            FROM itens
+            WHERE vendavel = false OR vendavel = 0
+        """))
+        conn.execute(sa.text("""
+            INSERT INTO produtos (id, nome, categoria_id, preco_venda, ativo)
+            SELECT id, nome, categoria_id, preco_venda, ativo
+            FROM itens
+            WHERE vendavel = true OR vendavel = 1
+        """))
 
 
 def downgrade() -> None:
