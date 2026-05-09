@@ -12,7 +12,7 @@ class ComandaCreateRequest(BaseModel):
     identificacao: str = Field(..., min_length=1)
     tipo_identificacao: Literal["nome", "mesa"]
     garcom_id: int
-    pessoas: list[str] = []
+    pessoas: list[str] = Field(..., min_length=1)
 
 
 class LancarItemRequest(BaseModel):
@@ -40,6 +40,7 @@ class CancelarItemRequest(BaseModel):
 class PatchComandaRequest(BaseModel):
     identificacao: Optional[str] = Field(None, min_length=1)
     garcom_id: Optional[int] = None
+    pessoas: Optional[list[str]] = Field(None, min_length=1)
 
 
 class ItemComandaResponse(BaseModel):

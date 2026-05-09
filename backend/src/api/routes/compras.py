@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_current_user, get_db
-from src.schemas.compras import CompraCreateRequest, CompraResponse
+from src.schemas.compras import CompraCreateRequest, CompraPatchRequest, CompraResponse
 from src.services import compras_service
 
 router = APIRouter()
@@ -37,3 +37,22 @@ def get_compra(
     _user: dict = Depends(get_current_user),
 ) -> CompraResponse:
     return compras_service.get_compra(db, compra_id)
+
+
+@router.post("/{compra_id}/cancelar", response_model=CompraResponse)
+def cancelar_compra(
+    compra_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> CompraResponse:
+    return compras_service.cancelar_compra(db, compra_id)
+
+
+@router.patch("/{compra_id}", response_model=CompraResponse)
+def patch_compra(
+    compra_id: int,
+    data: CompraPatchRequest,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> CompraResponse:
+    return compras_service.patch_compra(db, compra_id, data)

@@ -16,6 +16,7 @@ class Compra(Base):
     data_compra: Mapped[datetime.date] = mapped_column(sa.Date(), nullable=False)
     numero_nota: Mapped[Optional[str]] = mapped_column(sa.String(50), nullable=True)
     total: Mapped[Decimal] = mapped_column(sa.Numeric(12, 2), nullable=False, default=Decimal("0"))
+    status: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default="ativa")
     created_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime(), nullable=False, server_default=sa.func.now()
     )

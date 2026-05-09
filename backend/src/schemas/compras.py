@@ -42,6 +42,12 @@ class ItemCompraResponse(BaseModel):
     custo_total: Decimal
 
 
+class CompraPatchRequest(BaseModel):
+    fornecedor_id: Optional[int] = None
+    data_compra: Optional[datetime.date] = None
+    numero_nota: Optional[str] = None
+
+
 class CompraResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -51,5 +57,6 @@ class CompraResponse(BaseModel):
     data_compra: datetime.date
     numero_nota: Optional[str]
     total: Decimal
+    status: str
     itens: list[ItemCompraResponse]
     created_at: datetime.datetime

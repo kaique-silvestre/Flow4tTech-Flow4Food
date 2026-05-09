@@ -196,7 +196,7 @@ export function useReopenComanda(comanda_id: number | string) {
 export function usePatchComanda(comanda_id: number | string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { identificacao?: string; garcom_id?: number }) =>
+    mutationFn: (data: { identificacao?: string; garcom_id?: number; pessoas?: string[] }) =>
       api
         .patch<ComandaResponse>(`/api/comandas/${comanda_id}`, data)
         .then((r) => r.data),

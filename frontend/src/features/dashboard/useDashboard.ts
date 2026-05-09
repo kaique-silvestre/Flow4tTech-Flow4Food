@@ -29,6 +29,7 @@ export interface ComandaAbertaItem {
 export interface DashboardData {
   faturamento_hoje: number;
   ticket_medio_hoje: number;
+  cmv_hoje: number;
   comandas_abertas: number;
   comandas_fechadas_hoje: number;
   lucro_estimado_hoje: number;

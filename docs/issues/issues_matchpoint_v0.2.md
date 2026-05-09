@@ -64,7 +64,7 @@ Mesmo fix do Issue 1 aplicado a `GarcomModal.tsx`. Causa raiz idêntica — `ati
 
 ---
 
-## Issue 3 — U1: Enum `unidade_base` incompleto no backend
+## Issue 3 — U1: Enum `unidade_base` incompleto no backend ✓ Concluída
 
 **Tipo:** HITL  
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -89,12 +89,12 @@ Zero mudança em services, repositories ou schemas além do enum.
 
 ### Critérios de aceite
 
-- [ ] `POST /api/insumos` com `unidade_base: "kg"` → 201, dado persistido
-- [ ] `POST /api/insumos` com `unidade_base: "ml"` → 201, dado persistido
-- [ ] `POST /api/insumos` com `unidade_base: "l"` → 201, dado persistido
-- [ ] `POST /api/insumos` com `unidade_base: "g"` e `unidade_base: "un"` → ainda funciona (sem regressão)
-- [ ] Migration Alembic executa sem erro em DB limpo e em DB com dados existentes
-- [ ] Migration é reversível (`downgrade` desfaz sem erro quando não há dados com os novos valores)
+- [x] `POST /api/insumos` com `unidade_base: "kg"` → 201, dado persistido
+- [x] `POST /api/insumos` com `unidade_base: "ml"` → 201, dado persistido
+- [x] `POST /api/insumos` com `unidade_base: "l"` → 201, dado persistido
+- [x] `POST /api/insumos` com `unidade_base: "g"` e `unidade_base: "un"` → ainda funciona (sem regressão)
+- [x] Migration Alembic executa sem erro em DB limpo e em DB com dados existentes
+- [x] Migration é reversível (`downgrade` desfaz sem erro quando não há dados com os novos valores)
 
 ### User stories endereçadas
 
@@ -103,7 +103,7 @@ Zero mudança em services, repositories ou schemas além do enum.
 
 ---
 
-## Issue 4 — U2: Campo `quantidade_caixa` visível apenas para unidade `un`
+## Issue 4 — U2: Campo `quantidade_caixa` visível apenas para unidade `un` ✓ Concluída
 
 **Tipo:** AFK  
 **Bloqueado por:** Issue 3 (U1) — para teste consistente com as novas unidades
@@ -119,12 +119,12 @@ Em `InsumoModal.tsx`, renderizar o campo `quantidade_caixa` condicionalmente: ap
 
 ### Critérios de aceite
 
-- [ ] Selecionar unidade `un` → campo `quantidade_caixa` aparece
-- [ ] Selecionar unidade `kg` → campo `quantidade_caixa` não aparece
-- [ ] Selecionar unidade `g`, `ml`, `l` → campo `quantidade_caixa` não aparece
-- [ ] Trocar de `un` para `kg` durante edição → campo some imediatamente
-- [ ] Trocar de `kg` para `un` durante edição → campo reaparece
-- [ ] `POST /api/insumos` com `unidade_base: "kg"` não inclui `quantidade_caixa` no payload
+- [x] Selecionar unidade `un` → campo `quantidade_caixa` aparece
+- [x] Selecionar unidade `kg` → campo `quantidade_caixa` não aparece
+- [x] Selecionar unidade `g`, `ml`, `l` → campo `quantidade_caixa` não aparece
+- [x] Trocar de `un` para `kg` durante edição → campo some imediatamente
+- [x] Trocar de `kg` para `un` durante edição → campo reaparece
+- [x] `POST /api/insumos` com `unidade_base: "kg"` não inclui `quantidade_caixa` no payload
 
 ### User stories endereçadas
 
@@ -132,7 +132,7 @@ Em `InsumoModal.tsx`, renderizar o campo `quantidade_caixa` condicionalmente: ap
 
 ---
 
-## Issue 5 — C3 + C4 + P1: Fixes de validação no modal de nova comanda
+## Issue 5 — C3 + C4 + P1: Fixes de validação no modal de nova comanda ✓ Concluída
 
 **Tipo:** AFK  
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -154,12 +154,12 @@ Três ajustes independentes em `NovaComandaModal.tsx`:
 
 ### Critérios de aceite
 
-- [ ] **C3:** Selecionar tipo "mesa" → campo aceita apenas números inteiros positivos (letras ignoradas)
-- [ ] **C3:** Selecionar tipo "nome" → campo aceita texto livremente
-- [ ] **C4:** Tentar submeter formulário sem nenhuma pessoa → mensagem de erro no campo `pessoas`
-- [ ] **C4:** `POST /api/comandas` com `pessoas: []` → erro de validação do backend
-- [ ] **P1:** Label do campo pessoas exibe "Pessoas" sem "(opcional)"
-- [ ] Nenhuma regressão no fluxo de abertura de comanda com 1 ou mais pessoas
+- [x] **C3:** Selecionar tipo "mesa" → campo aceita apenas números inteiros positivos (letras ignoradas)
+- [x] **C3:** Selecionar tipo "nome" → campo aceita texto livremente
+- [x] **C4:** Tentar submeter formulário sem nenhuma pessoa → mensagem de erro no campo `pessoas`
+- [x] **C4:** `POST /api/comandas` com `pessoas: []` → erro de validação do backend
+- [x] **P1:** Label do campo pessoas exibe "Pessoas" sem "(opcional)"
+- [x] Nenhuma regressão no fluxo de abertura de comanda com 1 ou mais pessoas
 
 ### User stories endereçadas
 
@@ -169,7 +169,7 @@ Três ajustes independentes em `NovaComandaModal.tsx`:
 
 ---
 
-## Issue 6 — C2: Auto-add nome do cliente na lista de pessoas
+## Issue 6 — C2: Auto-add nome do cliente na lista de pessoas ✓ Concluída
 
 **Tipo:** AFK  
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -193,11 +193,11 @@ Se o operador alterar a identificação: remover o valor antigo e adicionar o no
 
 ### Critérios de aceite
 
-- [ ] Selecionar tipo "nome", digitar "Pedro" → "Pedro" aparece automaticamente na lista de pessoas
-- [ ] "Pedro" não duplicado se já estiver na lista
-- [ ] Alterar identificação de "Pedro" para "Ana" → "Pedro" removido da lista, "Ana" adicionada
-- [ ] Comportamento não ativo quando tipo é "mesa"
-- [ ] Pessoas adicionadas manualmente além do nome identificador permanecem na lista
+- [x] Selecionar tipo "nome", digitar "Pedro" → "Pedro" aparece automaticamente na lista de pessoas
+- [x] "Pedro" não duplicado se já estiver na lista
+- [x] Alterar identificação de "Pedro" para "Ana" → "Pedro" removido da lista, "Ana" adicionada
+- [x] Comportamento não ativo quando tipo é "mesa"
+- [x] Pessoas adicionadas manualmente além do nome identificador permanecem na lista
 
 ### User stories endereçadas
 
@@ -205,7 +205,7 @@ Se o operador alterar a identificação: remover o valor antigo e adicionar o no
 
 ---
 
-## Issue 7 — D1: Card CMV Hoje no Dashboard
+## Issue 7 — D1: Card CMV Hoje no Dashboard ✓ Concluída
 
 **Tipo:** HITL  
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -231,11 +231,11 @@ cmv_hoje: float
 
 ### Critérios de aceite
 
-- [ ] `GET /api/dashboard` retorna campo `cmv_hoje: float`
-- [ ] Card "CMV Hoje" visível no dashboard entre os demais cards do topo
-- [ ] Valor do card bate com a soma do CMV de comandas fechadas no dia com insumos de custo conhecido
-- [ ] Cor do card é neutra (sem verde/vermelho)
-- [ ] Sem regressão nos demais cards (ticket médio, faturamento, etc.)
+- [x] `GET /api/dashboard` retorna campo `cmv_hoje: float`
+- [x] Card "CMV Hoje" visível no dashboard entre os demais cards do topo
+- [x] Valor do card bate com a soma do CMV de comandas fechadas no dia com insumos de custo conhecido
+- [x] Cor do card é neutra (sem verde/vermelho)
+- [x] Sem regressão nos demais cards (ticket médio, faturamento, etc.)
 
 ### User stories endereçadas
 
@@ -243,7 +243,7 @@ cmv_hoje: float
 
 ---
 
-## Issue 8 — S1: Máscaras de input CNPJ e Telefone em Configurações
+## Issue 8 — S1: Máscaras de input CNPJ e Telefone em Configurações ✓ Concluída
 
 **Tipo:** AFK  
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -270,13 +270,13 @@ Usar `Controller` do RHF nos dois campos para manipular `onChange` e `value` ant
 
 ### Critérios de aceite
 
-- [ ] Digitar "12345678000195" no campo CNPJ → formata automaticamente para "12.345.678/0001-95"
-- [ ] Digitar "11999998888" no campo Telefone → formata para "(11) 99999-8888"
-- [ ] Digitar "1133334444" no campo Telefone → formata para "(11) 3333-4444"
-- [ ] Submeter CNPJ com formato incorreto → mensagem "CNPJ inválido"
-- [ ] Submeter Telefone com formato incorreto → mensagem "Telefone inválido"
-- [ ] CNPJ e Telefone vazios são aceitos (campos opcionais)
-- [ ] Dados salvos no backend com a formatação aplicada
+- [x] Digitar "12345678000195" no campo CNPJ → formata automaticamente para "12.345.678/0001-95"
+- [x] Digitar "11999998888" no campo Telefone → formata para "(11) 99999-8888"
+- [x] Digitar "1133334444" no campo Telefone → formata para "(11) 3333-4444"
+- [x] Submeter CNPJ com formato incorreto → mensagem "CNPJ inválido"
+- [x] Submeter Telefone com formato incorreto → mensagem "Telefone inválido"
+- [x] CNPJ e Telefone vazios são aceitos (campos opcionais)
+- [x] Dados salvos no backend com a formatação aplicada
 
 ### User stories endereçadas
 
@@ -286,7 +286,7 @@ Usar `Controller` do RHF nos dois campos para manipular `onChange` e `value` ant
 
 ---
 
-## Issue 9 — CP3: Identificador interno `#0001` nas notas de compra
+## Issue 9 — CP3: Identificador interno `#0001` nas notas de compra ✓ Concluída
 
 **Tipo:** AFK  
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -299,11 +299,11 @@ Exibir identificador interno `#${String(compra.id).padStart(4, "0")}` em toda re
 
 ### Critérios de aceite
 
-- [ ] Compra com `id=1` exibe "#0001" na listagem
-- [ ] Compra com `id=42` exibe "#0042" na listagem
-- [ ] Compra com `id=1000` exibe "#1000" na listagem
-- [ ] Identificador visível na listagem e em modais/detalhes de compra
-- [ ] Nenhuma chamada adicional ao backend — apenas formatação de `compra.id` existente
+- [x] Compra com `id=1` exibe "#0001" na listagem
+- [x] Compra com `id=42` exibe "#0042" na listagem
+- [x] Compra com `id=1000` exibe "#1000" na listagem
+- [x] Identificador visível na listagem e em modais/detalhes de compra
+- [x] Nenhuma chamada adicional ao backend — apenas formatação de `compra.id` existente
 
 ### User stories endereçadas
 
@@ -311,7 +311,7 @@ Exibir identificador interno `#${String(compra.id).padStart(4, "0")}` em toda re
 
 ---
 
-## Issue 10 — C1: Edição inline de pessoas em comanda aberta
+## Issue 10 — C1: Edição inline de pessoas em comanda aberta ✓ Concluída
 
 **Tipo:** HITL  
 **Bloqueado por:** Issue 5 (C4) — backend deve validar `len(pessoas) >= 1` no PATCH também
@@ -330,13 +330,13 @@ Em `ComandaAbertaPage.tsx`, substituir a exibição estática de pessoas por ges
 
 ### Critérios de aceite
 
-- [ ] Campo de texto + botão "Adicionar" visíveis na seção de pessoas para comanda aberta
-- [ ] Adicionar pessoa → aparece na lista imediatamente (otimista) e persiste via PATCH
-- [ ] Remover pessoa com `×` → some da lista e persiste via PATCH
-- [ ] Tentar remover a última pessoa → erro (lista mínima de 1)
-- [ ] `PATCH /api/comandas/:id` com `pessoas: []` → erro de validação
-- [ ] Seção de edição não aparece para comandas com status diferente de `aberta`
-- [ ] `GET /api/comandas/:id` após PATCH reflete a lista atualizada
+- [x] Campo de texto + botão "Adicionar" visíveis na seção de pessoas para comanda aberta
+- [x] Adicionar pessoa → aparece na lista imediatamente (otimista) e persiste via PATCH
+- [x] Remover pessoa com `×` → some da lista e persiste via PATCH
+- [x] Tentar remover a última pessoa → erro (lista mínima de 1)
+- [x] `PATCH /api/comandas/:id` com `pessoas: []` → erro de validação
+- [x] Seção de edição não aparece para comandas com status diferente de `aberta`
+- [x] `GET /api/comandas/:id` após PATCH reflete a lista atualizada
 
 ### User stories endereçadas
 
@@ -344,7 +344,7 @@ Em `ComandaAbertaPage.tsx`, substituir a exibição estática de pessoas por ges
 
 ---
 
-## Issue 11 — Z1: Bypass de pagamento quando total = R$0
+## Issue 11 — Z1: Bypass de pagamento quando total = R$0 ✓ Concluída
 
 **Tipo:** HITL  
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -368,11 +368,11 @@ Em `FechamentoPage.tsx`, detectar `comanda.total === 0`. Se verdadeiro: substitu
 
 ### Critérios de aceite
 
-- [ ] Comanda com todos os itens cortesia → tela de fechamento exibe aviso amarelo e botão "Confirmar sem cobrança" (sem formulário de pagamento)
-- [ ] Clicar em "Confirmar Fechamento (sem cobrança)" → comanda fechada com `status=fechada`, `total=0`, `pagamentos=[]`
-- [ ] `GET /api/comandas/:id` após fechamento confirma `status=fechada` e `pagamentos=[]`
-- [ ] Comanda com `total > 0` → formulário de pagamento normal aparece (sem regressão)
-- [ ] Comanda com mix de itens normais e cortesia resultando em `total > 0` → fluxo normal
+- [x] Comanda com todos os itens cortesia → tela de fechamento exibe aviso amarelo e botão "Confirmar sem cobrança" (sem formulário de pagamento)
+- [x] Clicar em "Confirmar Fechamento (sem cobrança)" → comanda fechada com `status=fechada`, `total=0`, `pagamentos=[]`
+- [x] `GET /api/comandas/:id` após fechamento confirma `status=fechada` e `pagamentos=[]`
+- [x] Comanda com `total > 0` → formulário de pagamento normal aparece (sem regressão)
+- [x] Comanda com mix de itens normais e cortesia resultando em `total > 0` → fluxo normal
 
 ### User stories endereçadas
 
@@ -381,7 +381,7 @@ Em `FechamentoPage.tsx`, detectar `comanda.total === 0`. Se verdadeiro: substitu
 
 ---
 
-## Issue 12 — F1 + F2: Filtro Ativos/Inativos/Todos em Garçons e Métodos de Pagamento
+## Issue 12 — F1 + F2: Filtro Ativos/Inativos/Todos em Garçons e Métodos de Pagamento ✓ Concluída
 
 **Tipo:** AFK  
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -398,13 +398,13 @@ Adicionar filtro de status (toggle "Todos / Ativos / Inativos") no topo de `Garc
 
 ### Critérios de aceite
 
-- [ ] **F1:** Toggle "Todos / Ativos / Inativos" visível no topo de `GarconsPage`
-- [ ] **F1:** Padrão ao carregar a página: "Ativos" selecionado
-- [ ] **F1:** Selecionar "Inativos" → apenas garçons inativos aparecem
-- [ ] **F1:** Selecionar "Todos" → todos os garçons aparecem
-- [ ] **F2:** Mesmo comportamento em `MetodosPagamentoPage`
-- [ ] Filtragem sem chamada adicional à API (apenas `.filter` no array em memória)
-- [ ] Botão selecionado destacado visualmente
+- [x] **F1:** Toggle "Todos / Ativos / Inativos" visível no topo de `GarconsPage`
+- [x] **F1:** Padrão ao carregar a página: "Ativos" selecionado
+- [x] **F1:** Selecionar "Inativos" → apenas garçons inativos aparecem
+- [x] **F1:** Selecionar "Todos" → todos os garçons aparecem
+- [x] **F2:** Mesmo comportamento em `MetodosPagamentoPage`
+- [x] Filtragem sem chamada adicional à API (apenas `.filter` no array em memória)
+- [x] Botão selecionado destacado visualmente
 
 ### User stories endereçadas
 
@@ -413,7 +413,7 @@ Adicionar filtro de status (toggle "Todos / Ativos / Inativos") no topo de `Garc
 
 ---
 
-## Issue 13 — MP1: Botão Remover método de pagamento
+## Issue 13 — MP1: Botão Remover método de pagamento ✓ Concluída
 
 **Tipo:** HITL  
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -441,12 +441,12 @@ def delete_metodo(db: Session, metodo_id: int) -> None:
 
 ### Critérios de aceite
 
-- [ ] Botão "Remover" visível por linha em `MetodosPagamentoPage`
-- [ ] Clicar em "Remover" abre modal de confirmação com nome do método
-- [ ] Confirmar remoção de método sem histórico → 204, método some da lista
-- [ ] `GET /api/metodos-pagamento/{id}` após remoção → 404
-- [ ] Tentar remover método com pagamentos históricos → 409, toast de erro exibido
-- [ ] Cancelar o modal de confirmação → método não é removido
+- [x] Botão "Remover" visível por linha em `MetodosPagamentoPage`
+- [x] Clicar em "Remover" abre modal de confirmação com nome do método
+- [x] Confirmar remoção de método sem histórico → 204, método some da lista
+- [x] `GET /api/metodos-pagamento/{id}` após remoção → 404
+- [x] Tentar remover método com pagamentos históricos → 409, toast de erro exibido
+- [x] Cancelar o modal de confirmação → método não é removido
 
 ### User stories endereçadas
 
@@ -455,7 +455,7 @@ def delete_metodo(db: Session, metodo_id: int) -> None:
 
 ---
 
-## Issue 14 — CP1: Cancelamento de nota de compra (estorno de estoque)
+## Issue 14 — CP1: Cancelamento de nota de compra (estorno de estoque) ✓ Concluída
 
 **Tipo:** HITL  
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -485,13 +485,13 @@ Adicionar `TipoMovimento.ESTORNO_COMPRA` ao enum se não existir.
 
 ### Critérios de aceite
 
-- [ ] Registrar compra com 2 insumos → estoque aumenta → cancelar → estoque revertido
-- [ ] Movimentos `ESTORNO_COMPRA` criados para cada item da compra cancelada
-- [ ] `custo_medio` dos insumos não muda após cancelamento
-- [ ] Tentar cancelar compra já cancelada → 409
-- [ ] Compras canceladas exibidas com badge "Cancelada" e linha acinzentada
-- [ ] Botão "Cancelar Nota" não aparece para compras já canceladas
-- [ ] Migration executa sem erro em DB com dados existentes
+- [x] Registrar compra com 2 insumos → estoque aumenta → cancelar → estoque revertido
+- [x] Movimentos `ESTORNO_COMPRA` criados para cada item da compra cancelada
+- [x] `custo_medio` dos insumos não muda após cancelamento
+- [x] Tentar cancelar compra já cancelada → 409
+- [x] Compras canceladas exibidas com badge "Cancelada" e linha acinzentada
+- [x] Botão "Cancelar Nota" não aparece para compras já canceladas
+- [x] Migration executa sem erro em DB com dados existentes
 
 ### User stories endereçadas
 
@@ -501,7 +501,7 @@ Adicionar `TipoMovimento.ESTORNO_COMPRA` ao enum se não existir.
 
 ---
 
-## Issue 15 — CP2: Edição de campos não-estoque de compra
+## Issue 15 — CP2: Edição de campos não-estoque de compra ✓ Concluída
 
 **Tipo:** HITL  
 **Bloqueado por:** Issue 14 (CP1) — compartilha model `Compra` com campo `status`
@@ -522,12 +522,12 @@ Permitir editar fornecedor, data e número da nota de uma compra ativa. Quantida
 
 ### Critérios de aceite
 
-- [ ] Botão "Editar" visível por linha apenas para compras com `status === "ativa"`
-- [ ] Modal de edição abre com fornecedor, data e número da nota pré-preenchidos
-- [ ] Salvar edição → `PATCH` enviado → dados atualizados na listagem
-- [ ] Tentar editar compra cancelada (via API direta) → 422
-- [ ] Botão "Editar" não aparece para compras canceladas
-- [ ] Campos de itens/quantidades não presentes no modal de edição
+- [x] Botão "Editar" visível por linha apenas para compras com `status === "ativa"`
+- [x] Modal de edição abre com fornecedor, data e número da nota pré-preenchidos
+- [x] Salvar edição → `PATCH` enviado → dados atualizados na listagem
+- [x] Tentar editar compra cancelada (via API direta) → 422
+- [x] Botão "Editar" não aparece para compras canceladas
+- [x] Campos de itens/quantidades não presentes no modal de edição
 
 ### User stories endereçadas
 

@@ -41,6 +41,7 @@ def dashboard(db: Session) -> DashboardResponse:
     return DashboardResponse(
         faturamento_hoje=faturamento_hoje,
         ticket_medio_hoje=ticket_medio,
+        cmv_hoje=float(cmv),
         comandas_abertas=len(abertas_lista),
         comandas_fechadas_hoje=qtd_fechadas,
         lucro_estimado_hoje=lucro_estimado,

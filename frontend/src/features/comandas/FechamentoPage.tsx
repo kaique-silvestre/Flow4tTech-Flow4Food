@@ -122,7 +122,26 @@ export default function FechamentoPage() {
         </Button>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {baseTotal === 0 && (
+        <div className="space-y-4">
+          <div className="rounded border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+            Total R$0,00 — todos os itens são cortesia ou desconto integral.
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={() => navigate(`/comandas/${id}`)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => fechar({ pagamentos: [], modo_divisao: "sem_divisao" })}
+              disabled={isPending}
+            >
+              {isPending ? "Processando..." : "Confirmar Fechamento (sem cobrança)"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {baseTotal > 0 && <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Modo de divisão */}
         <div>
           <Label className="text-base font-semibold">Como dividir?</Label>
@@ -285,6 +304,8 @@ export default function FechamentoPage() {
           </Button>
         </div>
       </form>
+
+      }
 
       {descontoOpen && (
         <AplicarDescontoModal

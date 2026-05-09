@@ -4,7 +4,7 @@ export const novaComandaSchema = z.object({
   identificacao: z.string().min(1, "Identificação é obrigatória"),
   tipo_identificacao: z.enum(["nome", "mesa"]),
   garcom_id: z.number().int().positive("Selecione um garçom"),
-  pessoas: z.array(z.string().min(1)).default([]),
+  pessoas: z.array(z.string().min(1)).min(1, "Adicione ao menos uma pessoa"),
 });
 
 export const lancarItemSchema = z.object({

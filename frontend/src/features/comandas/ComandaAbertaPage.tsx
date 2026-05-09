@@ -25,6 +25,7 @@ export function ComandaAbertaPage() {
   const [editingField, setEditingField] = useState<"identificacao" | "garcom" | null>(null);
   const [editIdentificacao, setEditIdentificacao] = useState("");
   const [editGarcomId, setEditGarcomId] = useState<number>(0);
+  const [novaPessoa, setNovaPessoa] = useState("");
 
   function startEditIdentificacao() {
     setEditIdentificacao(comanda?.identificacao ?? "");
@@ -270,7 +271,57 @@ export function ComandaAbertaPage() {
             {comanda.status}
           </span>
         </div>
-        {comanda.pessoas.length > 0 && (
+        {isEditable && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {comanda.pessoas.map((p, i) => (
+              <span key={i} className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                {p}
+                {comanda.pessoas.length > 1 && (
+                  <button
+                    type="button"
+                    className="text-gray-400 hover:text-gray-700"
+                    onClick={() => {
+                      const novaLista = comanda.pessoas.filter((_, j) => j !== i);
+                      patchComanda.mutate({ pessoas: novaLista });
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </span>
+            ))}
+            <div className="flex items-center gap-1">
+              <input
+                className="h-6 rounded border px-2 text-xs w-28"
+                placeholder="+ pessoa"
+                value={novaPessoa}
+                onChange={(e) => setNovaPessoa(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const nome = novaPessoa.trim();
+                    if (!nome || comanda.pessoas.includes(nome)) return;
+                    patchComanda.mutate({ pessoas: [...comanda.pessoas, nome] });
+                    setNovaPessoa("");
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="text-xs text-blue-600 hover:underline"
+                onClick={() => {
+                  const nome = novaPessoa.trim();
+                  if (!nome || comanda.pessoas.includes(nome)) return;
+                  patchComanda.mutate({ pessoas: [...comanda.pessoas, nome] });
+                  setNovaPessoa("");
+                }}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        )}
+        {!isEditable && comanda.pessoas.length > 0 && (
           <div className="mt-1 flex gap-2">
             {comanda.pessoas.map((p, i) => (
               <span key={i} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">

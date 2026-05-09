@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ export function NovaComandaModal({ onClose }: Props) {
     handleSubmit,
     setValue,
     watch,
+    getValues,
     formState: { errors },
   } = useForm<NovaComandaValues>({
     resolver: zodResolver(novaComandaSchema),
@@ -30,6 +31,23 @@ export function NovaComandaModal({ onClose }: Props) {
 
   const [pessoaInput, setPessoaInput] = useState("");
   const pessoas = watch("pessoas");
+  const tipo = watch("tipo_identificacao");
+  const identificacao = watch("identificacao");
+  const prevIdentificacaoRef = useRef("");
+
+  useEffect(() => {
+    if (tipo !== "nome") return;
+    const trimmed = (identificacao ?? "").trim();
+    const prev = prevIdentificacaoRef.current;
+    prevIdentificacaoRef.current = trimmed;
+    const atual = getValues("pessoas") ?? [];
+    const semPrev = prev ? atual.filter((p) => p !== prev) : atual;
+    if (trimmed && !semPrev.includes(trimmed)) {
+      setValue("pessoas", [trimmed, ...semPrev]);
+    } else {
+      setValue("pessoas", semPrev);
+    }
+  }, [tipo, identificacao, getValues, setValue]);
 
   function addPessoa() {
     const nome = pessoaInput.trim();
@@ -70,7 +88,14 @@ export function NovaComandaModal({ onClose }: Props) {
           {/* Identificação */}
           <div>
             <Label htmlFor="identificacao">Identificação</Label>
-            <Input id="identificacao" {...register("identificacao")} className="mt-1" />
+            <Input
+              id="identificacao"
+              type={tipo === "mesa" ? "number" : "text"}
+              min={tipo === "mesa" ? 1 : undefined}
+              step={tipo === "mesa" ? 1 : undefined}
+              {...register("identificacao")}
+              className="mt-1"
+            />
             {errors.identificacao && (
               <p className="mt-1 text-xs text-red-500">{errors.identificacao.message}</p>
             )}
@@ -98,7 +123,7 @@ export function NovaComandaModal({ onClose }: Props) {
 
           {/* Pessoas */}
           <div>
-            <Label>Pessoas (opcional)</Label>
+            <Label>Pessoas</Label>
             <div className="mt-1 flex gap-2">
               <Input
                 value={pessoaInput}
@@ -128,6 +153,9 @@ export function NovaComandaModal({ onClose }: Props) {
                   </span>
                 ))}
               </div>
+            )}
+            {errors.pessoas && (
+              <p className="mt-1 text-xs text-red-500">{errors.pessoas.message}</p>
             )}
           </div>
 

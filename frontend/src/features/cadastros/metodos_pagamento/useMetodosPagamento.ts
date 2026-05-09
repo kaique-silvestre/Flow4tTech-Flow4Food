@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/toast";
-import { api } from "@/lib/api";
+import { api, type ApiErrorBody } from "@/lib/api";
 import type { MetodoPagamentoCreateFormValues, MetodoPagamentoFormValues } from "./metodoPagamentoSchemas";
 
 export interface MetodoPagamento {
@@ -41,5 +41,24 @@ export function useUpdateMetodoPagamento() {
       toast.success("Método de pagamento atualizado.");
     },
     onError: () => toast.error("Erro ao atualizar método de pagamento."),
+  });
+}
+
+export function useDeleteMetodoPagamento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.delete(`/api/metodos-pagamento/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [QK] });
+      toast.success("Método removido.");
+    },
+    onError: (err: unknown) => {
+      const code = (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.code;
+      if (code === "CONFLICT") {
+        toast.error("Método de pagamento possui histórico e não pode ser removido.");
+      } else {
+        toast.error("Erro ao remover método de pagamento.");
+      }
+    },
   });
 }

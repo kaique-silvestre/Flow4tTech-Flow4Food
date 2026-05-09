@@ -32,3 +32,11 @@ def update(db: Session, metodo_id: int, data: MetodoPagamentoUpdateRequest) -> O
     db.commit()
     db.refresh(obj)
     return obj
+
+
+def delete(db: Session, metodo_id: int) -> None:
+    obj = get_by_id(db, metodo_id)
+    if obj is None:
+        return
+    db.delete(obj)
+    db.commit()

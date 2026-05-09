@@ -165,6 +165,9 @@ def patch_comanda(db: Session, comanda_id: int, data: PatchComandaRequest) -> Co
     if data.identificacao is not None:
         comanda.identificacao = data.identificacao
 
+    if data.pessoas is not None:
+        comanda.pessoas = json.dumps(data.pessoas, ensure_ascii=False)
+
     comandas_repository.add_evento(
         db,
         comanda_id,

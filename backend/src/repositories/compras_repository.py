@@ -20,6 +20,7 @@ def create_compra(
         data_compra=data_compra,
         numero_nota=numero_nota,
         total=total,
+        status="ativa",
     )
     db.add(compra)
     db.flush()

@@ -37,10 +37,13 @@ export function InsumoModal({ open, onClose, onSuccess }: Props) {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<InsumoRapidoFormValues>({
     resolver: zodResolver(insumoRapidoSchema),
   });
+
+  const unidade = watch("unidade_base");
 
   function handleClose() {
     reset();
@@ -109,17 +112,19 @@ export function InsumoModal({ open, onClose, onSuccess }: Props) {
             {errors.unidade_base && <p className="text-xs text-red-500">{errors.unidade_base.message}</p>}
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="qtd-caixa">Qtd por caixa (opcional)</Label>
-            <Input
-              id="qtd-caixa"
-              type="number"
-              min="1"
-              step="1"
-              placeholder="Ex: 24"
-              {...register("quantidade_caixa")}
-            />
-          </div>
+          {unidade === "un" && (
+            <div className="space-y-1">
+              <Label htmlFor="qtd-caixa">Qtd por caixa (opcional)</Label>
+              <Input
+                id="qtd-caixa"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="Ex: 24"
+                {...register("quantidade_caixa")}
+              />
+            </div>
+          )}
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={handleClose}>

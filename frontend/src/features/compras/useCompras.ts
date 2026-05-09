@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/lib/toast";
-import { api } from "@/lib/api";
+import { api, type ApiErrorBody } from "@/lib/api";
 import type { CompraFormValues } from "./compraSchemas";
 
 export interface ItemCompraResponse {
@@ -19,6 +19,7 @@ export interface CompraResponse {
   data_compra: string;
   numero_nota: string | null;
   total: number;
+  status: string;
   itens: ItemCompraResponse[];
   created_at: string;
 }
@@ -64,5 +65,39 @@ export function useCreateCompra() {
       const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
       toast.error(msg ?? "Erro ao registrar compra.");
     },
+  });
+}
+
+export function useCancelarCompra() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      api.post<CompraResponse>(`/api/compras/${id}/cancelar`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [QK] });
+      qc.invalidateQueries({ queryKey: ["estoque"] });
+      toast.warning("Nota cancelada. Verifique o custo médio dos insumos afetados.", { duration: 6000 });
+    },
+    onError: (err: unknown) => {
+      const code = (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.code;
+      if (code === "CONFLICT") {
+        toast.error("Esta nota já foi cancelada.");
+      } else {
+        toast.error("Erro ao cancelar nota.");
+      }
+    },
+  });
+}
+
+export function usePatchCompra() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { fornecedor_id?: number | null; data_compra?: string; numero_nota?: string | null } }) =>
+      api.patch<CompraResponse>(`/api/compras/${id}`, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [QK] });
+      toast.success("Compra atualizada.");
+    },
+    onError: () => toast.error("Erro ao editar compra."),
   });
 }

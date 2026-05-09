@@ -38,3 +38,12 @@ def update_metodo(
     _user: dict = Depends(get_current_user),
 ) -> MetodoPagamentoResponse:
     return metodos_pagamento_service.update_metodo(db, metodo_id, body)  # type: ignore[return-value]
+
+
+@router.delete("/{metodo_id}", status_code=204)
+def delete_metodo(
+    metodo_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> None:
+    metodos_pagamento_service.delete_metodo(db, metodo_id)

@@ -226,9 +226,10 @@ export function DashboardPage() {
       ) : (
         <>
           {/* Cards */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {isLoading ? (
               <>
+                <CardSkeleton />
                 <CardSkeleton />
                 <CardSkeleton />
                 <CardSkeleton />
@@ -245,6 +246,12 @@ export function DashboardPage() {
                   <p className="text-xs text-gray-500 uppercase tracking-wide">Ticket Médio</p>
                   <p className="mt-1 text-2xl font-bold text-gray-900">
                     {formatCurrency(data?.ticket_medio_hoje ?? 0)}
+                  </p>
+                </div>
+                <div className="rounded-lg border bg-white p-4">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">CMV Hoje</p>
+                  <p className="mt-1 text-2xl font-bold text-gray-900">
+                    {formatCurrency(data?.cmv_hoje ?? 0)}
                   </p>
                 </div>
                 <div className="rounded-lg border bg-white p-4">

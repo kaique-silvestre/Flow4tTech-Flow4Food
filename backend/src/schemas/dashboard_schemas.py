@@ -43,6 +43,7 @@ class DashboardResumoAnualItem(BaseModel):
 class DashboardResponse(BaseModel):
     faturamento_hoje: float
     ticket_medio_hoje: float
+    cmv_hoje: float
     comandas_abertas: int
     comandas_fechadas_hoje: int
     lucro_estimado_hoje: float

@@ -11,6 +11,7 @@ from src.models.movimentos_estoque import TipoMovimento
 from src.repositories import compras_repository, estoque_repository
 from src.schemas.compras import (
     CompraCreateRequest,
+    CompraPatchRequest,
     CompraResponse,
     ItemCompraResponse,
 )
@@ -111,6 +112,7 @@ def criar_compra(db: Session, data: CompraCreateRequest) -> CompraResponse:
         data_compra=compra.data_compra,
         numero_nota=compra.numero_nota,
         total=compra.total,
+        status=compra.status,
         itens=itens_response,
         created_at=compra.created_at,
     )
@@ -142,9 +144,86 @@ def get_compra(db: Session, compra_id: int) -> CompraResponse:
         data_compra=compra.data_compra,
         numero_nota=compra.numero_nota,
         total=compra.total,
+        status=getattr(compra, "status", "ativa"),
         itens=itens_response,
         created_at=compra.created_at,
     )
+
+
+def _build_compra_response(db: Session, compra: "Compra") -> CompraResponse:
+    from src.models.compras import Compra as CompraModel  # noqa: F401 — local import avoids circular
+    itens_db = compras_repository.get_itens_compra(db, compra.id)
+    itens_response = []
+    for ic in itens_db:
+        insumo = db.execute(select(Insumo).where(Insumo.id == ic.insumo_id)).scalar_one_or_none()
+        itens_response.append(
+            ItemCompraResponse(
+                item_id=ic.insumo_id,
+                item_nome=insumo.nome if insumo else "",
+                quantidade=ic.quantidade,
+                custo_unitario=ic.custo_unitario,
+                custo_total=ic.custo_total,
+            )
+        )
+    return CompraResponse(
+        id=compra.id,
+        fornecedor_id=compra.fornecedor_id,
+        fornecedor_nome=_get_fornecedor_nome(db, compra.fornecedor_id),
+        data_compra=compra.data_compra,
+        numero_nota=compra.numero_nota,
+        total=compra.total,
+        status=compra.status,
+        itens=itens_response,
+        created_at=compra.created_at,
+    )
+
+
+def cancelar_compra(db: Session, compra_id: int) -> CompraResponse:
+    from src.models.compras import Compra as CompraModel
+    compra = compras_repository.get_compra_by_id(db, compra_id)
+    if compra is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Compra não encontrada", http_status=404)
+    if compra.status == "cancelada":
+        raise AppError(ErrorCode.CONFLICT, "Compra já cancelada", http_status=409)
+
+    itens = compras_repository.get_itens_compra(db, compra_id)
+    for item in itens:
+        insumo = estoque_repository.get_insumo_for_update(db, item.insumo_id)
+        if insumo is None:
+            continue
+        novo_estoque = insumo.estoque_atual - item.quantidade
+        estoque_repository.update_estoque_e_custo(db, insumo.id, novo_estoque, insumo.custo_medio)
+        estoque_repository.registrar_movimento(
+            db=db,
+            insumo_id=insumo.id,
+            tipo=TipoMovimento.ESTORNO_COMPRA,
+            quantidade=-item.quantidade,
+            custo_unitario=item.custo_unitario,
+            saldo_apos=novo_estoque,
+            compra_id=compra_id,
+        )
+
+    compra.status = "cancelada"
+    db.commit()
+    db.refresh(compra)
+    return _build_compra_response(db, compra)
+
+
+def patch_compra(db: Session, compra_id: int, data: CompraPatchRequest) -> CompraResponse:
+    compra = compras_repository.get_compra_by_id(db, compra_id)
+    if compra is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Compra não encontrada", http_status=404)
+    if compra.status == "cancelada":
+        raise AppError(ErrorCode.VALIDATION_ERROR, "Compra cancelada não pode ser editada", http_status=422)
+    if data.fornecedor_id is not None:
+        compra.fornecedor_id = data.fornecedor_id
+    if data.data_compra is not None:
+        compra.data_compra = data.data_compra
+    if data.numero_nota is not None:
+        compra.numero_nota = data.numero_nota
+    db.commit()
+    db.refresh(compra)
+    return _build_compra_response(db, compra)
 
 
 def list_compras(
@@ -182,6 +261,7 @@ def list_compras(
                 data_compra=compra.data_compra,
                 numero_nota=compra.numero_nota,
                 total=compra.total,
+                status=getattr(compra, "status", "ativa"),
                 itens=itens_response,
                 created_at=compra.created_at,
             )

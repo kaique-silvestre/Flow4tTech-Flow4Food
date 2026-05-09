@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "@/lib/toast";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,38 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "backup", label: "Backup" },
 ];
 
+function maskCnpj(v: string): string {
+  const d = v.replace(/\D/g, "").slice(0, 14);
+  return d
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
+}
+
+function maskTelefone(v: string): string {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 10) {
+    return d
+      .replace(/^(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
+  }
+  return d
+    .replace(/^(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2");
+}
+
 const estSchema = z.object({
   nome: z.string().min(1, "Nome obrigatório"),
-  cnpj: z.string().optional(),
+  cnpj: z.string().optional().refine(
+    (v) => !v || /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(v),
+    { message: "CNPJ inválido" }
+  ),
   endereco: z.string().optional(),
-  telefone: z.string().optional(),
+  telefone: z.string().optional().refine(
+    (v) => !v || /^\(\d{2}\) \d{4,5}-\d{4}$/.test(v),
+    { message: "Telefone inválido" }
+  ),
 });
 
 const senhaSchema = z
@@ -46,6 +73,7 @@ function TabEstabelecimento() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<EstForm>({
     resolver: zodResolver(estSchema),
@@ -86,7 +114,19 @@ function TabEstabelecimento() {
       </div>
       <div className="space-y-1">
         <Label htmlFor="cnpj">CNPJ</Label>
-        <Input id="cnpj" {...register("cnpj")} placeholder="00.000.000/0000-00" />
+        <Controller
+          name="cnpj"
+          control={control}
+          render={({ field }) => (
+            <Input
+              id="cnpj"
+              placeholder="00.000.000/0000-00"
+              value={field.value ?? ""}
+              onChange={(e) => field.onChange(maskCnpj(e.target.value))}
+            />
+          )}
+        />
+        {errors.cnpj && <p className="text-sm text-red-500">{errors.cnpj.message}</p>}
       </div>
       <div className="space-y-1">
         <Label htmlFor="endereco">Endereço</Label>
@@ -94,7 +134,19 @@ function TabEstabelecimento() {
       </div>
       <div className="space-y-1">
         <Label htmlFor="telefone">Telefone</Label>
-        <Input id="telefone" {...register("telefone")} placeholder="(11) 99999-9999" />
+        <Controller
+          name="telefone"
+          control={control}
+          render={({ field }) => (
+            <Input
+              id="telefone"
+              placeholder="(11) 99999-9999"
+              value={field.value ?? ""}
+              onChange={(e) => field.onChange(maskTelefone(e.target.value))}
+            />
+          )}
+        />
+        {errors.telefone && <p className="text-sm text-red-500">{errors.telefone.message}</p>}
       </div>
       <Button type="submit" disabled={update.isPending}>
         {update.isPending ? "Salvando..." : "Salvar"}

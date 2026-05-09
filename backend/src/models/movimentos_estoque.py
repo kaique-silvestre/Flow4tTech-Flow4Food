@@ -14,6 +14,7 @@ class TipoMovimento(str, enum.Enum):
     SAIDA_VENDA = "saida_venda"
     SAIDA_PERDA = "saida_perda"
     ENTRADA_ESTORNO = "entrada_estorno"
+    ESTORNO_COMPRA = "estorno_compra"
 
 
 class MotivoPerda(str, enum.Enum):

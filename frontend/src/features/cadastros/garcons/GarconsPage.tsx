@@ -8,6 +8,11 @@ export function GarconsPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Garcom | null>(null);
+  const [filtro, setFiltro] = useState<"ativos" | "inativos" | "todos">("ativos");
+
+  const garconsFiltrados = garcons.filter((g) =>
+    filtro === "todos" ? true : filtro === "ativos" ? g.ativo : !g.ativo
+  );
 
   function openCreate() {
     setEditing(null);
@@ -26,14 +31,26 @@ export function GarconsPage() {
         <Button onClick={openCreate}>Novo Garçom</Button>
       </div>
 
+      <div className="mb-3 flex gap-1">
+        {(["ativos", "inativos", "todos"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFiltro(f)}
+            className={`rounded border px-3 py-1 text-sm capitalize ${filtro === f ? "bg-gray-900 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+          >
+            {f.charAt(0).toUpperCase() + f.slice(1)}
+          </button>
+        ))}
+      </div>
+
       {isLoading ? (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />
           ))}
         </div>
-      ) : garcons.length === 0 ? (
-        <p className="text-sm text-gray-500">Nenhum garçom cadastrado.</p>
+      ) : garconsFiltrados.length === 0 ? (
+        <p className="text-sm text-gray-500">Nenhum garçom encontrado.</p>
       ) : (
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -44,7 +61,7 @@ export function GarconsPage() {
             </tr>
           </thead>
           <tbody>
-            {garcons.map((g) => (
+            {garconsFiltrados.map((g) => (
               <tr key={g.id} className="border-b last:border-0">
                 <td className={`py-2 pr-4 ${!g.ativo ? "text-gray-400 line-through" : ""}`}>
                   {g.nome}

@@ -27,6 +27,7 @@ class ErrorCode(str, Enum):
     COMANDA_NAO_FECHADA = "COMANDA_NAO_FECHADA"
     HAS_CHILDREN = "HAS_CHILDREN"
     NIVEL_MAX_ATINGIDO = "NIVEL_MAX_ATINGIDO"
+    CONFLICT = "CONFLICT"
 
 
 class AppError(Exception):
