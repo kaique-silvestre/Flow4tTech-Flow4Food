@@ -61,7 +61,6 @@ export default function FechamentoPage() {
   const baseTotal = comanda.saldo_pendente ?? totalComDesconto;
   const totalPago = pagamentos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
   const bate = Math.abs(totalPago - baseTotal) <= 0.01;
-  const hasInvalidMethod = pagamentos.some((p) => !p.metodo_id);
 
   function onSubmit(data: FecharComandaValues) {
     fechar(data);
@@ -263,7 +262,7 @@ export default function FechamentoPage() {
           </Button>
           <Button
             type="submit"
-            disabled={isPending || hasInvalidMethod || (!bate && modo !== "parcial")}
+            disabled={isPending || (!bate && modo !== "parcial")}
             className="min-w-[160px]"
           >
             {isPending
