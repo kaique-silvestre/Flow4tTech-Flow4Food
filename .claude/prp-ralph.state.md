@@ -1,8 +1,8 @@
 ---
 iteration: 1
 max_iterations: 10
-plan_path: "docs/issues/issues_matchpoint_v0.1.md"
-started_at: "2026-05-08T00:00:00Z"
+plan_path: "docs/issues/issues_matchpoint_v0.2.md"
+started_at: "2026-05-09T00:00:00Z"
 ---
 
 # Ralph Progress Log
@@ -35,6 +35,25 @@ started_at: "2026-05-08T00:00:00Z"
 - Backend tests: PASS (104/104)
 - Frontend type-check: pre-existing recharts errors only (no new errors)
 - Committed: a48f47e
+
+---
+
+## Iteration 1 — v0.2 - 2026-05-09T14:00:00Z
+
+### Completed
+- Issue 1 (BG1): `MetodoPagamentoModal.tsx` — replaced `watch("ativo")`+`setValue` with `Controller`
+- Issue 2 (BG2): `GarcomModal.tsx` — same fix, identical pattern
+- Marked both Concluída ✓ in `docs/issues/issues_matchpoint_v0.2.md`
+
+### Validation Status
+- Type-check: PASS
+- Lint: PASS (0 warnings)
+- Build: PASS
+
+### Next Steps
+- Issue 3 (U1): expand `UnidadeBase` enum in backend + Alembic migration (HITL — needs human review before migration)
+- Issue 4 (U2): `InsumoModal.tsx` conditional `quantidade_caixa` (AFK, blocked by U1)
+- Issue 5 (C3+C4+P1): `NovaComandaModal.tsx` fixes (AFK, no blocker)
 
 ---
 

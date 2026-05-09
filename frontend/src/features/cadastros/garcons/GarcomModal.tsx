@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,15 +28,12 @@ export function GarcomModal({ open, onClose, editing }: Props) {
     register,
     handleSubmit,
     reset,
-    watch,
-    setValue,
+    control,
     formState: { errors },
   } = useForm<GarcomFormValues>({
     resolver: zodResolver(editing ? garcomSchema : garcomCreateSchema as typeof garcomSchema),
     defaultValues: { ativo: true },
   });
-
-  const ativo = watch("ativo");
 
   useEffect(() => {
     reset(editing ? { nome: editing.nome, ativo: editing.ativo } : { nome: "", ativo: true });
@@ -67,16 +64,24 @@ export function GarcomModal({ open, onClose, editing }: Props) {
           </div>
           {editing && (
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setValue("ativo", !ativo)}
-                className={`relative h-6 w-11 rounded-full transition-colors ${ativo ? "bg-gray-900" : "bg-gray-300"}`}
-              >
-                <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${ativo ? "translate-x-5" : "translate-x-0.5"}`}
-                />
-              </button>
-              <Label>{ativo ? "Ativo" : "Inativo"}</Label>
+              <Controller
+                name="ativo"
+                control={control}
+                render={({ field }) => (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => field.onChange(!field.value)}
+                      className={`relative h-6 w-11 rounded-full transition-colors ${field.value ? "bg-gray-900" : "bg-gray-300"}`}
+                    >
+                      <span
+                        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${field.value ? "translate-x-5" : "translate-x-0.5"}`}
+                      />
+                    </button>
+                    <Label>{field.value ? "Ativo" : "Inativo"}</Label>
+                  </>
+                )}
+              />
             </div>
           )}
           <div className="flex justify-end gap-2">
