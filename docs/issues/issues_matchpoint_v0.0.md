@@ -4,7 +4,7 @@
 **Documento mestre:** `docs/matchpoint_documentacao.md`
 **Gerado em:** 2026-05-06
 
-Cada issue abaixo é uma fatia vertical (schema → API → UI → testes). Quando `gh` CLI estiver disponível, criar nesta ordem para que números de bloqueio resolvam corretamente. Substituir `#PRD` pelo número da issue do PRD.
+Cada issue abaixo é uma fatia vertical (schema → API → UI → testes). Quando `gh` CLI estiver disponível, criar nesta ordem para que números de bloqueio resolvam corretamente. Substituir `#PRD` pelo número da issue do PRD
 
 ---
 
