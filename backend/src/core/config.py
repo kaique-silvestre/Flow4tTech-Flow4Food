@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     JWT_SECRET: str = Field(..., min_length=8, description="Secret for signing JWT")
     JWT_EXPIRES_HOURS: int = 12
     TZ: str = "America/Sao_Paulo"
-    CORS_ORIGINS: str = "http://localhost:5173"
+    CORS_ORIGINS: str = "http://localhost:5173,https://flow4-tech-sistema-de-gestao.vercel.app"
     ENV: str = "dev"
     SENTRY_DSN_BACKEND: str = ""
     APP_VERSION: str = "0.1.0"
