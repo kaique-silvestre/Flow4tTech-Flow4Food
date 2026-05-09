@@ -31,6 +31,7 @@ export default function FechamentoPage() {
   const { fields, append, remove } = useFieldArray({ control, name: "pagamentos" });
   const modo = watch("modo_divisao");
   const pagamentos = watch("pagamentos");
+  const hasInvalidMethod = pagamentos.some((p) => !p.metodo_id);
 
   useEffect(() => {
     if (comanda) {
@@ -262,7 +263,7 @@ export default function FechamentoPage() {
           </Button>
           <Button
             type="submit"
-            disabled={isPending || (!bate && modo !== "parcial")}
+            disabled={isPending || hasInvalidMethod || (!bate && modo !== "parcial")}
             className="min-w-[160px]"
           >
             {isPending
