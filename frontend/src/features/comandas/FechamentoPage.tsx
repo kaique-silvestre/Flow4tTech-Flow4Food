@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useForm, useFieldArray, useWatch } from "react-hook-form";
+import { useForm, useFieldArray, useWatch, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -201,21 +201,31 @@ export default function FechamentoPage() {
             <div key={field.id} className="flex gap-2 items-end">
               <div className="flex-1">
                 <Label className="text-xs">Método</Label>
-                <select
-                  className={`mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring ${isSubmitted && !pagamentos[idx]?.metodo_id ? "border-destructive" : "border-input"}`}
-                  value={pagamentos[idx]?.metodo_id || ""}
-                  onChange={(e) => setValue(`pagamentos.${idx}.metodo_id`, Number(e.target.value), { shouldDirty: true, shouldTouch: true })}
-                >
-                  <option value="">Selecione...</option>
-                  {metodos?.filter((m) => m.ativo).map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.nome}
-                    </option>
-                  ))}
-                </select>
-                {isSubmitted && !pagamentos[idx]?.metodo_id && (
-                  <p className="text-xs text-destructive mt-1">Selecione um método</p>
-                )}
+                <Controller
+                  control={control}
+                  name={`pagamentos.${idx}.metodo_id`}
+                  render={({ field, fieldState }) => (
+                    <>
+                      <select
+                        className={`mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring ${fieldState.error || (isSubmitted && !field.value) ? "border-destructive" : "border-input"}`}
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        onBlur={field.onBlur}
+                        ref={field.ref}
+                      >
+                        <option value="">Selecione...</option>
+                        {metodos?.filter((m) => m.ativo).map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.nome}
+                          </option>
+                        ))}
+                      </select>
+                      {(fieldState.error || (isSubmitted && !field.value)) && (
+                        <p className="text-xs text-destructive mt-1">Selecione um método</p>
+                      )}
+                    </>
+                  )}
+                />
               </div>
               <div className="w-32">
                 <Label className="text-xs">Valor (R$)</Label>
