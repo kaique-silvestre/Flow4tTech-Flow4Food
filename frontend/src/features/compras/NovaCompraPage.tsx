@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { formatCurrency } from "@/lib/format";
 import { compraSchema, type CompraFormValues } from "./compraSchemas";
 import { useCreateCompra } from "./useCompras";
 import { InsumoModal } from "./InsumoModal";
+import { calculateLine, type LastEdited } from "./compraCalculations";
 
 export function NovaCompraPage() {
   const navigate = useNavigate();
@@ -23,6 +24,10 @@ export function NovaCompraPage() {
   const [showNovoForn, setShowNovoForn] = useState(false);
   const [insumoModalIndex, setInsumoModalIndex] = useState<number | null>(null);
 
+  // custo_unitario per row (not in RHF schema — UI only)
+  const [unitarios, setUnitarios] = useState<string[]>([""]); // one per row
+  const lastEditedRef = useRef<Record<number, LastEdited>>({});
+
   const today = new Date().toISOString().split("T")[0];
 
   const {
@@ -30,6 +35,7 @@ export function NovaCompraPage() {
     handleSubmit,
     control,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<CompraFormValues>({
     resolver: zodResolver(compraSchema),
@@ -45,6 +51,57 @@ export function NovaCompraPage() {
   const totalCompra = useMemo(() => {
     return (itensWatch ?? []).reduce((sum, i) => sum + Number(i.custo_total || 0), 0);
   }, [itensWatch]);
+
+  function round2(v: number) {
+    return Math.round(v * 100) / 100;
+  }
+
+  function handleUnitarioChange(index: number, raw: string) {
+    lastEditedRef.current[index] = "unitario";
+    setUnitarios((prev) => {
+      const next = [...prev];
+      next[index] = raw;
+      return next;
+    });
+    const unitario = parseFloat(raw) || 0;
+    const qty = parseFloat(String(getValues(`itens.${index}.quantidade`))) || 0;
+    if (qty > 0 && unitario > 0) {
+      setValue(`itens.${index}.custo_total`, round2(unitario * qty) as never);
+    }
+  }
+
+  function handleTotalChange(index: number, rawEvent: React.ChangeEvent<HTMLInputElement>) {
+    lastEditedRef.current[index] = "total";
+    const total = parseFloat(rawEvent.target.value) || 0;
+    const qty = parseFloat(String(getValues(`itens.${index}.quantidade`))) || 0;
+    if (qty > 0 && total > 0) {
+      setUnitarios((prev) => {
+        const next = [...prev];
+        next[index] = String(round2(total / qty));
+        return next;
+      });
+    }
+  }
+
+  function handleQtdChange(index: number, raw: string) {
+    const qty = parseFloat(raw) || 0;
+    const mode = lastEditedRef.current[index] ?? "unitario";
+    const result = calculateLine({
+      quantidade: qty,
+      custo_unitario: parseFloat(unitarios[index] ?? "") || 0,
+      custo_total: parseFloat(String(getValues(`itens.${index}.custo_total`))) || 0,
+      lastEdited: mode,
+    });
+    if (mode === "unitario" && result.custo_total > 0) {
+      setValue(`itens.${index}.custo_total`, result.custo_total as never);
+    } else if (mode === "total" && result.custo_unitario > 0) {
+      setUnitarios((prev) => {
+        const next = [...prev];
+        next[index] = String(result.custo_unitario);
+        return next;
+      });
+    }
+  }
 
   function handleAddFornecedor() {
     if (!novoFornNome.trim()) return;
@@ -67,12 +124,29 @@ export function NovaCompraPage() {
     setInsumoModalIndex(null);
   }
 
+  function handleAppend() {
+    append({ item_id: 0, quantidade: 0, custo_total: 0 });
+    setUnitarios((prev) => [...prev, ""]);
+  }
+
+  function handleRemove(index: number) {
+    remove(index);
+    setUnitarios((prev) => prev.filter((_, i) => i !== index));
+    const newLastEdited: Record<number, LastEdited> = {};
+    Object.entries(lastEditedRef.current).forEach(([k, v]) => {
+      const ki = parseInt(k);
+      if (ki < index) newLastEdited[ki] = v;
+      else if (ki > index) newLastEdited[ki - 1] = v;
+    });
+    lastEditedRef.current = newLastEdited;
+  }
+
   function onSubmit(data: CompraFormValues) {
     createCompra.mutate(data);
   }
 
   return (
-    <div className="p-6 max-w-3xl">
+    <div className="p-6 max-w-4xl">
       <div className="mb-6 flex items-center gap-4">
         <Button variant="outline" size="sm" onClick={() => navigate("/compras")}>← Voltar</Button>
         <h1 className="text-xl font-semibold">Nova Compra</h1>
@@ -138,16 +212,17 @@ export function NovaCompraPage() {
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => append({ item_id: 0, quantidade: 0, custo_total: 0 })}
+              onClick={handleAppend}
             >
               + Adicionar item
             </Button>
           </div>
 
-          <div className="grid grid-cols-[1fr_100px_80px_110px_32px] gap-2 text-xs text-gray-500 px-1">
+          <div className="grid grid-cols-[1fr_90px_70px_100px_110px_32px] gap-2 text-xs text-gray-500 px-1">
             <span>Item</span>
             <span>Qtd</span>
             <span>Unidade</span>
+            <span>Custo Unit. (R$)</span>
             <span>Custo Total (R$)</span>
             <span />
           </div>
@@ -155,12 +230,10 @@ export function NovaCompraPage() {
           {fields.map((field, index) => {
             const itemId = itensWatch?.[index]?.item_id;
             const item = itensSimples.find((i) => i.id === Number(itemId));
-            const qtd = Number(itensWatch?.[index]?.quantidade || 0);
-            const custoTotal = Number(itensWatch?.[index]?.custo_total || 0);
-            const custoUnitario = qtd > 0 ? custoTotal / qtd : 0;
 
             return (
-              <div key={field.id} className="grid grid-cols-[1fr_100px_80px_110px_32px] gap-2 items-start">
+              <div key={field.id} className="grid grid-cols-[1fr_90px_70px_100px_110px_32px] gap-2 items-start">
+                {/* Item selector */}
                 <div>
                   <select
                     className="w-full rounded border px-2 py-1.5 text-sm"
@@ -182,28 +255,60 @@ export function NovaCompraPage() {
                     [ + Cadastrar novo insumo ]
                   </button>
                 </div>
+
+                {/* Quantidade */}
                 <div>
-                  <Input type="number" step="0.001" min="0" {...register(`itens.${index}.quantidade`)} />
+                  <Input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    {...register(`itens.${index}.quantidade`, {
+                      onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+                        handleQtdChange(index, e.target.value),
+                    })}
+                  />
                   {errors.itens?.[index]?.quantidade && (
                     <p className="text-xs text-red-500">{errors.itens[index]?.quantidade?.message}</p>
                   )}
                 </div>
+
+                {/* Unidade */}
                 <div className="py-1.5 text-sm text-gray-500">{item?.unidade_base ?? "—"}</div>
+
+                {/* Custo Unitário — UI only, not in RHF */}
                 <div>
-                  <Input type="number" step="0.01" min="0" {...register(`itens.${index}.custo_total`)} />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={unitarios[index] ?? ""}
+                    onChange={(e) => handleUnitarioChange(index, e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+
+                {/* Custo Total */}
+                <div>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    {...register(`itens.${index}.custo_total`, {
+                      onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+                        handleTotalChange(index, e),
+                    })}
+                  />
                   {errors.itens?.[index]?.custo_total && (
                     <p className="text-xs text-red-500">{errors.itens[index]?.custo_total?.message}</p>
                   )}
-                  {qtd > 0 && custoTotal > 0 && (
-                    <p className="text-xs text-gray-400">{formatCurrency(custoUnitario)}/un</p>
-                  )}
                 </div>
+
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
                   className="text-red-500 hover:text-red-700 px-2"
-                  onClick={() => remove(index)}
+                  onClick={() => handleRemove(index)}
                   disabled={fields.length === 1}
                 >
                   ✕
@@ -235,6 +340,7 @@ export function NovaCompraPage() {
           </Button>
         </div>
       </form>
+
       <InsumoModal
         open={insumoModalIndex !== null}
         onClose={() => setInsumoModalIndex(null)}
