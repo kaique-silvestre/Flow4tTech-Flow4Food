@@ -194,7 +194,7 @@ Botão `[✏]` ao lado de garçom e identificação no cabeçalho de `ComandaAbe
 - [x] Enter ou blur dispara `PATCH /api/comandas/:id` com o novo valor
 - [x] `PATCH` aceita `identificacao` (string) e `garcom_id` (int) individualmente
 - [x] Tentativa de PATCH em comanda fechada retorna 422/400
-- [ ] Botão `[✏]` não renderizado para comandas com status != `aberta`
+- [x] Botão `[✏]` não renderizado para comandas com status != `aberta`
 - [x] Troca de garçom reflete em relatórios de vendas por garçom
 - [x] Sem debounce excessivo — salva apenas no blur/Enter, não a cada keystroke
 
@@ -440,6 +440,7 @@ Campo `parent_id` nullable FK em `categorias`. Máximo 2 níveis (pai + filho �
 ## Issue 17 — M017: Cálculo bidirecional Quantidade/Unitário/Total em Nova Compra
 
 **Tipo:** AFK  
+**Status:** Concluída ✓ (2026-05-09)
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
 
 ### O que construir
@@ -448,15 +449,15 @@ Cada linha de `NovaCompraPage` tem três campos controlados: `quantidade`, `cust
 
 ### Critérios de aceite
 
-- [ ] Três campos por linha: Quantidade, Custo Unitário, Custo Total
-- [ ] Editar Custo Unitário com Quantidade preenchida → Total calculado em tempo real
-- [ ] Editar Custo Total com Quantidade preenchida → Unitário calculado em tempo real
-- [ ] Editar Quantidade → recalcula o campo derivado correto baseado no `lastEdited`
-- [ ] Quantidade = 0 ou vazio → sem divisão por zero, campo derivado limpo
-- [ ] Resultados arredondados a 2 casas decimais
-- [ ] Teste: `calculateLine({quantidade: 10, custo_unitario: 2.5, lastEdited: 'unitario'})` → `custo_total: 25.00`
-- [ ] Teste: `calculateLine({quantidade: 10, custo_total: 25, lastEdited: 'total'})` → `custo_unitario: 2.50`
-- [ ] Teste: 10 / 3 → `custo_unitario` arredondado a 2 casas sem crash
+- [x] Três campos por linha: Quantidade, Custo Unitário, Custo Total
+- [x] Editar Custo Unitário com Quantidade preenchida → Total calculado em tempo real
+- [x] Editar Custo Total com Quantidade preenchida → Unitário calculado em tempo real
+- [x] Editar Quantidade → recalcula o campo derivado correto baseado no `lastEdited`
+- [x] Quantidade = 0 ou vazio → sem divisão por zero, campo derivado limpo
+- [x] Resultados arredondados a 2 casas decimais
+- [x] Teste: `calculateLine({quantidade: 10, custo_unitario: 2.5, lastEdited: 'unitario'})` → `custo_total: 25.00`
+- [x] Teste: `calculateLine({quantidade: 10, custo_total: 25, lastEdited: 'total'})` → `custo_unitario: 2.50`
+- [x] Teste: 10 / 3 → `custo_unitario` arredondado a 2 casas sem crash
 
 ### User stories endereçadas
 
