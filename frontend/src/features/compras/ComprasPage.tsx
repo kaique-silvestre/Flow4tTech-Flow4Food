@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useFornecedores } from "@/features/cadastros/fornecedores/useFornecedores";
 import { formatCurrency } from "@/lib/format";
 import { useCancelarCompra, useCompras, usePatchCompra, type CompraFilters, type CompraResponse } from "./useCompras";
+import { ChevronRight, ChevronDown } from "lucide-react";
 
 export function ComprasPage() {
   const navigate = useNavigate();
@@ -15,8 +16,18 @@ export function ComprasPage() {
   const cancelarMutation = useCancelarCompra();
   const patchMutation = usePatchCompra();
 
+  const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [cancelando, setCancelando] = useState<CompraResponse | null>(null);
   const [editando, setEditando] = useState<CompraResponse | null>(null);
+
+  function toggleExpandir(id: number) {
+    setExpandidos((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
   const [editFornecedorId, setEditFornecedorId] = useState<string>("");
   const [editDataCompra, setEditDataCompra] = useState<string>("");
   const [editNumeroNota, setEditNumeroNota] = useState<string>("");
@@ -73,42 +84,81 @@ export function ComprasPage() {
         <p className="text-sm text-gray-500">Nenhuma compra encontrada.</p>
       ) : (
         <div className="space-y-2">
-          {compras.map((compra) => (
-            <div key={compra.id} className={`flex items-center justify-between rounded border p-3 ${compra.status === "cancelada" ? "text-gray-400" : ""}`}>
-              <div>
-                <div className="font-medium flex items-center gap-2">
-                  <span className="text-gray-400 font-normal">#{String(compra.id).padStart(4, "0")}</span>
-                  {new Date(compra.data_compra + "T00:00:00").toLocaleDateString("pt-BR")}
-                  {" · "}
-                  <span className={compra.status === "cancelada" ? "text-gray-400" : "text-gray-600"}>{compra.fornecedor_nome ?? "Sem fornecedor"}</span>
-                  {compra.status === "cancelada" && (
-                    <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-500">Cancelada</span>
-                  )}
+          {compras.map((compra) => {
+            const expandido = expandidos.has(compra.id);
+            return (
+              <div key={compra.id} className={`rounded border ${compra.status === "cancelada" ? "text-gray-400" : ""}`}>
+                <div className="flex items-center justify-between p-3">
+                  <div className="flex items-start gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleExpandir(compra.id)}
+                      className="mt-0.5 shrink-0 text-gray-400 hover:text-gray-700"
+                      aria-label={expandido ? "Recolher itens" : "Expandir itens"}
+                    >
+                      {expandido ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    </button>
+                    <div>
+                      <div className="font-medium flex items-center gap-2">
+                        <span className="text-gray-400 font-normal">#{String(compra.id).padStart(4, "0")}</span>
+                        {new Date(compra.data_compra + "T00:00:00").toLocaleDateString("pt-BR")}
+                        {" · "}
+                        <span className={compra.status === "cancelada" ? "text-gray-400" : "text-gray-600"}>{compra.fornecedor_nome ?? "Sem fornecedor"}</span>
+                        {compra.status === "cancelada" && (
+                          <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-500">Cancelada</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Nota: {compra.numero_nota ?? "—"} · {compra.itens.length} {compra.itens.length === 1 ? "item" : "itens"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-right">
+                    <div className={`font-semibold ${compra.status === "cancelada" ? "line-through" : ""}`}>{formatCurrency(compra.total)}</div>
+                    {compra.status === "ativa" && (
+                      <>
+                        <Button size="sm" variant="outline" onClick={() => {
+                          setEditando(compra);
+                          setEditFornecedorId(compra.fornecedor_id ? String(compra.fornecedor_id) : "");
+                          setEditDataCompra(compra.data_compra);
+                          setEditNumeroNota(compra.numero_nota ?? "");
+                        }}>
+                          Editar
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => setCancelando(compra)}>
+                          Cancelar Nota
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="text-xs text-gray-400">
-                  Nota: {compra.numero_nota ?? "—"} · {compra.itens.length} {compra.itens.length === 1 ? "item" : "itens"}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-right">
-                <div className={`font-semibold ${compra.status === "cancelada" ? "line-through" : ""}`}>{formatCurrency(compra.total)}</div>
-                {compra.status === "ativa" && (
-                  <>
-                    <Button size="sm" variant="outline" onClick={() => {
-                      setEditando(compra);
-                      setEditFornecedorId(compra.fornecedor_id ? String(compra.fornecedor_id) : "");
-                      setEditDataCompra(compra.data_compra);
-                      setEditNumeroNota(compra.numero_nota ?? "");
-                    }}>
-                      Editar
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => setCancelando(compra)}>
-                      Cancelar Nota
-                    </Button>
-                  </>
+                {expandido && compra.itens.length > 0 && (
+                  <div className="border-t mx-3 mb-3 pt-2">
+                    <table className="w-full text-xs text-gray-600">
+                      <thead>
+                        <tr className="text-gray-400 border-b">
+                          <th className="text-left pb-1 font-normal">Item</th>
+                          <th className="text-right pb-1 font-normal">Qtd</th>
+                          <th className="text-right pb-1 font-normal">Custo unit.</th>
+                          <th className="text-right pb-1 font-normal">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {compra.itens.map((item) => (
+                          <tr key={item.item_id} className="border-b last:border-0">
+                            <td className="py-1">{item.item_nome}</td>
+                            <td className="py-1 text-right">{Number(item.quantidade)}</td>
+                            <td className="py-1 text-right">{formatCurrency(item.custo_unitario)}</td>
+                            <td className="py-1 text-right">{formatCurrency(item.custo_total)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
