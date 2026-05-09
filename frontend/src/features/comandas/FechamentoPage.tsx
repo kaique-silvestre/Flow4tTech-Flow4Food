@@ -20,7 +20,7 @@ export default function FechamentoPage() {
   const [descontoOpen, setDescontoOpen] = useState(false);
   const [nPessoas, setNPessoas] = useState<number | "">(2);
 
-  const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm<FecharComandaValues>({
+  const { register, control, handleSubmit, watch, setValue, formState: { errors, isSubmitted } } = useForm<FecharComandaValues>({
     resolver: zodResolver(fecharComandaSchema),
     defaultValues: {
       pagamentos: [{ metodo_id: 0, valor: 0 }],
@@ -61,6 +61,7 @@ export default function FechamentoPage() {
   const baseTotal = comanda.saldo_pendente ?? totalComDesconto;
   const totalPago = pagamentos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
   const bate = Math.abs(totalPago - baseTotal) <= 0.01;
+  const hasInvalidMethod = pagamentos.some((p) => !p.metodo_id);
 
   function onSubmit(data: FecharComandaValues) {
     fechar(data);
@@ -200,7 +201,7 @@ export default function FechamentoPage() {
               <div className="flex-1">
                 <Label className="text-xs">Método</Label>
                 <select
-                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  className={`mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring ${isSubmitted && !pagamentos[idx]?.metodo_id ? "border-destructive" : "border-input"}`}
                   value={pagamentos[idx]?.metodo_id || ""}
                   onChange={(e) => setValue(`pagamentos.${idx}.metodo_id`, Number(e.target.value))}
                 >
@@ -211,6 +212,9 @@ export default function FechamentoPage() {
                     </option>
                   ))}
                 </select>
+                {isSubmitted && !pagamentos[idx]?.metodo_id && (
+                  <p className="text-xs text-destructive mt-1">Selecione um método</p>
+                )}
               </div>
               <div className="w-32">
                 <Label className="text-xs">Valor (R$)</Label>
@@ -259,7 +263,7 @@ export default function FechamentoPage() {
           </Button>
           <Button
             type="submit"
-            disabled={isPending || (!bate && modo !== "parcial")}
+            disabled={isPending || hasInvalidMethod || (!bate && modo !== "parcial")}
             className="min-w-[160px]"
           >
             {isPending
