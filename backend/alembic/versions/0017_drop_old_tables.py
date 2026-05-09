@@ -19,7 +19,14 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.drop_table("componentes_ficha")
     op.drop_table("fichas_tecnicas")
-    op.drop_table("itens")
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        # Postgres: itens_compra/itens_comanda/movimentos_estoque still hold FK
+        # constraints pointing to itens (column was renamed but FK was not dropped).
+        # CASCADE removes those dangling constraints automatically.
+        op.execute("DROP TABLE itens CASCADE")
+    else:
+        op.drop_table("itens")
 
 
 def downgrade() -> None:
