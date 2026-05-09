@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { categoriaSchema, type CategoriaFormValues } from "./categoriaSchemas";
 import type { Categoria } from "./useCategorias";
-import { useCreateCategoria, useUpdateCategoria } from "./useCategorias";
+import { useCategorias, useCreateCategoria, useUpdateCategoria } from "./useCategorias";
 
 interface Props {
   open: boolean;
@@ -23,6 +23,11 @@ interface Props {
 export function CategoriaModal({ open, onClose, editing }: Props) {
   const create = useCreateCategoria();
   const update = useUpdateCategoria();
+  const { data: categorias = [] } = useCategorias();
+
+  const rootCategorias = categorias.filter(
+    (c) => !c.parent_id && c.id !== editing?.id
+  );
 
   const {
     register,
@@ -32,16 +37,21 @@ export function CategoriaModal({ open, onClose, editing }: Props) {
   } = useForm<CategoriaFormValues>({ resolver: zodResolver(categoriaSchema) });
 
   useEffect(() => {
-    reset(editing ? { nome: editing.nome } : { nome: "" });
+    reset(
+      editing
+        ? { nome: editing.nome, parent_id: editing.parent_id ?? null }
+        : { nome: "", parent_id: null }
+    );
   }, [editing, open, reset]);
 
   const isPending = create.isPending || update.isPending;
 
   function onSubmit(data: CategoriaFormValues) {
+    const payload = { ...data, parent_id: data.parent_id || null };
     if (editing) {
-      update.mutate({ id: editing.id, data }, { onSuccess: onClose });
+      update.mutate({ id: editing.id, data: payload }, { onSuccess: onClose });
     } else {
-      create.mutate(data, { onSuccess: onClose });
+      create.mutate(payload, { onSuccess: onClose });
     }
   }
 
@@ -57,6 +67,22 @@ export function CategoriaModal({ open, onClose, editing }: Props) {
             <Input id="nome" {...register("nome")} />
             {errors.nome && <p className="text-sm text-red-500">{errors.nome.message}</p>}
           </div>
+
+          <div className="space-y-1">
+            <Label>Categoria pai (opcional)</Label>
+            <select
+              className="w-full rounded border px-2 py-1.5 text-sm"
+              {...register("parent_id", {
+                setValueAs: (v) => (v === "" || v === "0" ? null : Number(v)),
+              })}
+            >
+              <option value="">— Sem categoria pai (raiz) —</option>
+              {rootCategorias.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar

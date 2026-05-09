@@ -1,12 +1,16 @@
+from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class CategoriaCreateRequest(BaseModel):
     nome: str = Field(..., min_length=1)
+    parent_id: Optional[int] = None
 
 
 class CategoriaUpdateRequest(BaseModel):
     nome: str = Field(..., min_length=1)
+    parent_id: Optional[int] = None
 
 
 class CategoriaResponse(BaseModel):
@@ -14,3 +18,8 @@ class CategoriaResponse(BaseModel):
 
     id: int
     nome: str
+    parent_id: Optional[int] = None
+    children: list["CategoriaResponse"] = []
+
+
+CategoriaResponse.model_rebuild()

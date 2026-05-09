@@ -6,6 +6,27 @@ import type { CategoriaFormValues } from "./categoriaSchemas";
 export interface Categoria {
   id: number;
   nome: string;
+  parent_id?: number | null;
+  children: Categoria[];
+}
+
+export interface CategoriaFlat {
+  id: number;
+  nome: string;
+  parent_id?: number | null;
+  indent: boolean;
+}
+
+/** Flatten tree into list with indent flag for selectors. */
+export function flattenCategorias(tree: Categoria[]): CategoriaFlat[] {
+  const result: CategoriaFlat[] = [];
+  for (const cat of tree) {
+    result.push({ id: cat.id, nome: cat.nome, parent_id: cat.parent_id, indent: false });
+    for (const child of cat.children ?? []) {
+      result.push({ id: child.id, nome: child.nome, parent_id: child.parent_id, indent: true });
+    }
+  }
+  return result;
 }
 
 const QK = "categorias";
@@ -51,6 +72,13 @@ export function useDeleteCategoria() {
       qc.invalidateQueries({ queryKey: [QK] });
       toast.success("Categoria removida.");
     },
-    onError: () => toast.error("Erro ao remover categoria."),
+    onError: (err: unknown) => {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 409) {
+        toast.error("Remova as subcategorias antes de excluir esta categoria.");
+      } else {
+        toast.error("Erro ao remover categoria.");
+      }
+    },
   });
 }

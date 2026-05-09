@@ -129,6 +129,51 @@ def test_categoria_requires_auth(no_auth_client):
     assert resp.status_code == 401
 
 
+def test_subcategoria_crud(crud_client):
+    """Create parent → subcategory, list tree, delete blocks parent while children exist."""
+    pai = crud_client.post("/api/categorias", json={"nome": "Bebidas"})
+    assert pai.status_code == 201
+    pai_id = pai.json()["id"]
+
+    filho = crud_client.post("/api/categorias", json={"nome": "Alcoólicas", "parent_id": pai_id})
+    assert filho.status_code == 201
+    filho_data = filho.json()
+    assert filho_data["parent_id"] == pai_id
+
+    resp = crud_client.get("/api/categorias")
+    assert resp.status_code == 200
+    tree = resp.json()
+    pai_node = next((c for c in tree if c["id"] == pai_id), None)
+    assert pai_node is not None
+    assert any(ch["id"] == filho_data["id"] for ch in pai_node["children"])
+
+    # DELETE parent blocked while child exists
+    resp = crud_client.delete(f"/api/categorias/{pai_id}")
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "HAS_CHILDREN"
+
+    # DELETE child first, then parent succeeds
+    crud_client.delete(f"/api/categorias/{filho_data['id']}")
+    resp = crud_client.delete(f"/api/categorias/{pai_id}")
+    assert resp.status_code == 204
+
+
+def test_subcategoria_max_nivel(crud_client):
+    """3rd level is blocked with 422."""
+    pai = crud_client.post("/api/categorias", json={"nome": "Nivel1"})
+    filho = crud_client.post("/api/categorias", json={"nome": "Nivel2", "parent_id": pai.json()["id"]})
+    neto = crud_client.post("/api/categorias", json={"nome": "Nivel3", "parent_id": filho.json()["id"]})
+    assert neto.status_code == 422
+    assert neto.json()["error"]["code"] == "NIVEL_MAX_ATINGIDO"
+
+
+def test_resumo_anual_retorna_12_entradas(crud_client):
+    """GET /api/dashboard/resumo-anual returns exactly 12 entries."""
+    resp = crud_client.get("/api/dashboard/resumo-anual?ano=2026")
+    assert resp.status_code == 200
+    assert len(resp.json()) == 12
+
+
 # ---------------------------------------------------------------------------
 # Fornecedores
 # ---------------------------------------------------------------------------

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCategorias } from "@/features/cadastros/categorias/useCategorias";
+import { useCategorias, flattenCategorias } from "@/features/cadastros/categorias/useCategorias";
 import { useCreateInsumo, type InsumoResponse } from "@/features/estoque/useInsumos";
 
 const insumoRapidoSchema = z.object({
@@ -29,7 +29,8 @@ interface Props {
 }
 
 export function InsumoModal({ open, onClose, onSuccess }: Props) {
-  const { data: categorias = [] } = useCategorias();
+  const { data: categoriasTree = [] } = useCategorias();
+  const categorias = flattenCategorias(categoriasTree);
   const createInsumo = useCreateInsumo();
 
   const {
@@ -84,7 +85,9 @@ export function InsumoModal({ open, onClose, onSuccess }: Props) {
             >
               <option value="">Selecione...</option>
               {categorias.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
+                <option key={c.id} value={c.id}>
+                  {c.indent ? `  ${c.nome}` : c.nome}
+                </option>
               ))}
             </select>
             {errors.categoria_id && <p className="text-xs text-red-500">{errors.categoria_id.message}</p>}

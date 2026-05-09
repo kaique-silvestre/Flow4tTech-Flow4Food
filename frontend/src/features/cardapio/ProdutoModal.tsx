@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCategorias } from "@/features/cadastros/categorias/useCategorias";
+import { useCategorias, flattenCategorias } from "@/features/cadastros/categorias/useCategorias";
 import { useInsumos } from "@/features/estoque/useInsumos";
 import {
   useCreateProduto,
@@ -49,7 +49,8 @@ function cmvColor(cmv: number): string {
 export function ProdutoModal({ open, onClose, editing }: Props) {
   const create = useCreateProduto();
   const update = useUpdateProduto();
-  const { data: categorias = [] } = useCategorias();
+  const { data: categoriasTree = [] } = useCategorias();
+  const categorias = flattenCategorias(categoriasTree);
   const { data: insumos = [] } = useInsumos();
 
   const {
@@ -126,7 +127,9 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
               >
                 <option value="">— Sem categoria —</option>
                 {categorias.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
+                  <option key={c.id} value={c.id}>
+                    {c.indent ? `  ${c.nome}` : c.nome}
+                  </option>
                 ))}
               </select>
             </div>

@@ -14,19 +14,29 @@ def get_by_id(db: Session, categoria_id: int) -> Optional[Categoria]:
     return db.execute(select(Categoria).where(Categoria.id == categoria_id)).scalar_one_or_none()
 
 
-def create(db: Session, nome: str) -> Categoria:
-    obj = Categoria(nome=nome)
+def has_children(db: Session, categoria_id: int) -> bool:
+    result = db.execute(
+        select(Categoria.id).where(Categoria.parent_id == categoria_id).limit(1)
+    ).first()
+    return result is not None
+
+
+def create(db: Session, nome: str, parent_id: Optional[int] = None) -> Categoria:
+    obj = Categoria(nome=nome, parent_id=parent_id)
     db.add(obj)
     db.commit()
     db.refresh(obj)
     return obj
 
 
-def update(db: Session, categoria_id: int, nome: str) -> Optional[Categoria]:
+def update(
+    db: Session, categoria_id: int, nome: str, parent_id: Optional[int] = None
+) -> Optional[Categoria]:
     obj = get_by_id(db, categoria_id)
     if obj is None:
         return None
     obj.nome = nome
+    obj.parent_id = parent_id
     db.commit()
     db.refresh(obj)
     return obj

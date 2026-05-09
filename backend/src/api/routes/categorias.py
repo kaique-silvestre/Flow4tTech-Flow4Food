@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -14,7 +13,7 @@ def list_categorias(
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ) -> list[CategoriaResponse]:
-    return categorias_service.list_categorias(db)  # type: ignore[return-value]
+    return categorias_service.list_categorias(db)
 
 
 @router.post("", response_model=CategoriaResponse, status_code=201)
@@ -23,7 +22,7 @@ def create_categoria(
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ) -> CategoriaResponse:
-    return categorias_service.create_categoria(db, body)  # type: ignore[return-value]
+    return categorias_service.create_categoria(db, body)
 
 
 @router.put("/{categoria_id}", response_model=CategoriaResponse)
@@ -33,7 +32,7 @@ def update_categoria(
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ) -> CategoriaResponse:
-    return categorias_service.update_categoria(db, categoria_id, body)  # type: ignore[return-value]
+    return categorias_service.update_categoria(db, categoria_id, body)
 
 
 @router.delete("/{categoria_id}", status_code=204)
