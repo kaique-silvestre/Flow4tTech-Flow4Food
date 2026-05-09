@@ -426,7 +426,8 @@ export function ComandaAbertaPage() {
         </div>
 
         {/* Right panel — itens lançados */}
-        <div className="flex flex-1 flex-col overflow-y-auto p-4">
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-4">
           <h3 className="mb-3 font-medium">
             Itens Lançados ({itensAtivos.length})
           </h3>
@@ -521,9 +522,10 @@ export function ComandaAbertaPage() {
               ))}
             </div>
           )}
+          </div>
 
-          {/* Rodapé total */}
-          <div className="mt-auto border-t pt-3 flex items-center justify-between">
+          {/* Rodapé total — fora do scroll para ficar sempre visível */}
+          <div className="border-t px-4 py-3 flex items-center justify-between bg-white">
             <Button
               variant="default"
               onClick={() => navigate(`/comandas/${id}/fechar`)}
