@@ -11,7 +11,15 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 export function ComprasPage() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState<CompraFilters>({});
-  const { data: compras = [], isLoading } = useCompras(filters);
+  const [pagina, setPagina] = useState(1);
+  const { data: paginado, isLoading } = useCompras({ ...filters, pagina, por_pagina: 10 });
+  const compras = paginado?.itens ?? [];
+  const totalPaginas = paginado?.total_paginas ?? 1;
+
+  function atualizarFiltro(update: Partial<CompraFilters>) {
+    setFilters((f) => ({ ...f, ...update }));
+    setPagina(1);
+  }
   const { data: fornecedores = [] } = useFornecedores();
   const cancelarMutation = useCancelarCompra();
   const patchMutation = usePatchCompra();
@@ -32,7 +40,7 @@ export function ComprasPage() {
   const [editDataCompra, setEditDataCompra] = useState<string>("");
   const [editNumeroNota, setEditNumeroNota] = useState<string>("");
 
-  const total = compras.reduce((sum, c) => sum + Number(c.total), 0);
+  const totalPeriodo = compras.reduce((sum, c) => sum + Number(c.total), 0);
 
   return (
     <div className="p-6">
@@ -49,7 +57,7 @@ export function ComprasPage() {
             type="date"
             className="rounded border px-2 py-1 text-sm"
             value={filters.data_inicio ?? ""}
-            onChange={(e) => setFilters((f) => ({ ...f, data_inicio: e.target.value || null }))}
+            onChange={(e) => atualizarFiltro({ data_inicio: e.target.value || null })}
           />
         </div>
         <div className="flex items-center gap-2">
@@ -58,14 +66,14 @@ export function ComprasPage() {
             type="date"
             className="rounded border px-2 py-1 text-sm"
             value={filters.data_fim ?? ""}
-            onChange={(e) => setFilters((f) => ({ ...f, data_fim: e.target.value || null }))}
+            onChange={(e) => atualizarFiltro({ data_fim: e.target.value || null })}
           />
         </div>
         <select
           className="rounded border px-2 py-1 text-sm"
           value={filters.fornecedor_id ?? ""}
           onChange={(e) =>
-            setFilters((f) => ({ ...f, fornecedor_id: e.target.value ? Number(e.target.value) : null }))
+            atualizarFiltro({ fornecedor_id: e.target.value ? Number(e.target.value) : null })
           }
         >
           <option value="">Todos os fornecedores</option>
@@ -163,8 +171,29 @@ export function ComprasPage() {
       )}
 
       {compras.length > 0 && (
-        <div className="mt-4 text-right text-sm text-gray-500">
-          Total no período: <span className="font-semibold text-gray-800">{formatCurrency(total)}</span>
+        <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPagina((p) => Math.max(1, p - 1))}
+              disabled={pagina === 1}
+            >
+              ← Anterior
+            </Button>
+            <span>Página {pagina} de {totalPaginas}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+              disabled={pagina === totalPaginas}
+            >
+              Próxima →
+            </Button>
+          </div>
+          <div>
+            Total no período: <span className="font-semibold text-gray-800">{formatCurrency(totalPeriodo)}</span>
+          </div>
         </div>
       )}
 

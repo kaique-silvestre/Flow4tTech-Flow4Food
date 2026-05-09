@@ -28,6 +28,16 @@ export interface CompraFilters {
   data_inicio?: string | null;
   data_fim?: string | null;
   fornecedor_id?: number | null;
+  pagina?: number;
+  por_pagina?: number;
+}
+
+export interface ComprasPageResponse {
+  itens: CompraResponse[];
+  total: number;
+  pagina: number;
+  por_pagina: number;
+  total_paginas: number;
 }
 
 const QK = "compras";
@@ -37,14 +47,16 @@ function filtersToParams(f: CompraFilters) {
   if (f.data_inicio) p.data_inicio = f.data_inicio;
   if (f.data_fim) p.data_fim = f.data_fim;
   if (f.fornecedor_id != null) p.fornecedor_id = String(f.fornecedor_id);
+  if (f.pagina != null) p.pagina = String(f.pagina);
+  if (f.por_pagina != null) p.por_pagina = String(f.por_pagina);
   return p;
 }
 
 export function useCompras(filters: CompraFilters = {}) {
-  return useQuery<CompraResponse[]>({
+  return useQuery<ComprasPageResponse>({
     queryKey: [QK, filters],
     queryFn: () =>
-      api.get<CompraResponse[]>("/api/compras", { params: filtersToParams(filters) }).then((r) => r.data),
+      api.get<ComprasPageResponse>("/api/compras", { params: filtersToParams(filters) }).then((r) => r.data),
   });
 }
 

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_current_user, get_db
-from src.schemas.compras import CompraCreateRequest, CompraPatchRequest, CompraResponse
+from src.schemas.compras import CompraCreateRequest, CompraPatchRequest, CompraResponse, ComprasPageResponse
 from src.services import compras_service
 
 router = APIRouter()
@@ -19,15 +19,17 @@ def create_compra(
     return compras_service.criar_compra(db, data)
 
 
-@router.get("", response_model=list[CompraResponse])
+@router.get("", response_model=ComprasPageResponse)
 def list_compras(
     data_inicio: Optional[str] = Query(None),
     data_fim: Optional[str] = Query(None),
     fornecedor_id: Optional[int] = Query(None),
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
-) -> list[CompraResponse]:
-    return compras_service.list_compras(db, data_inicio, data_fim, fornecedor_id)  # type: ignore[return-value]
+) -> ComprasPageResponse:
+    return compras_service.list_compras(db, data_inicio, data_fim, fornecedor_id, pagina, por_pagina)  # type: ignore[return-value]
 
 
 @router.get("/{compra_id}", response_model=CompraResponse)

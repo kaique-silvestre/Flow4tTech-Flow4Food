@@ -9,10 +9,13 @@ from src.models.fornecedores import Fornecedor
 from src.models.insumos import Insumo
 from src.models.movimentos_estoque import TipoMovimento
 from src.repositories import compras_repository, estoque_repository
+import math
+
 from src.schemas.compras import (
     CompraCreateRequest,
     CompraPatchRequest,
     CompraResponse,
+    ComprasPageResponse,
     ItemCompraResponse,
 )
 
@@ -231,13 +234,15 @@ def list_compras(
     data_inicio: Optional[str] = None,
     data_fim: Optional[str] = None,
     fornecedor_id: Optional[int] = None,
-) -> list[CompraResponse]:
+    pagina: int = 1,
+    por_pagina: int = 10,
+) -> ComprasPageResponse:
     import datetime
 
     di = datetime.date.fromisoformat(data_inicio) if data_inicio else None
     df = datetime.date.fromisoformat(data_fim) if data_fim else None
 
-    compras = compras_repository.list_compras(db, di, df, fornecedor_id)
+    compras, total = compras_repository.list_compras(db, di, df, fornecedor_id, pagina, por_pagina)
     result = []
     for compra in compras:
         itens_db = compras_repository.get_itens_compra(db, compra.id)
@@ -266,4 +271,10 @@ def list_compras(
                 created_at=compra.created_at,
             )
         )
-    return result
+    return ComprasPageResponse(
+        itens=result,
+        total=total,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        total_paginas=max(1, math.ceil(total / por_pagina)),
+    )

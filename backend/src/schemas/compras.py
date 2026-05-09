@@ -60,3 +60,11 @@ class CompraResponse(BaseModel):
     status: str
     itens: list[ItemCompraResponse]
     created_at: datetime.datetime
+
+
+class ComprasPageResponse(BaseModel):
+    itens: list[CompraResponse]
+    total: int
+    pagina: int
+    por_pagina: int
+    total_paginas: int

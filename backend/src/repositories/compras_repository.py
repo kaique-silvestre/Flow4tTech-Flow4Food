@@ -2,7 +2,7 @@ import datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.models.compras import Compra, ItemCompra
@@ -51,15 +51,24 @@ def list_compras(
     data_inicio: Optional[datetime.date] = None,
     data_fim: Optional[datetime.date] = None,
     fornecedor_id: Optional[int] = None,
-) -> list[Compra]:
+    pagina: int = 1,
+    por_pagina: int = 10,
+) -> tuple[list[Compra], int]:
     stmt = select(Compra).order_by(Compra.data_compra.desc(), Compra.created_at.desc())
+    count_stmt = select(func.count()).select_from(Compra)
     if data_inicio is not None:
         stmt = stmt.where(Compra.data_compra >= data_inicio)
+        count_stmt = count_stmt.where(Compra.data_compra >= data_inicio)
     if data_fim is not None:
         stmt = stmt.where(Compra.data_compra <= data_fim)
+        count_stmt = count_stmt.where(Compra.data_compra <= data_fim)
     if fornecedor_id is not None:
         stmt = stmt.where(Compra.fornecedor_id == fornecedor_id)
-    return list(db.execute(stmt).scalars().all())
+        count_stmt = count_stmt.where(Compra.fornecedor_id == fornecedor_id)
+    total = db.execute(count_stmt).scalar_one()
+    offset = (pagina - 1) * por_pagina
+    compras = list(db.execute(stmt.offset(offset).limit(por_pagina)).scalars().all())
+    return compras, total
 
 
 def get_compra_by_id(db: Session, compra_id: int) -> Optional[Compra]:
