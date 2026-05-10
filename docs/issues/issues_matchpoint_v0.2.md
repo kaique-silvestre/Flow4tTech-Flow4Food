@@ -535,6 +535,74 @@ Permitir editar fornecedor, data e número da nota de uma compra ativa. Quantida
 
 ---
 
+---
+
+## Issue 16 — I1: Página de cadastro de insumos ✓ Concluída
+
+**Tipo:** HITL  
+**Bloqueado por:** Nenhum
+
+### O que construir
+
+Criar rota dedicada `/cadastros/insumos` para gerenciamento completo de insumos, com filtro ativo/inativo, toggle de status e remoção. O botão de cadastro rápido em Compras continua funcionando — ambos compartilham o mesmo endpoint `/api/insumos`.
+
+**Backend — `backend/src/repositories/insumos_repository.py`:**
+- Adicionado `list_all(db, busca)` — retorna todos os insumos (ativos e inativos).
+- Adicionado `toggle_ativo(db, insumo_id)` — inverte `ativo` e persiste.
+- Corrigido typo `obj.quantidade_caixa =Sim data.quantidade_caixa` → `= data.quantidade_caixa`.
+
+**Backend — `backend/src/services/insumos_service.py`:**
+- Adicionado `list_all_insumos(db, busca)` — chama `list_all`.
+- Adicionado `toggle_insumo_ativo(db, insumo_id)` — lança NOT_FOUND se inexistente.
+
+**Backend — `backend/src/api/routes/insumos.py`:**
+- `GET /api/insumos` aceita `?incluir_inativos=true` — usa `list_all_insumos`.
+- `PATCH /api/insumos/{id}/toggle-ativo` — novo endpoint, retorna `InsumoResponse`.
+
+**Frontend — `frontend/src/features/estoque/useInsumos.ts`:**
+- Adicionado `useAllInsumos(busca?)` — query com `incluir_inativos=true`.
+- Adicionado `useUpdateInsumo()` — mutation PUT.
+- Adicionado `useToggleInsumoAtivo()` — mutation PATCH toggle-ativo.
+- Adicionado `useDeleteInsumo()` — mutation DELETE.
+- Adicionado `InsumoUpdateRequest` interface.
+
+**Frontend — `frontend/src/features/cadastros/insumos/InsumoEditModal.tsx`** (novo):
+- Modal unificado para criar e editar insumo.
+- Campos: nome, categoria_id, unidade_base, quantidade_caixa (condicional a `un`).
+- Reutiliza `flattenCategorias` de categorias.
+
+**Frontend — `frontend/src/features/cadastros/insumos/InsumosPage.tsx`** (novo):
+- Filtro ativos/inativos/todos.
+- Tabela com nome, unidade, qtd/caixa, badge de status, botões Editar/Desativar/Reativar/Remover.
+- Remover só aparece para inativos (seguindo fluxo de soft-delete do backend).
+
+**Frontend — `frontend/src/App.tsx`:**
+- Rota `/cadastros/insumos` → `InsumosPage`.
+
+**Frontend — `frontend/src/components/layout/Sidebar.tsx`:**
+- Item "Insumos" (ícone `FlaskConical`) adicionado em Cadastros, entre Categorias e Fornecedores.
+
+### Critérios de aceite
+
+- [ ] Sidebar mostra "Insumos" sob Cadastros
+- [ ] `/cadastros/insumos` lista todos os insumos com filtro ativo/inativo/todos
+- [ ] Criar insumo pela página → aparece na lista e no seletor de compras
+- [ ] Editar insumo pela página → dados atualizados
+- [ ] Desativar insumo → status muda para Inativo, não aparece no seletor de compras
+- [ ] Reativar insumo → status volta para Ativo, reaparece no seletor de compras
+- [ ] Remover insumo inativo sem ficha técnica → hard delete
+- [ ] Remover insumo inativo com ficha técnica → soft delete (já coberto pelo backend existente)
+- [ ] Botão rápido "+ Cadastrar novo insumo" em Compras continua funcionando
+- [ ] Insumo criado via botão rápido aparece na página de cadastro
+
+### User stories endereçadas
+
+- US1: Como sócio, quero cadastrar insumos em uma página dedicada sem precisar abrir uma compra.
+- US2: Como sócio, quero desativar insumos obsoletos para que não apareçam no seletor de compras, mas sem perder o histórico.
+- US3: Como sócio, quero reativar um insumo desativado caso precise usá-lo novamente.
+
+---
+
 ## Sequência de implementação
 
 ```
@@ -544,4 +612,5 @@ Bloco C — UI independentes:   Issue 4 (U2), Issue 5 (C3+C4+P1), Issue 6 (C2), 
 Bloco D — Features comanda:   Issue 10 (C1), Issue 11 (Z1)
 Bloco E — Cadastros:          Issue 12 (F1+F2), Issue 13 (MP1)
 Bloco F — Compras:            Issue 14 (CP1), Issue 15 (CP2)
+Bloco G — Insumos:            Issue 16 (I1)
 ```

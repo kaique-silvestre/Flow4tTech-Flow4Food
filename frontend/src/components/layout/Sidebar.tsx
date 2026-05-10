@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ChevronRight,
   ScrollText,
+  FlaskConical,
   type LucideIcon,
 } from "lucide-react";
 
@@ -36,6 +37,7 @@ interface NavItem {
 
 const CADASTROS_CHILDREN: SubNavItem[] = [
   { label: "Categorias", to: "/cadastros/categorias", icon: Tag },
+  { label: "Insumos", to: "/cadastros/insumos", icon: FlaskConical },
   { label: "Fornecedores", to: "/cadastros/fornecedores", icon: Truck },
   { label: "Garçons", to: "/cadastros/garcons", icon: Users },
   { label: "Métodos Pgto.", to: "/cadastros/metodos-pagamento", icon: CreditCard },

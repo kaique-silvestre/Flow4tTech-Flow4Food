@@ -9,6 +9,7 @@ import { CategoriasPage } from "@/features/cadastros/categorias/CategoriasPage";
 import { FornecedoresPage } from "@/features/cadastros/fornecedores/FornecedoresPage";
 import { GarconsPage } from "@/features/cadastros/garcons/GarconsPage";
 import { MetodosPagamentoPage } from "@/features/cadastros/metodos_pagamento/MetodosPagamentoPage";
+import { InsumosPage } from "@/features/cadastros/insumos/InsumosPage";
 import { ComprasPage } from "@/features/compras/ComprasPage";
 import { NovaCompraPage } from "@/features/compras/NovaCompraPage";
 import { EstoquePage } from "@/features/estoque/EstoquePage";
@@ -54,6 +55,7 @@ export function App() {
               <Route path="/cadastros/fornecedores" element={<FornecedoresPage />} />
               <Route path="/cadastros/garcons" element={<GarconsPage />} />
               <Route path="/cadastros/metodos-pagamento" element={<MetodosPagamentoPage />} />
+              <Route path="/cadastros/insumos" element={<InsumosPage />} />
               <Route path="/historico" element={<HistoricoPage />} />
               <Route path="/relatorios" element={<RelatoriosIndexPage />} />
               <Route path="/relatorios/vendas-do-dia" element={<VendasDoDiaPage />} />

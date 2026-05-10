@@ -14,9 +14,12 @@ router = APIRouter()
 def list_insumos(
     categoria_id: Optional[int] = Query(None),
     busca: Optional[str] = Query(None),
+    incluir_inativos: bool = Query(False),
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ) -> list[InsumoResponse]:
+    if incluir_inativos:
+        return insumos_service.list_all_insumos(db, busca)  # type: ignore[return-value]
     return insumos_service.list_insumos(db, categoria_id, busca)  # type: ignore[return-value]
 
 
@@ -46,6 +49,15 @@ def update_insumo(
     _user: dict = Depends(get_current_user),
 ) -> InsumoResponse:
     return insumos_service.update_insumo(db, insumo_id, body)  # type: ignore[return-value]
+
+
+@router.patch("/{insumo_id}/toggle-ativo", response_model=InsumoResponse)
+def toggle_ativo(
+    insumo_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> InsumoResponse:
+    return insumos_service.toggle_insumo_ativo(db, insumo_id)  # type: ignore[return-value]
 
 
 @router.delete("/{insumo_id}", status_code=204)

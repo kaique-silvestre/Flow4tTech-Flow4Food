@@ -16,6 +16,14 @@ def list_insumos(
     return [InsumoResponse.model_validate(i) for i in items]
 
 
+def list_all_insumos(
+    db: Session,
+    busca: Optional[str] = None,
+) -> list[InsumoResponse]:
+    items = insumos_repository.list_all(db, busca)
+    return [InsumoResponse.model_validate(i) for i in items]
+
+
 def get_insumo(db: Session, insumo_id: int) -> InsumoResponse:
     obj = insumos_repository.get_by_id(db, insumo_id)
     if obj is None:
@@ -30,6 +38,13 @@ def create_insumo(db: Session, data: InsumoCreateRequest) -> InsumoResponse:
 
 def update_insumo(db: Session, insumo_id: int, data: InsumoUpdateRequest) -> InsumoResponse:
     obj = insumos_repository.update(db, insumo_id, data)
+    if obj is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Insumo não encontrado", http_status=404)
+    return InsumoResponse.model_validate(obj)
+
+
+def toggle_insumo_ativo(db: Session, insumo_id: int) -> InsumoResponse:
+    obj = insumos_repository.toggle_ativo(db, insumo_id)
     if obj is None:
         raise AppError(ErrorCode.NOT_FOUND, "Insumo não encontrado", http_status=404)
     return InsumoResponse.model_validate(obj)

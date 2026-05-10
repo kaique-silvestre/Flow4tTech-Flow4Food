@@ -21,6 +21,17 @@ def list_ativos(
     return list(db.execute(stmt).scalars().all())
 
 
+def list_all(
+    db: Session,
+    busca: Optional[str] = None,
+) -> list[Insumo]:
+    stmt = select(Insumo)
+    if busca:
+        stmt = stmt.where(Insumo.nome.ilike(f"%{busca}%"))
+    stmt = stmt.order_by(Insumo.nome)
+    return list(db.execute(stmt).scalars().all())
+
+
 def get_by_id(db: Session, insumo_id: int) -> Optional[Insumo]:
     return db.execute(select(Insumo).where(Insumo.id == insumo_id)).scalar_one_or_none()
 
@@ -46,6 +57,16 @@ def update(db: Session, insumo_id: int, data: InsumoUpdateRequest) -> Optional[I
     obj.categoria_id = data.categoria_id
     obj.unidade_base = data.unidade_base
     obj.quantidade_caixa = data.quantidade_caixa
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+
+def toggle_ativo(db: Session, insumo_id: int) -> Optional[Insumo]:
+    obj = get_by_id(db, insumo_id)
+    if obj is None:
+        return None
+    obj.ativo = not obj.ativo
     db.commit()
     db.refresh(obj)
     return obj
