@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import { useComandasAbertasCount } from "@/features/comandas/useComandas";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -62,6 +63,7 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [cadastrosOpen, setCadastrosOpen] = useState(true);
   const [cadastrosHovered, setCadastrosHovered] = useState(false);
+  const { data: countAbertas = 0 } = useComandasAbertasCount();
 
   return (
     <aside
@@ -173,7 +175,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               end
               title={item.label}
               className={({ isActive }) =>
-                `flex items-center gap-2 rounded px-2 py-2 text-sm transition-colors ${
+                `relative flex items-center gap-2 rounded px-2 py-2 text-sm transition-colors ${
                   collapsed ? "justify-center" : ""
                 } ${
                   isActive
@@ -184,6 +186,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             >
               {item.icon && <item.icon size={18} className="shrink-0" />}
               {!collapsed && <span className="truncate">{item.label}</span>}
+              {!collapsed && item.to === "/comandas" && countAbertas > 0 && (
+                <span className="ml-auto rounded-full bg-amber-500 px-2 py-0.5 text-xs text-white">
+                  {countAbertas}
+                </span>
+              )}
+              {collapsed && item.to === "/comandas" && countAbertas > 0 && (
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500" />
+              )}
             </NavLink>
           );
         })}

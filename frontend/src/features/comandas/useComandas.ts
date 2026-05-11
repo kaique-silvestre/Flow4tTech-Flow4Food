@@ -61,6 +61,14 @@ function handle409(err: unknown, comanda_id: number | string, qc: ReturnType<typ
   }
 }
 
+export function useComandasAbertasCount() {
+  return useQuery<number>({
+    queryKey: ["comandas", "count-abertas"],
+    queryFn: () => api.get<number>("/api/comandas/count-abertas").then((r) => r.data),
+    staleTime: 30_000,
+  });
+}
+
 export function useComandas(busca?: string) {
   return useQuery<ComandaResponse[]>({
     queryKey: ["comandas", busca],

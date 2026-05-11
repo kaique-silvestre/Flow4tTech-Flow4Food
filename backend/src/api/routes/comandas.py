@@ -49,6 +49,15 @@ def list_fechadas(
     return [_build_response(db, c) for c in comandas]  # type: ignore[return-value]
 
 
+@router.get("/count-abertas", response_model=int)
+def count_abertas(
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> int:
+    from src.repositories import comandas_repository
+    return comandas_repository.count_abertas(db)
+
+
 @router.get("", response_model=list[ComandaResponse])
 def list_comandas(
     busca: Optional[str] = Query(None),

@@ -36,6 +36,12 @@ def list_abertas(db: Session, busca: Optional[str] = None) -> list[Comanda]:
     return q.order_by(Comanda.created_at.desc()).all()
 
 
+def count_abertas(db: Session) -> int:
+    return db.query(Comanda).filter(
+        Comanda.status.in_([StatusComanda.ABERTA.value, StatusComanda.REABERTA.value])
+    ).count()
+
+
 def list_fechadas(
     db: Session,
     busca: Optional[str] = None,
