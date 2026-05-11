@@ -174,7 +174,7 @@ Substituir radio inputs com `setValue` manual de `modo_divisao` em `FechamentoPa
 
 ---
 
-## Issue 7 — FE4: Schema de pagamentos coerente com Z1 (total R$0)
+## Issue 7 — FE4: Schema de pagamentos coerente com Z1 (total R$0) ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -185,11 +185,11 @@ Alterar `fecharComandaSchema.pagamentos` removendo `.min(1)` para que aceite arr
 
 ### Critérios de aceite
 
-- [ ] Schema permite `pagamentos: []`
-- [ ] Comanda com total R$0 → confirma fechamento sem método → backend recebe `pagamentos: []`
-- [ ] Comanda com total > 0 sem nenhum pagamento → submit bloqueado com mensagem clara
-- [ ] Caminho `baseTotal === 0` continua funcionando como hoje
-- [ ] Nenhuma regressão em fluxos com 1 ou múltiplos pagamentos
+- [x] Schema permite `pagamentos: []`
+- [x] Comanda com total R$0 → confirma fechamento sem método → backend recebe `pagamentos: []`
+- [x] Comanda com total > 0 sem nenhum pagamento → submit bloqueado com mensagem clara
+- [x] Caminho `baseTotal === 0` continua funcionando como hoje
+- [x] Nenhuma regressão em fluxos com 1 ou múltiplos pagamentos
 
 ### User stories endereçadas
 
