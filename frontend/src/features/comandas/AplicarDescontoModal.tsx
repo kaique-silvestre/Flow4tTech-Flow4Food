@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -17,7 +16,7 @@ interface Props {
 
 export default function AplicarDescontoModal({ open, onClose, comanda }: Props) {
   const { mutate, isPending } = useAplicarDesconto(comanda.id);
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<AplicarDescontoValues>({
+  const { register, handleSubmit, watch, control, formState: { errors } } = useForm<AplicarDescontoValues>({
     resolver: zodResolver(aplicarDescontoSchema),
     defaultValues: {
       tipo: comanda.desconto_percentual ? "percentual" : "valor",
@@ -27,53 +26,40 @@ export default function AplicarDescontoModal({ open, onClose, comanda }: Props) 
 
   const tipo = watch("tipo");
 
-  useEffect(() => {
-    if (comanda.desconto_percentual) {
-      setValue("tipo", "percentual");
-      setValue("valor", comanda.desconto_percentual);
-    } else if (comanda.desconto_valor) {
-      setValue("tipo", "valor");
-      setValue("valor", comanda.desconto_valor);
-    }
-  }, [comanda, setValue]);
-
   function onSubmit(data: AplicarDescontoValues) {
     mutate(data, { onSuccess: onClose });
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Aplicar Desconto</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="flex gap-4">
-            <div className="flex items-center gap-2">
-              <input
-                type="radio"
-                id="desc-pct"
-                name="tipo_desconto"
-                value="percentual"
-                checked={tipo === "percentual"}
-                onChange={() => setValue("tipo", "percentual")}
-                className="h-4 w-4 accent-blue-600"
-              />
-              <Label htmlFor="desc-pct">Percentual (%)</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="radio"
-                id="desc-val"
-                name="tipo_desconto"
-                value="valor"
-                checked={tipo === "valor"}
-                onChange={() => setValue("tipo", "valor")}
-                className="h-4 w-4 accent-blue-600"
-              />
-              <Label htmlFor="desc-val">Valor fixo (R$)</Label>
-            </div>
-          </div>
+          <Controller
+            control={control}
+            name="tipo"
+            render={({ field }) => (
+              <div className="flex gap-4">
+                {(["percentual", "valor"] as const).map((t) => (
+                  <div key={t} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id={`desc-${t}`}
+                      value={t}
+                      checked={field.value === t}
+                      onChange={() => field.onChange(t)}
+                      className="h-4 w-4 accent-blue-600"
+                    />
+                    <Label htmlFor={`desc-${t}`}>
+                      {t === "percentual" ? "Percentual (%)" : "Valor fixo (R$)"}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            )}
+          />
           <div>
             <Label>{tipo === "percentual" ? "Desconto %" : "Desconto R$"}</Label>
             <Input
