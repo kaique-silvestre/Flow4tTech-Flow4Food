@@ -197,7 +197,7 @@ Alterar `fecharComandaSchema.pagamentos` removendo `.min(1)` para que aceite arr
 
 ---
 
-## Issue 8 — DE1 + DE2: Fixes em `AplicarDescontoModal`
+## Issue 8 — DE1 + DE2: Fixes em `AplicarDescontoModal` ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -210,11 +210,11 @@ Alterar `fecharComandaSchema.pagamentos` removendo `.min(1)` para que aceite arr
 
 ### Critérios de aceite
 
-- [ ] Abrir modal de desconto → modal permanece aberto (não fecha sozinho)
-- [ ] Trocar entre "Percentual (%)" e "Valor fixo (R$)" → submeter → payload contém o `tipo` correto
-- [ ] Esc continua fechando o modal
-- [ ] Aplicar desconto percentual de 10% → comanda passa a refletir desconto
-- [ ] Aplicar desconto em valor de R$5 → comanda passa a refletir desconto
+- [x] Abrir modal de desconto → modal permanece aberto (não fecha sozinho)
+- [x] Trocar entre "Percentual (%)" e "Valor fixo (R$)" → submeter → payload contém o `tipo` correto
+- [x] Esc continua fechando o modal
+- [x] Aplicar desconto percentual de 10% → comanda passa a refletir desconto
+- [x] Aplicar desconto em valor de R$5 → comanda passa a refletir desconto
 
 ### User stories endereçadas
 

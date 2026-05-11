@@ -1,8 +1,8 @@
 ---
 iteration: 1
-max_iterations: 10
-plan_path: "docs/issues/issues_matchpoint_v0.2.md"
-started_at: "2026-05-09T00:00:00Z"
+max_iterations: 31
+plan_path: "docs/issues/issues_matchpoint_v0.3.md"
+started_at: "2026-05-11T00:00:00Z"
 ---
 
 # Ralph Progress Log
@@ -13,37 +13,22 @@ started_at: "2026-05-09T00:00:00Z"
 - Comanda.data_fechamento is UTC; use `_day_utc_range` + `_local_date` for SP timezone
 - Compra.data_compra is plain `datetime.date` (already local, no UTC conversion needed)
 - Frontend recharts has pre-existing TS errors (no @types/recharts) — do not fix those
-- React Query queryKey pattern: `["dashboard", "historico", inicio, fim]`
-- SQLite: `op.create_foreign_key` fails — just add column, skip FK constraint (SQLite doesn't enforce FKs anyway)
-- When migration partially runs (fails mid-way), column is already created → use `alembic stamp <rev>` to advance state
+- React Query queryKey pattern: `["resource", "subkey", ...params]`
+- SQLite: `op.create_foreign_key` fails — just add column, skip FK constraint
 - `CategoriaResponse` with recursive `children` field requires `CategoriaResponse.model_rebuild()` in Pydantic v2
 - Edit tool cannot match non-ASCII whitespace (NBSP U+00A0) — use PowerShell byte-level replacement
-- pytest must be run via `python -m pytest` (not `.venv\Scripts\pytest.exe`) to avoid wrong Python interpreter
+- pytest must be run via `python -m pytest` (not `.venv\Scripts\pytest.exe`)
+- Debounce pattern: `busca === "" ? clearValue : debouncedBusca` for immediate clear behavior
+- Dialog component available at `@/components/ui/dialog` — use for all modals
+- Controller pattern for RHF radios: `<Controller render={({ field }) => ...} />` instead of `setValue`
 
-## Iteration 1 - 2026-05-08T00:00:00Z
-
-### Completed
-- backend/src/repositories/dashboard_repository.py: added `historico_periodo()` and `resumo_anual()`
-- backend/src/schemas/dashboard_schemas.py: added `DashboardHistoricoItem`, `DashboardResumoAnualItem`
-- backend/src/services/dashboard_service.py: added `dashboard_historico()`, `dashboard_resumo_anual()`
-- backend/src/api/routes/dashboard.py: added GET /historico and GET /resumo-anual routes
-- frontend/src/features/dashboard/useDashboard.ts: added `useDashboardHistorico`, `useDashboardResumoAnual`
-- frontend/src/features/dashboard/DashboardPage.tsx: removed Lucro Estimado, removed HeatmapMes, added tabs Resumo/Histórico with table and annual calendar grid
-
-### Validation Status
-- Ruff lint: PASS
-- Backend tests: PASS (104/104)
-- Frontend type-check: pre-existing recharts errors only (no new errors)
-- Committed: a48f47e
-
----
-
-## Iteration 1 — v0.2 - 2026-05-09T14:00:00Z
+## Iteration 1 - 2026-05-11T00:00:00Z
 
 ### Completed
-- Issue 1 (BG1): `MetodoPagamentoModal.tsx` — replaced `watch("ativo")`+`setValue` with `Controller`
-- Issue 2 (BG2): `GarcomModal.tsx` — same fix, identical pattern
-- Marked both Concluída ✓ in `docs/issues/issues_matchpoint_v0.2.md`
+- Issue 1 (DB2): Installed `use-debounce` package
+- Applied `useDebounce(busca, 350)` in ComandasPage, ComandaAbertaPage, EstoquePage, HistoricoComandasPage
+- Clear-input → immediate query (busca === "" path bypasses debounce)
+- Committed: bae9b34
 
 ### Validation Status
 - Type-check: PASS
@@ -51,61 +36,125 @@ started_at: "2026-05-09T00:00:00Z"
 - Build: PASS
 
 ### Next Steps
-- Issue 3 (U1): expand `UnidadeBase` enum in backend + Alembic migration (HITL — needs human review before migration)
-- Issue 4 (U2): `InsumoModal.tsx` conditional `quantidade_caixa` (AFK, blocked by U1)
-- Issue 5 (C3+C4+P1): `NovaComandaModal.tsx` fixes (AFK, no blocker)
+- Issue 2 (CM1): Delete dead code — ItensPage.tsx, ItemModal.tsx, itemSchemas.ts, useItens.ts
 
 ---
 
-## Iteration 2 - 2026-05-09T11:40:00Z
+## Iteration 2 - 2026-05-11T01:00:00Z
 
 ### Completed
-- Verified Issue 7 (M005): `isEditable` guard already gates both ✏ buttons → marked ✓
-- Verified Issue 17 (M017): `calculateLine` + tests + NovaCompraPage integration already done
-- Fixed lint error: NBSP (U+00A0) in `InsumoModal.tsx:89` template literal → byte-level fix
-- Marked M017 Concluída ✓ in issues doc; all 9 criteria checked
-
-### Validation Status
-- Type-check: PASS
-- Lint: PASS (0 warnings)
-- Tests: PASS (14 tests)
-- Build: PASS
-
----
-
-## Iteration 3 - 2026-05-09T12:00:00Z
-
-### Completed
-- Verified Issue 15 (M016): all criteria already implemented — frontend has tabs, TabHistorico, calendário anual; backend has /historico e /resumo-anual endpoints
-- Ran `test_resumo_anual_retorna_12_entradas` → PASSED
-- Marked Issue 15 Concluída ✓ in issues doc with all 10 criteria checked
+- Issue 2 (CM1): Deleted 4 files from `frontend/src/features/cadastros/itens/`
+- Zero imports found — safe to delete
+- Committed: ed2e849
 
 ### Validation Status
 - Type-check: PASS
 - Lint: PASS
-- Tests: PASS (test_resumo_anual_retorna_12_entradas)
-- Build: PASS
-
----
-
-## Iteration 4 - 2026-05-09T12:30:00Z
-
-### Completed
-- Verified Issue 16 (M012): all criteria already implemented
-  - Migration 0018 adds parent_id; model, service, repo all handle subcategorias
-  - NIVEL_MAX_ATINGIDO (422) and HAS_CHILDREN (409) error codes wired
-  - CategoriasPage accordion, CategoriaModal parent select, flattenCategorias for indented selectors in InsumoModal/ProdutoModal
-- Ran test_subcategoria_crud + test_subcategoria_max_nivel → PASSED
-- Marked Issue 16 Concluída ✓ with all 9 criteria checked
-- All 17 issues in issues_matchpoint_v0.1.md now Concluída ✓
-
-### Validation Status
-- Type-check: PASS
-- Lint: PASS
-- Tests: PASS (subcategoria_crud, subcategoria_max_nivel)
 - Build: PASS
 
 ### Next Steps
-- All issues complete. Loop can exit.
+- Issue 3 (EM1): Remove `reset()` from `handleClose` in `InsumoEditModal.tsx`
+
+---
+
+## Iteration 3 - 2026-05-11T02:00:00Z
+
+### Completed
+- Issue 3 (EM1): Removed `reset()` from `handleClose` in `InsumoEditModal.tsx`
+- `useEffect([open, editing, reset])` already handles reinit — extra `reset()` caused field flash
+- Committed: 3c37c61
+
+### Validation Status
+- Type-check: PASS
+- Lint: PASS
+
+### Next Steps
+- Issue 4 (MOD1+NC1+NC2): `NovaComandaModal.tsx` — migrate to Dialog + valueAsNumber on mesa + radio a11y
+
+---
+
+## Iteration 4 - 2026-05-11T03:00:00Z
+
+### Completed
+- Issue 4 (MOD1+NC1+NC2): NovaComandaModal migrado para Dialog
+- `valueAsNumber: true` aplicado em `identificacao` quando `tipo === "mesa"`
+- Radios com `id="tipo-identificacao-{t}"` e `htmlFor` correspondente
+- `ComandasPage.tsx` atualizado: renderização condicional → `open={showModal}` prop
+- Committed: 4d6398a
+
+### Validation Status
+- Type-check: PASS
+- Lint: PASS
+
+### Next Steps
+- Issue 5 (MOD1b): `CancelarItemModal.tsx` — migrar para Dialog
+
+---
+
+## Iteration 5 - 2026-05-11T04:00:00Z
+
+### Completed
+- Issue 5 (MOD1b): CancelarItemModal migrado para Dialog
+- Adicionado `open` prop; caller atualizado com `open={!!cancelando && !!comanda}`
+- Committed: 1af081b
+
+### Validation Status
+- Type-check: PASS
+- Lint: PASS
+
+### Next Steps
+- Issue 6 (FE2): `modo_divisao` via Controller em FechamentoPage.tsx
+
+---
+
+## Iteration 6 - 2026-05-11T05:00:00Z
+
+### Completed
+- Issue 6 (FE2): modo_divisao via Controller em FechamentoPage — setValue("modo_divisao") removido
+- Issues 1–6 marcadas ✅ na documentação docs/issues/issues_matchpoint_v0.3.md
+- Committed: 27bed48 (FE2) + 69e200f (docs)
+
+### Validation Status
+- Type-check: PASS
+- Lint: PASS
+
+### Next Steps
+- Issue 7 (FE4): Schema pagamentos coerente com total R$0 — remover .min(1), validação manual no submit
+
+---
+
+## Iteration 7 - 2026-05-11T06:00:00Z
+
+### Completed
+- Issue 7 (FE4): removido `.min(1)` de `fecharComandaSchema.pagamentos`
+- `setError` adicionado ao useForm; `onSubmit` valida manualmente quando `baseTotal > 0 && pagamentos.length === 0`
+- Doc marcada ✅
+- Committed: c40fdbd + e7251af
+
+### Validation Status
+- Type-check: PASS
+- Lint: PASS
+
+### Next Steps
+- Issue 8 (DE1+DE2): AplicarDescontoModal — onOpenChange correto + Controller para radio tipo
+
+---
+
+## Iteration 8 - 2026-05-11T07:00:00Z
+
+### Completed
+- Issue 8 (DE1+DE2): AplicarDescontoModal — onOpenChange correto + Controller para radio tipo
+- `onOpenChange={(v) => !v && onClose()}` evita fechamento ao abrir
+- `<Controller>` substitui radios com `setValue` manual
+- `useEffect` removido — modal sempre remonta (conditional render `{descontoOpen && ...}`)
+- Doc marcada ✅
+- Committed: 810b1a0
+
+### Validation Status
+- Type-check: PASS
+- Lint: PASS
+
+### Next Steps
+- Issue 9 (FE1+CV1): `formatQuantidade` no Fechamento e no Comprovante
 
 ---
