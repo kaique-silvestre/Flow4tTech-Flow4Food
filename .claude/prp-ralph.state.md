@@ -214,3 +214,23 @@ started_at: "2026-05-11T00:00:00Z"
 - Issue 16 (CP6): Modal de edição de compra com Dialog padronizado em ComprasPage
 
 ---
+
+## Iteration 12 - 2026-05-11T11:00:00Z
+
+### Completed
+- Issue 16 (CP6): modal edição compra migrado para Dialog; `onOpenChange={(v) => !v && setEditando(null)}`
+- Issue 17 (CP7): já estava implementado (toast.warning duration 6000 em useCancelarCompra) — marcado ✅
+- Issue 18 (CP8): `handleItemChange(index)` no `onChange` do item selector — zera qtd, custo_total, unitarios[index], lastEditedRef
+- Issue 19 (CP9): `custo_unitario = (total/qty).quantize(Decimal("0.0001"))` em compras_service
+- Issue 20 (CP10): `find_by_numero_nota` no repo; check em `criar_compra`; `warning` no CompraResponse; toast.warning no frontend onSuccess
+- Doc marcada ✅ issues 16-20
+- Committed: 7565fe9
+
+### Validation Status
+- Type-check: PASS
+- Lint: PASS
+
+### Next Steps
+- Issue 21 (CP11): Transação atômica em criar_compra e cancelar_compra
+
+---

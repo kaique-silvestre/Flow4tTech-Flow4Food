@@ -385,7 +385,7 @@ Adicionar filtro de status à listagem de compras com 3 opções (Todas / Ativas
 
 ---
 
-## Issue 16 — CP6: Modal de edição de compra com `Dialog` padronizado
+## Issue 16 — CP6: Modal de edição de compra com `Dialog` padronizado ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -396,11 +396,11 @@ Substituir o JSX inline `<div className="fixed inset-0 z-50...">` do modal de ed
 
 ### Critérios de aceite
 
-- [ ] Modal de edição usa `<Dialog>` com `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogFooter`
-- [ ] Esc fecha o modal
-- [ ] Clique fora fecha o modal
-- [ ] Foco no primeiro campo ao abrir
-- [ ] Salvar e cancelar continuam funcionando
+- [x] Modal de edição usa `<Dialog>` com `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogFooter`
+- [x] Esc fecha o modal
+- [x] Clique fora fecha o modal
+- [x] Foco no primeiro campo ao abrir
+- [x] Salvar e cancelar continuam funcionando
 
 ### User stories endereçadas
 
@@ -408,7 +408,7 @@ Substituir o JSX inline `<div className="fixed inset-0 z-50...">` do modal de ed
 
 ---
 
-## Issue 17 — CP7: Toast amarelo após cancelamento de compra
+## Issue 17 — CP7: Toast amarelo após cancelamento de compra ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -419,10 +419,10 @@ Em `useCompras.ts → useCancelarCompra → onSuccess`, disparar `toast.warning(
 
 ### Critérios de aceite
 
-- [ ] Cancelar uma nota com 2 ou mais insumos → toast amarelo aparece após sucesso
-- [ ] Toast persiste por ~5 segundos antes de desaparecer
-- [ ] Texto exatamente como especificado
-- [ ] Nenhuma regressão no estorno de estoque já implementado em CP1 v0.2
+- [x] Cancelar uma nota com 2 ou mais insumos → toast amarelo aparece após sucesso
+- [x] Toast persiste por ~5 segundos antes de desaparecer
+- [x] Texto exatamente como especificado
+- [x] Nenhuma regressão no estorno de estoque já implementado em CP1 v0.2
 
 ### User stories endereçadas
 
@@ -430,7 +430,7 @@ Em `useCompras.ts → useCancelarCompra → onSuccess`, disparar `toast.warning(
 
 ---
 
-## Issue 18 — CP8: Reset de linha ao trocar item selecionado
+## Issue 18 — CP8: Reset de linha ao trocar item selecionado ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -441,10 +441,10 @@ Em `NovaCompraPage.tsx`, no `onChange` do `<select>` de `item_id`, zerar quantid
 
 ### Critérios de aceite
 
-- [ ] Linha 1 com item A, qtd 5, custo unit R$10, total R$50 → trocar para item B → todos os 3 campos zerados
-- [ ] Outras linhas não são afetadas
-- [ ] Adicionar nova linha após troca não é prejudicado
-- [ ] Comportamento normal (digitação inicial) preservado
+- [x] Linha 1 com item A, qtd 5, custo unit R$10, total R$50 → trocar para item B → todos os 3 campos zerados
+- [x] Outras linhas não são afetadas
+- [x] Adicionar nova linha após troca não é prejudicado
+- [x] Comportamento normal (digitação inicial) preservado
 
 ### User stories endereçadas
 
@@ -452,7 +452,7 @@ Em `NovaCompraPage.tsx`, no `onChange` do `<select>` de `item_id`, zerar quantid
 
 ---
 
-## Issue 19 — CP9: Precisão do `custo_unitario` em 4 casas decimais
+## Issue 19 — CP9: Precisão do `custo_unitario` em 4 casas decimais ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -467,10 +467,10 @@ custo_unitario = (item_req.custo_total / item_req.quantidade).quantize(Decimal("
 
 ### Critérios de aceite
 
-- [ ] Registrar compra de 3 unidades a R$10 → `custo_unitario` salvo como `3.3333` (não `3.333333333...`)
-- [ ] Compra com quantidades inteiras e custo divisível → `custo_unitario` sem casas extras desnecessárias
-- [ ] Relatórios que consomem `custo_unitario` não quebram
-- [ ] Nenhuma regressão em CMV ou custo médio
+- [x] Registrar compra de 3 unidades a R$10 → `custo_unitario` salvo como `3.3333` (não `3.333333333...`)
+- [x] Compra com quantidades inteiras e custo divisível → `custo_unitario` sem casas extras desnecessárias
+- [x] Relatórios que consomem `custo_unitario` não quebram
+- [x] Nenhuma regressão em CMV ou custo médio
 
 ### User stories endereçadas
 
@@ -478,7 +478,7 @@ custo_unitario = (item_req.custo_total / item_req.quantidade).quantize(Decimal("
 
 ---
 
-## Issue 20 — CP10: Warning amarelo para `numero_nota` duplicado
+## Issue 20 — CP10: Warning amarelo para `numero_nota` duplicado ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -491,11 +491,11 @@ Frontend `useCompras.ts → useCreateCompra → onSuccess`: se `data.warning`, d
 
 ### Critérios de aceite
 
-- [ ] Cadastrar compra com `numero_nota = "X1"` → sem warning, salva normalmente
-- [ ] Cadastrar segunda compra com `numero_nota = "X1"` → response inclui `warning` com mensagem padronizada
-- [ ] Frontend exibe toast amarelo com a mensagem
-- [ ] Compra é salva mesmo com duplicidade
-- [ ] Cadastrar compra sem `numero_nota` → nenhum warning
+- [x] Cadastrar compra com `numero_nota = "X1"` → sem warning, salva normalmente
+- [x] Cadastrar segunda compra com `numero_nota = "X1"` → response inclui `warning` com mensagem padronizada
+- [x] Frontend exibe toast amarelo com a mensagem
+- [x] Compra é salva mesmo com duplicidade
+- [x] Cadastrar compra sem `numero_nota` → nenhum warning
 
 ### User stories endereçadas
 
