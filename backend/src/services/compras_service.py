@@ -1,5 +1,6 @@
+import math
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -9,8 +10,6 @@ from src.models.fornecedores import Fornecedor
 from src.models.insumos import Insumo
 from src.models.movimentos_estoque import TipoMovimento
 from src.repositories import compras_repository, estoque_repository
-import math
-
 from src.schemas.compras import (
     CompraCreateRequest,
     CompraPatchRequest,
@@ -47,72 +46,76 @@ def criar_compra(db: Session, data: CompraCreateRequest) -> CompraResponse:
         if existing:
             warning = f"Número de nota já registrado na compra #{str(existing.id).zfill(4)}"
 
-    total = Decimal("0")
-    itens_processados = []
+    try:
+        total = Decimal("0")
+        itens_processados = []
 
-    for item_req in data.itens:
-        insumo = estoque_repository.get_insumo_for_update(db, item_req.item_id)
-        if insumo is None:
-            raise AppError(
-                ErrorCode.NOT_FOUND,
-                f"Insumo {item_req.item_id} não encontrado",
-                http_status=404,
+        for item_req in data.itens:
+            insumo = estoque_repository.get_insumo_for_update(db, item_req.item_id)
+            if insumo is None:
+                raise AppError(
+                    ErrorCode.NOT_FOUND,
+                    f"Insumo {item_req.item_id} não encontrado",
+                    http_status=404,
+                )
+
+            custo_unitario = (item_req.custo_total / item_req.quantidade).quantize(Decimal("0.0001"))
+            novo_custo_medio = _calcular_custo_medio(
+                insumo.estoque_atual,
+                insumo.custo_medio,
+                item_req.quantidade,
+                custo_unitario,
             )
+            novo_estoque = insumo.estoque_atual + item_req.quantidade
 
-        custo_unitario = (item_req.custo_total / item_req.quantidade).quantize(Decimal("0.0001"))
-        novo_custo_medio = _calcular_custo_medio(
-            insumo.estoque_atual,
-            insumo.custo_medio,
-            item_req.quantidade,
-            custo_unitario,
-        )
-        novo_estoque = insumo.estoque_atual + item_req.quantidade
+            estoque_repository.update_estoque_e_custo(
+                db, insumo.id, novo_estoque, novo_custo_medio
+            )
+            total += item_req.custo_total
 
-        estoque_repository.update_estoque_e_custo(
-            db, insumo.id, novo_estoque, novo_custo_medio
-        )
-        total += item_req.custo_total
+            itens_processados.append((insumo, item_req, custo_unitario, novo_estoque))
 
-        itens_processados.append((insumo, item_req, custo_unitario, novo_estoque))
-
-    compra = compras_repository.create_compra(
-        db=db,
-        fornecedor_id=data.fornecedor_id,
-        data_compra=data.data_compra,
-        numero_nota=data.numero_nota,
-        total=total,
-    )
-
-    itens_response = []
-    for insumo, item_req, custo_unitario, novo_estoque in itens_processados:
-        compras_repository.add_item_compra(
+        compra = compras_repository.create_compra(
             db=db,
-            compra_id=compra.id,
-            insumo_id=insumo.id,
-            quantidade=item_req.quantidade,
-            custo_unitario=custo_unitario,
-            custo_total=item_req.custo_total,
+            fornecedor_id=data.fornecedor_id,
+            data_compra=data.data_compra,
+            numero_nota=data.numero_nota,
+            total=total,
         )
-        estoque_repository.registrar_movimento(
-            db=db,
-            insumo_id=insumo.id,
-            tipo=TipoMovimento.ENTRADA,
-            quantidade=item_req.quantidade,
-            custo_unitario=custo_unitario,
-            saldo_apos=novo_estoque,
-            compra_id=compra.id,
-        )
-        itens_response.append(
-            ItemCompraResponse(
-                item_id=insumo.id,
-                item_nome=insumo.nome,
+
+        itens_response = []
+        for insumo, item_req, custo_unitario, novo_estoque in itens_processados:
+            compras_repository.add_item_compra(
+                db=db,
+                compra_id=compra.id,
+                insumo_id=insumo.id,
                 quantidade=item_req.quantidade,
                 custo_unitario=custo_unitario,
                 custo_total=item_req.custo_total,
             )
-        )
+            estoque_repository.registrar_movimento(
+                db=db,
+                insumo_id=insumo.id,
+                tipo=TipoMovimento.ENTRADA,
+                quantidade=item_req.quantidade,
+                custo_unitario=custo_unitario,
+                saldo_apos=novo_estoque,
+                compra_id=compra.id,
+            )
+            itens_response.append(
+                ItemCompraResponse(
+                    item_id=insumo.id,
+                    item_nome=insumo.nome,
+                    quantidade=item_req.quantidade,
+                    custo_unitario=custo_unitario,
+                    custo_total=item_req.custo_total,
+                )
+            )
 
-    db.commit()
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     return CompraResponse(
         id=compra.id,
@@ -160,8 +163,7 @@ def get_compra(db: Session, compra_id: int) -> CompraResponse:
     )
 
 
-def _build_compra_response(db: Session, compra: "Compra") -> CompraResponse:
-    from src.models.compras import Compra as CompraModel  # noqa: F401 — local import avoids circular
+def _build_compra_response(db: Session, compra: Any) -> CompraResponse:
     itens_db = compras_repository.get_itens_compra(db, compra.id)
     itens_response = []
     for ic in itens_db:
@@ -189,32 +191,36 @@ def _build_compra_response(db: Session, compra: "Compra") -> CompraResponse:
 
 
 def cancelar_compra(db: Session, compra_id: int) -> CompraResponse:
-    from src.models.compras import Compra as CompraModel
     compra = compras_repository.get_compra_by_id(db, compra_id)
     if compra is None:
         raise AppError(ErrorCode.NOT_FOUND, "Compra não encontrada", http_status=404)
     if compra.status == "cancelada":
         raise AppError(ErrorCode.CONFLICT, "Compra já cancelada", http_status=409)
 
-    itens = compras_repository.get_itens_compra(db, compra_id)
-    for item in itens:
-        insumo = estoque_repository.get_insumo_for_update(db, item.insumo_id)
-        if insumo is None:
-            continue
-        novo_estoque = insumo.estoque_atual - item.quantidade
-        estoque_repository.update_estoque_e_custo(db, insumo.id, novo_estoque, insumo.custo_medio)
-        estoque_repository.registrar_movimento(
-            db=db,
-            insumo_id=insumo.id,
-            tipo=TipoMovimento.ESTORNO_COMPRA,
-            quantidade=-item.quantidade,
-            custo_unitario=item.custo_unitario,
-            saldo_apos=novo_estoque,
-            compra_id=compra_id,
-        )
+    try:
+        itens = compras_repository.get_itens_compra(db, compra_id)
+        for item in itens:
+            insumo = estoque_repository.get_insumo_for_update(db, item.insumo_id)
+            if insumo is None:
+                continue
+            novo_estoque = insumo.estoque_atual - item.quantidade
+            estoque_repository.update_estoque_e_custo(db, insumo.id, novo_estoque, insumo.custo_medio)
+            estoque_repository.registrar_movimento(
+                db=db,
+                insumo_id=insumo.id,
+                tipo=TipoMovimento.ESTORNO_COMPRA,
+                quantidade=-item.quantidade,
+                custo_unitario=item.custo_unitario,
+                saldo_apos=novo_estoque,
+                compra_id=compra_id,
+            )
 
-    compra.status = "cancelada"
-    db.commit()
+        compra.status = "cancelada"
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
     db.refresh(compra)
     return _build_compra_response(db, compra)
 
