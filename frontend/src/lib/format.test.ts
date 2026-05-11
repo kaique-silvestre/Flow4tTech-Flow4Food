@@ -31,13 +31,13 @@ describe("formatQuantidade", () => {
     expect(formatQuantidade(3.000)).toBe("3");
   });
 
-  it("returns fractional with decimal places", () => {
-    expect(formatQuantidade(0.25)).toBe("0.25");
+  it("returns fractional with pt-BR decimal separator", () => {
+    expect(formatQuantidade(0.25)).toBe("0,25");
   });
 
-  it("returns up to 3 decimal places for fractional", () => {
-    expect(formatQuantidade(0.250)).toBe("0.25");
-    expect(formatQuantidade(0.125)).toBe("0.125");
+  it("returns up to 3 decimal places for fractional (pt-BR)", () => {
+    expect(formatQuantidade(0.250)).toBe("0,25");
+    expect(formatQuantidade(0.125)).toBe("0,125");
   });
 
   it("handles zero as integer", () => {

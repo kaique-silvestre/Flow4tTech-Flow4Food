@@ -18,5 +18,5 @@ export function formatDate(d: Date | string, fmt = "dd/MM/yyyy HH:mm"): string {
 export function formatQuantidade(value: number | string): string {
   const n = Number(value);
   if (Number.isInteger(n)) return String(n);
-  return parseFloat(n.toFixed(3)).toString();
+  return n.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
 }

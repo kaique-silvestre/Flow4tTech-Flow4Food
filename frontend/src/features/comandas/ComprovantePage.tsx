@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useComprovante } from "./useComprovante";
+import { formatQuantidade } from "@/lib/format";
 
 const brl = (value: number | null | undefined) =>
   value != null
@@ -114,7 +115,7 @@ export function ComprovantePage() {
           {data.itens.map((item, i) => (
             <div key={i} className="flex justify-between gap-2 text-xs mb-1">
               <span className="flex-1 truncate">
-                {item.quantidade}x {item.nome}
+                {formatQuantidade(item.quantidade)}x {item.nome}
                 {item.cortesia && (
                   <span className="text-gray-500"> (cortesia)</span>
                 )}

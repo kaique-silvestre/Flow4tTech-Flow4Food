@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatQuantidade } from "@/lib/format";
 import { useComanda } from "./useComandas";
 import { useFecharComanda, useMetodosPagamento } from "./useFechamento";
 import { fecharComandaSchema, type FecharComandaValues } from "./fechamentoSchemas";
@@ -98,7 +98,7 @@ export default function FechamentoPage() {
         {itensNaoCancelados.map((item) => (
           <div key={item.id} className="flex justify-between text-sm">
             <span>
-              {item.quantidade}× {item.item_nome}
+              {formatQuantidade(item.quantidade)}× {item.item_nome}
               {item.cortesia && " 🎁"}
               {item.pessoa_associada && ` (${item.pessoa_associada})`}
             </span>
