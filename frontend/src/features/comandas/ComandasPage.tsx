@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDebounce } from "use-debounce";
 import { LayoutList, LayoutGrid } from "lucide-react";
@@ -44,6 +44,12 @@ export function ComandasPage() {
   const [viewMode, setViewMode] = useState<ViewMode>(getInitialViewMode);
 
   const today = todayISODate();
+
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const queryBusca = busca === "" ? undefined : debouncedBusca || undefined;
   const { data: comandas = [], isLoading } = useComandas(queryBusca);
@@ -132,7 +138,7 @@ export function ComandasPage() {
                     </div>
                     <div className="text-sm text-gray-500">
                       Garçom: {c.garcom_nome} · {ativos.length}{" "}
-                      {ativos.length === 1 ? "item" : "itens"} · {c.tempo_aberta_minutos} min
+                      {ativos.length === 1 ? "item" : "itens"} · {Math.floor((now - new Date(c.created_at).getTime()) / 60_000)} min
                     </div>
                   </div>
                   <div className="text-right">
@@ -169,7 +175,7 @@ export function ComandasPage() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-400">
-                    {ativos.length} {ativos.length === 1 ? "item" : "itens"} · {c.tempo_aberta_minutos} min
+                    {ativos.length} {ativos.length === 1 ? "item" : "itens"} · {Math.floor((now - new Date(c.created_at).getTime()) / 60_000)} min
                   </span>
                   <span className="font-medium text-gray-900">
                     {formatCurrency(Number(c.total_parcial))}

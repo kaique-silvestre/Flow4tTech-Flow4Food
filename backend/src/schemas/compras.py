@@ -68,3 +68,4 @@ class ComprasPageResponse(BaseModel):
     pagina: int
     por_pagina: int
     total_paginas: int
+    total_periodo: Decimal

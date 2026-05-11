@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDebounce } from "use-debounce";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,18 @@ export function ComandaAbertaPage() {
   const [confirmReabrir, setConfirmReabrir] = useState(false);
 
   const reopenComanda = useReopenComanda(comanda_id);
+
+  const [now, setNow] = useState(() => Date.now());
+  const comandaStatus = comanda?.status;
+  useEffect(() => {
+    if (!comandaStatus || comandaStatus === "fechada") return;
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [comandaStatus]);
+
+  function minutesAgo(iso: string): number {
+    return Math.floor((now - new Date(iso).getTime()) / 60_000);
+  }
 
   const itemSelecionadoObj = itemSelecionado != null
     ? (itens.find((i) => i.id === itemSelecionado) ?? topItens.find((i) => i.id === itemSelecionado))
@@ -265,7 +277,7 @@ export function ComandaAbertaPage() {
                     ✏
                   </button>
                 )}
-                <span>· Aberta há {comanda.tempo_aberta_minutos} min</span>
+                <span>· Aberta há {minutesAgo(comanda.created_at)} min</span>
               </div>
             </div>
           </div>
@@ -500,11 +512,24 @@ export function ComandaAbertaPage() {
                           onChange={(e) => setEditQtd(e.target.value)}
                           className="w-24"
                         />
-                        <Input
-                          value={editPessoa}
-                          onChange={(e) => setEditPessoa(e.target.value)}
-                          placeholder="Pessoa"
-                        />
+                        {comanda.pessoas.length > 0 ? (
+                          <select
+                            className="rounded border px-2 py-1.5 text-sm"
+                            value={editPessoa}
+                            onChange={(e) => setEditPessoa(e.target.value)}
+                          >
+                            <option value="">— nenhuma —</option>
+                            {comanda.pessoas.map((p, i) => (
+                              <option key={i} value={p}>{p}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Input
+                            value={editPessoa}
+                            onChange={(e) => setEditPessoa(e.target.value)}
+                            placeholder="Pessoa"
+                          />
+                        )}
                         <Input
                           value={editObs}
                           onChange={(e) => setEditObs(e.target.value)}

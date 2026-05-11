@@ -8,9 +8,15 @@ import { formatCurrency } from "@/lib/format";
 import { useCancelarCompra, useCompras, usePatchCompra, type CompraFilters, type CompraResponse } from "./useCompras";
 import { ChevronRight, ChevronDown } from "lucide-react";
 
+const STATUS_OPTS = [
+  { value: "ativa", label: "Ativas" },
+  { value: "", label: "Todas" },
+  { value: "cancelada", label: "Canceladas" },
+] as const;
+
 export function ComprasPage() {
   const navigate = useNavigate();
-  const [filters, setFilters] = useState<CompraFilters>({});
+  const [filters, setFilters] = useState<CompraFilters>({ status: "ativa" });
   const [pagina, setPagina] = useState(1);
   const { data: paginado, isLoading } = useCompras({ ...filters, pagina, por_pagina: 10 });
   const compras = paginado?.itens ?? [];
@@ -40,13 +46,31 @@ export function ComprasPage() {
   const [editDataCompra, setEditDataCompra] = useState<string>("");
   const [editNumeroNota, setEditNumeroNota] = useState<string>("");
 
-  const totalPeriodo = compras.reduce((sum, c) => sum + Number(c.total), 0);
+  const totalPeriodo = paginado?.total_periodo ?? 0;
 
   return (
     <div className="p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Compras</h1>
         <Button onClick={() => navigate("/compras/nova")}>+ Nova Compra</Button>
+      </div>
+
+      {/* Filtro status */}
+      <div className="mb-3 flex gap-1">
+        {STATUS_OPTS.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => { atualizarFiltro({ status: o.value || null }); }}
+            className={`rounded px-3 py-1 text-sm border transition-colors ${
+              (filters.status ?? "") === o.value
+                ? "bg-gray-800 text-white border-gray-800"
+                : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
       </div>
 
       {/* Filtros */}

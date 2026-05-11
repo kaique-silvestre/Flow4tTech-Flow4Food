@@ -8,18 +8,21 @@ const TIPO_OPTIONS = [
   { value: "entrada", label: "Entrada" },
   { value: "saida_venda", label: "Saída venda" },
   { value: "saida_perda", label: "Baixa" },
+  { value: "estorno_compra", label: "Estorno compra" },
 ];
 
 const TIPO_BADGE: Record<string, string> = {
   entrada: "bg-green-100 text-green-700",
   saida_venda: "bg-blue-100 text-blue-700",
   saida_perda: "bg-orange-100 text-orange-700",
+  estorno_compra: "bg-gray-100 text-gray-500",
 };
 
 const TIPO_LABEL: Record<string, string> = {
   entrada: "Entrada",
   saida_venda: "Saída venda",
   saida_perda: "Baixa",
+  estorno_compra: "Estorno compra",
 };
 
 export function MovimentosPage() {
@@ -108,7 +111,7 @@ export function MovimentosPage() {
                 <tr key={mov.id} className="border-b last:border-0">
                   <td className="py-2 pr-4 text-gray-500">
                     {new Date(mov.created_at).toLocaleString("pt-BR", {
-                      day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+                      day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit",
                     })}
                   </td>
                   <td className="py-2 pr-4 font-medium">{mov.item_nome}</td>

@@ -24,12 +24,13 @@ def list_compras(
     data_inicio: Optional[str] = Query(None),
     data_fim: Optional[str] = Query(None),
     fornecedor_id: Optional[int] = Query(None),
+    status: Optional[str] = Query(None),
     pagina: int = Query(1, ge=1),
     por_pagina: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ) -> ComprasPageResponse:
-    return compras_service.list_compras(db, data_inicio, data_fim, fornecedor_id, pagina, por_pagina)  # type: ignore[return-value]
+    return compras_service.list_compras(db, data_inicio, data_fim, fornecedor_id, status, pagina, por_pagina)  # type: ignore[return-value]
 
 
 @router.get("/{compra_id}", response_model=CompraResponse)
