@@ -63,7 +63,6 @@ export function InsumoEditModal({ open, onClose, editing }: Props) {
   const unidade = watch("unidade_base");
 
   function handleClose() {
-    reset();
     onClose();
   }
 
