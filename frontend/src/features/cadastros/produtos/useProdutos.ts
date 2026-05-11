@@ -79,6 +79,19 @@ export function useDesativarProduto() {
   });
 }
 
+export function useReativarProduto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      api.patch<ProdutoResponse>(`/api/produtos/${id}/reativar`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [QK] });
+      toast.success("Produto reativado.");
+    },
+    onError: () => toast.error("Erro ao reativar produto."),
+  });
+}
+
 export function useDeleteProduto() {
   const qc = useQueryClient();
   return useMutation({

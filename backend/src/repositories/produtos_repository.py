@@ -13,8 +13,11 @@ def list_ativos(
     db: Session,
     categoria_id: Optional[int] = None,
     busca: Optional[str] = None,
+    ativo: Optional[bool] = None,
 ) -> list[Produto]:
-    stmt = select(Produto).where(Produto.ativo == True)  # noqa: E712
+    stmt = select(Produto)
+    if ativo is not None:
+        stmt = stmt.where(Produto.ativo == ativo)
     if categoria_id is not None:
         stmt = stmt.where(Produto.categoria_id == categoria_id)
     if busca:

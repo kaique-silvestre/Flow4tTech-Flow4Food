@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useCategorias } from "@/features/cadastros/categorias/useCategorias";
 import {
   useProdutos,
   useDesativarProduto,
+  useReativarProduto,
   useDeleteProduto,
   type ProdutoResponse,
 } from "@/features/cadastros/produtos/useProdutos";
 import { ProdutoModal } from "./ProdutoModal";
+
+type FiltroAtivo = "ativos" | "inativos" | "todos";
 
 function calcCusto(produto: ProdutoResponse): number | null {
   if (!produto.ficha_tecnica?.length) return null;
@@ -31,14 +35,24 @@ export function CardapioPage() {
   const { data: produtos = [], isLoading } = useProdutos();
   const { data: categorias = [] } = useCategorias();
   const desativar = useDesativarProduto();
+  const reativar = useReativarProduto();
   const deletar = useDeleteProduto();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ProdutoResponse | null>(null);
   const [confirmDesativar, setConfirmDesativar] = useState<number | null>(null);
   const [confirmDeletar, setConfirmDeletar] = useState<number | null>(null);
+  const [filtro, setFiltro] = useState<FiltroAtivo>("ativos");
+  const [busca, setBusca] = useState("");
 
   const catMap = Object.fromEntries(categorias.map((c) => [c.id, c.nome]));
+
+  const produtosFiltrados = produtos.filter((p) => {
+    if (filtro === "ativos" && !p.ativo) return false;
+    if (filtro === "inativos" && p.ativo) return false;
+    if (busca && !p.nome.toLowerCase().includes(busca.toLowerCase())) return false;
+    return true;
+  });
 
   function openCreate() {
     setEditing(null);
@@ -50,11 +64,41 @@ export function CardapioPage() {
     setModalOpen(true);
   }
 
+  const filtroOpcoes: { value: FiltroAtivo; label: string }[] = [
+    { value: "ativos", label: "Ativos" },
+    { value: "inativos", label: "Inativos" },
+    { value: "todos", label: "Todos" },
+  ];
+
   return (
     <div className="p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Cardápio</h1>
         <Button onClick={openCreate}>Novo Produto</Button>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="flex rounded border overflow-hidden text-sm">
+          {filtroOpcoes.map((o) => (
+            <button
+              key={o.value}
+              onClick={() => setFiltro(o.value)}
+              className={`px-3 py-1.5 ${
+                filtro === o.value
+                  ? "bg-gray-900 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <Input
+          placeholder="Buscar produto..."
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          className="w-52 text-sm"
+        />
       </div>
 
       {isLoading ? (
@@ -63,8 +107,8 @@ export function CardapioPage() {
             <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />
           ))}
         </div>
-      ) : produtos.length === 0 ? (
-        <p className="text-sm text-gray-500">Nenhum produto cadastrado.</p>
+      ) : produtosFiltrados.length === 0 ? (
+        <p className="text-sm text-gray-500">Nenhum produto encontrado.</p>
       ) : (
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -79,12 +123,12 @@ export function CardapioPage() {
             </tr>
           </thead>
           <tbody>
-            {produtos.map((p) => {
+            {produtosFiltrados.map((p) => {
               const custo = calcCusto(p);
               const lucro =
                 p.preco_venda !== null && custo !== null ? p.preco_venda - custo : null;
               return (
-                <tr key={p.id} className="border-b last:border-0">
+                <tr key={p.id} className={`border-b last:border-0 ${!p.ativo ? "opacity-50" : ""}`}>
                   <td className="py-2 pr-4 font-medium">{p.nome}</td>
                   <td className="py-2 pr-4 text-gray-500">
                     {p.categoria_id ? (catMap[p.categoria_id] ?? "—") : "—"}
@@ -109,14 +153,25 @@ export function CardapioPage() {
                     <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
                       Editar
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setConfirmDesativar(p.id)}
-                      className="text-yellow-600 hover:text-yellow-700"
-                    >
-                      Desativar
-                    </Button>
+                    {p.ativo ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setConfirmDesativar(p.id)}
+                        className="text-yellow-600 hover:text-yellow-700"
+                      >
+                        Desativar
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => reativar.mutate(p.id)}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        Reativar
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"

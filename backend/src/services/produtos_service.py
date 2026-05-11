@@ -43,7 +43,7 @@ def list_produtos(
     categoria_id: Optional[int] = None,
     busca: Optional[str] = None,
 ) -> list[ProdutoResponse]:
-    items = produtos_repository.list_ativos(db, categoria_id, busca)
+    items = produtos_repository.list_ativos(db, categoria_id, busca, ativo=None)
     return [_build_response(db, p) for p in items]
 
 
@@ -116,6 +116,16 @@ def desativar_produto(db: Session, produto_id: int) -> ProdutoResponse:
     if obj is None:
         raise AppError(ErrorCode.NOT_FOUND, "Produto não encontrado", http_status=404)
     obj.ativo = False
+    db.commit()
+    db.refresh(obj)
+    return _build_response(db, obj)
+
+
+def reativar_produto(db: Session, produto_id: int) -> ProdutoResponse:
+    obj = produtos_repository.get_by_id(db, produto_id)
+    if obj is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Produto não encontrado", http_status=404)
+    obj.ativo = True
     db.commit()
     db.refresh(obj)
     return _build_response(db, obj)
