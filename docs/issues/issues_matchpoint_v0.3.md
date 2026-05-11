@@ -503,7 +503,7 @@ Frontend `useCompras.ts → useCreateCompra → onSuccess`: se `data.warning`, d
 
 ---
 
-## Issue 21 — CP11: Transação atômica em `criar_compra` e `cancelar_compra`
+## Issue 21 — CP11: Transação atômica em `criar_compra` e `cancelar_compra` ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -514,10 +514,10 @@ Envolver `criar_compra` e `cancelar_compra` em `compras_service.py` em bloco `tr
 
 ### Critérios de aceite
 
-- [ ] Simular exceção na 2ª iteração do loop de `criar_compra` → estoque do 1º insumo não foi alterado no banco
-- [ ] Mesmo cenário em `cancelar_compra` → estorno parcial revertido
-- [ ] Caso feliz (sem exceção) continua funcionando idêntico
-- [ ] Logs/Sentry capturam a exceção original (não suprimir)
+- [x] Simular exceção na 2ª iteração do loop de `criar_compra` → estoque do 1º insumo não foi alterado no banco
+- [x] Mesmo cenário em `cancelar_compra` → estorno parcial revertido
+- [x] Caso feliz (sem exceção) continua funcionando idêntico
+- [x] Logs/Sentry capturam a exceção original (não suprimir)
 
 ### User stories endereçadas
 
@@ -525,7 +525,7 @@ Envolver `criar_compra` e `cancelar_compra` em `compras_service.py` em bloco `tr
 
 ---
 
-## Issue 22 — AR1 + AR2: Histórico unificado em Relatórios
+## Issue 22 — AR1 + AR2: Histórico unificado em Relatórios ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -552,7 +552,7 @@ Envolver `criar_compra` e `cancelar_compra` em `compras_service.py` em bloco `tr
 
 ---
 
-## Issue 23 — CD1 + CD2: Cardápio com filtro ativo/inativo + Reativar + busca
+## Issue 23 — CD1 + CD2: Cardápio com filtro ativo/inativo + Reativar + busca ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -583,7 +583,7 @@ Envolver `criar_compra` e `cancelar_compra` em `compras_service.py` em bloco `tr
 
 ---
 
-## Issue 24 — VD1 + VD2: VendasDoDia com seletor de data + rows clicáveis
+## Issue 24 — VD1 + VD2: VendasDoDia com seletor de data + rows clicáveis ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -609,7 +609,7 @@ Envolver `criar_compra` e `cancelar_compra` em `compras_service.py` em bloco `tr
 
 ---
 
-## Issue 25 — CG1: Toggle inline ativar/desativar em Garçons e Métodos de Pagamento
+## Issue 25 — CG1: Toggle inline ativar/desativar em Garçons e Métodos de Pagamento ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -633,7 +633,7 @@ Adicionar botão "Ativar" / "Desativar" diretamente na linha da tabela em `Garco
 
 ---
 
-## Issue 26 — DB1: Hooks de histórico montados só na aba ativa do Dashboard
+## Issue 26 — DB1: Hooks de histórico montados só na aba ativa do Dashboard ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -655,7 +655,7 @@ Garantir que `useDashboardHistorico` e `useDashboardResumoAnual` só sejam monta
 
 ---
 
-## Issue 27 — SB1: Badge com contagem de comandas abertas no Sidebar
+## Issue 27 — SB1: Badge com contagem de comandas abertas no Sidebar ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -679,7 +679,7 @@ Adicionar endpoint leve `GET /api/comandas/count-abertas` no backend retornando 
 
 ---
 
-## Issue 28 — ES1: Valor total em estoque
+## Issue 28 — ES1: Valor total em estoque ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -702,7 +702,7 @@ Em `EstoquePage.tsx`, adicionar coluna "Valor em estoque" (saldo × custo_medio)
 
 ---
 
-## Issue 29 — BK1: Nome do arquivo de backup com data
+## Issue 29 — BK1: Nome do arquivo de backup com data ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
