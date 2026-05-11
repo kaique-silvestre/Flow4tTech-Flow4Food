@@ -246,7 +246,7 @@ Aplicar `formatQuantidade(item.quantidade)` no resumo de itens em `FechamentoPag
 
 ---
 
-## Issue 10 — FE3: Label "Última pessoa paga" no modo igualitário
+## Issue 10 — FE3: Label "Última pessoa paga" no modo igualitário ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -257,9 +257,9 @@ Em `FechamentoPage.tsx`, no bloco de divisão igualitária, substituir o label "
 
 ### Critérios de aceite
 
-- [ ] Modo "igualmente" com 3 pessoas, total R$10 → exibe "2 pessoas pagam: R$3,33 cada" e "Última pessoa paga: R$3,34"
-- [ ] Total ainda bate (`R$10,00`)
-- [ ] Cálculo inalterado em todos os outros aspectos
+- [x] Modo "igualmente" com 3 pessoas, total R$10 → exibe "2 pessoas pagam: R$3,33 cada" e "Última pessoa paga: R$3,34"
+- [x] Total ainda bate (`R$10,00`)
+- [x] Cálculo inalterado em todos os outros aspectos
 
 ### User stories endereçadas
 

@@ -178,3 +178,19 @@ started_at: "2026-05-11T00:00:00Z"
 - Issue 10 (FE3): Label "Última pessoa paga" no modo igualitário em FechamentoPage
 
 ---
+
+## Iteration 10 - 2026-05-11T09:00:00Z
+
+### Completed
+- Issue 10 (FE3): label "1ª pessoa paga:" → "Última pessoa paga:" em FechamentoPage.tsx:210
+- Doc marcada ✅
+- Committed: ae56d59
+
+### Validation Status
+- Type-check: PASS
+- Lint: PASS
+
+### Next Steps
+- Issue 11 (CA1): Select de pessoa no modo edição de item em ComandaAbertaPage
+
+---
