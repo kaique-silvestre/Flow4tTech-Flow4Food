@@ -245,7 +245,8 @@ function TabBackup() {
       const url = URL.createObjectURL(new Blob([r.data as BlobPart]));
       const a = document.createElement("a");
       a.href = url;
-      a.download = `backup.${ext}`;
+      const today = new Date().toISOString().slice(0, 10);
+      a.download = `backup_${today}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
