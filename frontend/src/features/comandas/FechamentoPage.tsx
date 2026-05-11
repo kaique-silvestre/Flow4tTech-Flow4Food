@@ -20,7 +20,7 @@ export default function FechamentoPage() {
   const [descontoOpen, setDescontoOpen] = useState(false);
   const [nPessoas, setNPessoas] = useState<number | "">(2);
 
-  const { register, control, handleSubmit, watch, setValue, formState: { errors, isSubmitted } } = useForm<FecharComandaValues>({
+  const { register, control, handleSubmit, watch, setValue, setError, formState: { errors, isSubmitted } } = useForm<FecharComandaValues>({
     resolver: zodResolver(fecharComandaSchema),
     defaultValues: {
       pagamentos: [{ metodo_id: 0, valor: 0 }],
@@ -65,6 +65,10 @@ export default function FechamentoPage() {
   const bate = Math.abs(totalPago - baseTotal) <= 0.01;
 
   function onSubmit(data: FecharComandaValues) {
+    if (baseTotal > 0 && data.pagamentos.length === 0) {
+      setError("pagamentos", { message: "Adicione ao menos um pagamento" });
+      return;
+    }
     fechar(data);
   }
 
