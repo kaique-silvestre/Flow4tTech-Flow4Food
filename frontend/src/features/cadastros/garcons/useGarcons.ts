@@ -31,6 +31,16 @@ export function useCreateGarcom() {
   });
 }
 
+export function useToggleGarcomAtivo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      api.patch<Garcom>(`/api/garcons/${id}/toggle-ativo`).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [QK] }),
+    onError: () => toast.error("Erro ao alternar status do garçom."),
+  });
+}
+
 export function useUpdateGarcom() {
   const qc = useQueryClient();
   return useMutation({

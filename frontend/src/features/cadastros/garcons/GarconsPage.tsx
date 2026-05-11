@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { GarcomModal } from "./GarcomModal";
-import { useGarcons, type Garcom } from "./useGarcons";
+import { useGarcons, useToggleGarcomAtivo, type Garcom } from "./useGarcons";
 
 export function GarconsPage() {
   const { data: garcons = [], isLoading } = useGarcons();
+  const toggle = useToggleGarcomAtivo();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Garcom | null>(null);
@@ -77,9 +78,17 @@ export function GarconsPage() {
                     </span>
                   )}
                 </td>
-                <td className="py-2 text-right">
+                <td className="py-2 text-right space-x-2">
                   <Button size="sm" variant="outline" onClick={() => openEdit(g)}>
                     Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toggle.mutate(g.id)}
+                    className={g.ativo ? "text-yellow-600 hover:text-yellow-700" : "text-green-600 hover:text-green-700"}
+                  >
+                    {g.ativo ? "Desativar" : "Ativar"}
                   </Button>
                 </td>
               </tr>

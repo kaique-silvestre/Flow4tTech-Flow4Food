@@ -44,6 +44,16 @@ export function useUpdateMetodoPagamento() {
   });
 }
 
+export function useToggleMetodoAtivo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      api.patch<MetodoPagamento>(`/api/metodos-pagamento/${id}/toggle-ativo`).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [QK] }),
+    onError: () => toast.error("Erro ao alternar status do método."),
+  });
+}
+
 export function useDeleteMetodoPagamento() {
   const qc = useQueryClient();
   return useMutation({

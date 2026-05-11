@@ -40,6 +40,15 @@ def update_metodo(
     return metodos_pagamento_service.update_metodo(db, metodo_id, body)  # type: ignore[return-value]
 
 
+@router.patch("/{metodo_id}/toggle-ativo", response_model=MetodoPagamentoResponse)
+def toggle_ativo_metodo(
+    metodo_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> MetodoPagamentoResponse:
+    return metodos_pagamento_service.toggle_ativo_metodo(db, metodo_id)  # type: ignore[return-value]
+
+
 @router.delete("/{metodo_id}", status_code=204)
 def delete_metodo(
     metodo_id: int,

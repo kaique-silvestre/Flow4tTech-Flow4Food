@@ -31,6 +31,16 @@ def update_metodo(db: Session, metodo_id: int, data: MetodoPagamentoUpdateReques
     return obj
 
 
+def toggle_ativo_metodo(db: Session, metodo_id: int) -> MetodoPagamento:
+    obj = metodos_pagamento_repository.get_by_id(db, metodo_id)
+    if obj is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Método de pagamento não encontrado", http_status=404)
+    obj.ativo = not obj.ativo
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+
 def delete_metodo(db: Session, metodo_id: int) -> None:
     get_metodo(db, metodo_id)
     count = db.execute(

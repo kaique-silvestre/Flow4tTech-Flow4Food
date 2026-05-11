@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MetodoPagamentoModal } from "./MetodoPagamentoModal";
-import { useDeleteMetodoPagamento, useMetodosPagamento, type MetodoPagamento } from "./useMetodosPagamento";
+import { useDeleteMetodoPagamento, useMetodosPagamento, useToggleMetodoAtivo, type MetodoPagamento } from "./useMetodosPagamento";
 
 export function MetodosPagamentoPage() {
   const { data: metodos = [], isLoading } = useMetodosPagamento();
@@ -12,6 +12,7 @@ export function MetodosPagamentoPage() {
   const [filtro, setFiltro] = useState<"ativos" | "inativos" | "todos">("ativos");
   const [removendo, setRemovendo] = useState<MetodoPagamento | null>(null);
   const deleteMutation = useDeleteMetodoPagamento();
+  const toggle = useToggleMetodoAtivo();
 
   const metodosFiltrados = metodos.filter((m) =>
     filtro === "todos" ? true : filtro === "ativos" ? m.ativo : !m.ativo
@@ -81,9 +82,17 @@ export function MetodosPagamentoPage() {
                     </span>
                   )}
                 </td>
-                <td className="py-2 pr-4 text-right">
+                <td className="py-2 pr-4 text-right space-x-2">
                   <Button size="sm" variant="outline" onClick={() => openEdit(m)}>
                     Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toggle.mutate(m.id)}
+                    className={m.ativo ? "text-yellow-600 hover:text-yellow-700" : "text-green-600 hover:text-green-700"}
+                  >
+                    {m.ativo ? "Desativar" : "Ativar"}
                   </Button>
                 </td>
                 <td className="py-2 text-right">

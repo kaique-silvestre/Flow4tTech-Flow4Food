@@ -27,3 +27,13 @@ def update_garcom(db: Session, garcom_id: int, data: GarcomUpdateRequest) -> Gar
     if obj is None:
         raise AppError(ErrorCode.NOT_FOUND, "Garçom não encontrado", http_status=404)
     return obj
+
+
+def toggle_ativo_garcom(db: Session, garcom_id: int) -> Garcom:
+    obj = garcons_repository.get_by_id(db, garcom_id)
+    if obj is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Garçom não encontrado", http_status=404)
+    obj.ativo = not obj.ativo
+    db.commit()
+    db.refresh(obj)
+    return obj

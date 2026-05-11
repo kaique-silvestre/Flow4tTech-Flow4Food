@@ -34,3 +34,12 @@ def update_garcom(
     _user: dict = Depends(get_current_user),
 ) -> GarcomResponse:
     return garcons_service.update_garcom(db, garcom_id, body)  # type: ignore[return-value]
+
+
+@router.patch("/{garcom_id}/toggle-ativo", response_model=GarcomResponse)
+def toggle_ativo_garcom(
+    garcom_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> GarcomResponse:
+    return garcons_service.toggle_ativo_garcom(db, garcom_id)  # type: ignore[return-value]
