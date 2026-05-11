@@ -233,7 +233,7 @@ export function ComandasPage() {
         )}
       </div>
 
-      {showModal && <NovaComandaModal onClose={() => setShowModal(false)} />}
+      <NovaComandaModal open={showModal} onClose={() => setShowModal(false)} />
     </div>
   );
 }

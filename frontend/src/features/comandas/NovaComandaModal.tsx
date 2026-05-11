@@ -2,6 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useGarcons } from "@/features/cadastros/garcons/useGarcons";
@@ -9,10 +16,11 @@ import { novaComandaSchema, type NovaComandaValues } from "./comandaSchemas";
 import { useAbrirComanda } from "./useComandas";
 
 interface Props {
+  open: boolean;
   onClose: () => void;
 }
 
-export function NovaComandaModal({ onClose }: Props) {
+export function NovaComandaModal({ open, onClose }: Props) {
   const { data: garcons = [] } = useGarcons();
   const garçonsAtivos = garcons.filter((g) => g.ativo);
   const abrirComanda = useAbrirComanda();
@@ -68,19 +76,31 @@ export function NovaComandaModal({ onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h2 className="mb-4 text-lg font-semibold">Nova Comanda</h2>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Nova Comanda</DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Tipo */}
           <div>
             <Label>Tipo de identificação</Label>
             <div className="mt-1 flex gap-4">
-              {(["mesa", "nome"] as const).map((tipo) => (
-                <label key={tipo} className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="radio" value={tipo} {...register("tipo_identificacao")} />
-                  {tipo === "mesa" ? "Número da mesa" : "Nome do responsável"}
-                </label>
+              {(["mesa", "nome"] as const).map((t) => (
+                <div key={t} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    id={`tipo-identificacao-${t}`}
+                    value={t}
+                    {...register("tipo_identificacao")}
+                  />
+                  <label
+                    htmlFor={`tipo-identificacao-${t}`}
+                    className="text-sm cursor-pointer"
+                  >
+                    {t === "mesa" ? "Número da mesa" : "Nome do responsável"}
+                  </label>
+                </div>
               ))}
             </div>
           </div>
@@ -93,7 +113,7 @@ export function NovaComandaModal({ onClose }: Props) {
               type={tipo === "mesa" ? "number" : "text"}
               min={tipo === "mesa" ? 1 : undefined}
               step={tipo === "mesa" ? 1 : undefined}
-              {...register("identificacao")}
+              {...register("identificacao", tipo === "mesa" ? { valueAsNumber: true } : {})}
               className="mt-1"
             />
             {errors.identificacao && (
@@ -159,16 +179,16 @@ export function NovaComandaModal({ onClose }: Props) {
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
             <Button type="submit" disabled={abrirComanda.isPending}>
               {abrirComanda.isPending ? "Abrindo..." : "Abrir Comanda"}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
