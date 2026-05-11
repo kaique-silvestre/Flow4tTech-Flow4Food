@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useFornecedores } from "@/features/cadastros/fornecedores/useFornecedores";
 import { formatCurrency } from "@/lib/format";
@@ -232,64 +233,65 @@ export function ComprasPage() {
         onCancel={() => setCancelando(null)}
       />
 
-      {editando && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
-            <h2 className="mb-4 text-lg font-semibold">Editar Compra #{String(editando.id).padStart(4, "0")}</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="mb-1 block text-sm text-gray-600">Fornecedor</label>
-                <select
-                  className="w-full rounded border px-2 py-1.5 text-sm"
-                  value={editFornecedorId}
-                  onChange={(e) => setEditFornecedorId(e.target.value)}
-                >
-                  <option value="">Sem fornecedor</option>
-                  {fornecedores.map((f) => (
-                    <option key={f.id} value={f.id}>{f.nome}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm text-gray-600">Data da Compra</label>
-                <Input
-                  type="date"
-                  value={editDataCompra}
-                  onChange={(e) => setEditDataCompra(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm text-gray-600">Número da Nota</label>
-                <Input
-                  value={editNumeroNota}
-                  onChange={(e) => setEditNumeroNota(e.target.value)}
-                  placeholder="Opcional"
-                />
-              </div>
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditando(null)}>Cancelar</Button>
-              <Button
-                onClick={() => {
-                  patchMutation.mutate(
-                    {
-                      id: editando.id,
-                      data: {
-                        fornecedor_id: editFornecedorId ? Number(editFornecedorId) : null,
-                        data_compra: editDataCompra,
-                        numero_nota: editNumeroNota || null,
-                      },
-                    },
-                    { onSuccess: () => setEditando(null) },
-                  );
-                }}
+      <Dialog open={!!editando} onOpenChange={(v) => !v && setEditando(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar Compra #{String(editando?.id ?? 0).padStart(4, "0")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">Fornecedor</label>
+              <select
+                className="w-full rounded border px-2 py-1.5 text-sm"
+                value={editFornecedorId}
+                onChange={(e) => setEditFornecedorId(e.target.value)}
               >
-                Salvar
-              </Button>
+                <option value="">Sem fornecedor</option>
+                {fornecedores.map((f) => (
+                  <option key={f.id} value={f.id}>{f.nome}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">Data da Compra</label>
+              <Input
+                type="date"
+                value={editDataCompra}
+                onChange={(e) => setEditDataCompra(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">Número da Nota</label>
+              <Input
+                value={editNumeroNota}
+                onChange={(e) => setEditNumeroNota(e.target.value)}
+                placeholder="Opcional"
+              />
             </div>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditando(null)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                if (!editando) return;
+                patchMutation.mutate(
+                  {
+                    id: editando.id,
+                    data: {
+                      fornecedor_id: editFornecedorId ? Number(editFornecedorId) : null,
+                      data_compra: editDataCompra,
+                      numero_nota: editNumeroNota || null,
+                    },
+                  },
+                  { onSuccess: () => setEditando(null) },
+                );
+              }}
+            >
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -81,6 +81,10 @@ def list_compras(
     return compras, total, total_periodo
 
 
+def find_by_numero_nota(db: Session, numero_nota: str) -> Optional[Compra]:
+    return db.execute(select(Compra).where(Compra.numero_nota == numero_nota)).scalar_one_or_none()
+
+
 def get_compra_by_id(db: Session, compra_id: int) -> Optional[Compra]:
     return db.execute(select(Compra).where(Compra.id == compra_id)).scalar_one_or_none()
 

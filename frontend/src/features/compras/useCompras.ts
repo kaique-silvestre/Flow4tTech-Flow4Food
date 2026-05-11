@@ -22,6 +22,7 @@ export interface CompraResponse {
   status: string;
   itens: ItemCompraResponse[];
   created_at: string;
+  warning?: string | null;
 }
 
 export interface CompraFilters {
@@ -69,11 +70,12 @@ export function useCreateCompra() {
   return useMutation({
     mutationFn: (data: CompraFormValues) =>
       api.post<CompraResponse>("/api/compras", data).then((r) => r.data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: [QK] });
       qc.invalidateQueries({ queryKey: ["estoque"] });
       qc.invalidateQueries({ queryKey: ["itens"] });
       toast.success("Compra registrada.");
+      if (data.warning) toast.warning(data.warning);
       navigate("/compras");
     },
     onError: (err: unknown) => {

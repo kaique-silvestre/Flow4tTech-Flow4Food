@@ -60,6 +60,7 @@ class CompraResponse(BaseModel):
     status: str
     itens: list[ItemCompraResponse]
     created_at: datetime.datetime
+    warning: Optional[str] = None
 
 
 class ComprasPageResponse(BaseModel):

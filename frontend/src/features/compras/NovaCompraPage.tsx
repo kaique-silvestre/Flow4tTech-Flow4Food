@@ -129,6 +129,17 @@ export function NovaCompraPage() {
     setUnitarios((prev) => [...prev, ""]);
   }
 
+  function handleItemChange(index: number) {
+    setValue(`itens.${index}.quantidade`, 0 as never);
+    setValue(`itens.${index}.custo_total`, 0 as never);
+    setUnitarios((prev) => {
+      const next = [...prev];
+      next[index] = "";
+      return next;
+    });
+    delete lastEditedRef.current[index];
+  }
+
   function handleRemove(index: number) {
     remove(index);
     setUnitarios((prev) => prev.filter((_, i) => i !== index));
@@ -237,7 +248,10 @@ export function NovaCompraPage() {
                 <div>
                   <select
                     className="w-full rounded border px-2 py-1.5 text-sm"
-                    {...register(`itens.${index}.item_id`, { setValueAs: (v) => Number(v) })}
+                    {...register(`itens.${index}.item_id`, {
+                      setValueAs: (v) => Number(v),
+                      onChange: () => handleItemChange(index),
+                    })}
                   >
                     <option value={0}>Selecione...</option>
                     {itensSimples.map((i) => (

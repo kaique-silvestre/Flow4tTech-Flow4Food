@@ -41,6 +41,12 @@ def _get_fornecedor_nome(db: Session, fornecedor_id: Optional[int]) -> Optional[
 
 
 def criar_compra(db: Session, data: CompraCreateRequest) -> CompraResponse:
+    warning = None
+    if data.numero_nota:
+        existing = compras_repository.find_by_numero_nota(db, data.numero_nota)
+        if existing:
+            warning = f"Número de nota já registrado na compra #{str(existing.id).zfill(4)}"
+
     total = Decimal("0")
     itens_processados = []
 
@@ -53,7 +59,7 @@ def criar_compra(db: Session, data: CompraCreateRequest) -> CompraResponse:
                 http_status=404,
             )
 
-        custo_unitario = item_req.custo_total / item_req.quantidade
+        custo_unitario = (item_req.custo_total / item_req.quantidade).quantize(Decimal("0.0001"))
         novo_custo_medio = _calcular_custo_medio(
             insumo.estoque_atual,
             insumo.custo_medio,
@@ -118,6 +124,7 @@ def criar_compra(db: Session, data: CompraCreateRequest) -> CompraResponse:
         status=compra.status,
         itens=itens_response,
         created_at=compra.created_at,
+        warning=warning,
     )
 
 
