@@ -158,3 +158,23 @@ started_at: "2026-05-11T00:00:00Z"
 - Issue 9 (FE1+CV1): `formatQuantidade` no Fechamento e no Comprovante
 
 ---
+
+## Iteration 9 - 2026-05-11T08:00:00Z
+
+### Completed
+- Issue 9 (FE1+CV1): `formatQuantidade` pt-BR em FechamentoPage e ComprovantePage
+- `formatQuantidade` atualizado: `toLocaleString("pt-BR", { maximumFractionDigits: 3 })` → vírgula como separador decimal
+- Testes atualizados: `"0.25"` → `"0,25"` etc.
+- `FechamentoPage.tsx`: adicionado import + `{formatQuantidade(item.quantidade)}×`
+- `ComprovantePage.tsx`: adicionado import + `{formatQuantidade(item.quantidade)}x`
+- Doc marcada ✅
+- Committed: ce51cb6
+
+### Validation Status
+- Type-check: PASS
+- Lint: PASS
+
+### Next Steps
+- Issue 10 (FE3): Label "Última pessoa paga" no modo igualitário em FechamentoPage
+
+---

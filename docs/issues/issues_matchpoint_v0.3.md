@@ -223,7 +223,7 @@ Alterar `fecharComandaSchema.pagamentos` removendo `.min(1)` para que aceite arr
 
 ---
 
-## Issue 9 — FE1 + CV1: `formatQuantidade` no Fechamento e no Comprovante
+## Issue 9 — FE1 + CV1: `formatQuantidade` no Fechamento e no Comprovante ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -234,10 +234,10 @@ Aplicar `formatQuantidade(item.quantidade)` no resumo de itens em `FechamentoPag
 
 ### Critérios de aceite
 
-- [ ] Lançar item com qtd 1.5 → resumo em fechamento exibe "1,5×" (vírgula)
-- [ ] Mesmo item no comprovante impresso exibe "1,5x" (vírgula)
-- [ ] Item com qtd inteira 3 exibe "3×" sem casas decimais
-- [ ] Comportamento idêntico ao já existente em `ComandaAbertaPage`
+- [x] Lançar item com qtd 1.5 → resumo em fechamento exibe "1,5×" (vírgula)
+- [x] Mesmo item no comprovante impresso exibe "1,5x" (vírgula)
+- [x] Item com qtd inteira 3 exibe "3×" sem casas decimais
+- [x] Comportamento idêntico ao já existente em `ComandaAbertaPage`
 
 ### User stories endereçadas
 
