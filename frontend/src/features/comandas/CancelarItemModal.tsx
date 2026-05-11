@@ -1,6 +1,13 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { cancelarItemSchema, type CancelarItemValues } from "./comandaSchemas";
 import { useCancelarItem } from "./useComandas";
@@ -13,6 +20,7 @@ const MOTIVOS = [
 ] as const;
 
 interface Props {
+  open: boolean;
   comanda_id: number;
   item_id: number;
   version: number;
@@ -20,7 +28,7 @@ interface Props {
   onSuccess: (data: unknown) => void;
 }
 
-export function CancelarItemModal({ comanda_id, item_id, version, onClose, onSuccess }: Props) {
+export function CancelarItemModal({ open, comanda_id, item_id, version, onClose, onSuccess }: Props) {
   const cancelar = useCancelarItem(comanda_id);
   const { register, handleSubmit } = useForm<CancelarItemValues>({
     resolver: zodResolver(cancelarItemSchema),
@@ -35,9 +43,11 @@ export function CancelarItemModal({ comanda_id, item_id, version, onClose, onSuc
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
-        <h2 className="mb-4 text-lg font-semibold">Cancelar Item</h2>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Cancelar Item</DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Label htmlFor="motivo">Motivo</Label>
@@ -59,16 +69,16 @@ export function CancelarItemModal({ comanda_id, item_id, version, onClose, onSuc
             <Label htmlFor="estornado">Estornar itens ao estoque</Label>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Voltar
             </Button>
             <Button type="submit" disabled={cancelar.isPending} variant="destructive">
               {cancelar.isPending ? "Cancelando..." : "Cancelar Item"}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

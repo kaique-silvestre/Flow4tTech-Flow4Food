@@ -596,15 +596,14 @@ export function ComandaAbertaPage() {
       </div>
 
       {/* Modal cancelar */}
-      {cancelando && comanda && (
-        <CancelarItemModal
-          comanda_id={comanda.id}
-          item_id={cancelando.id}
-          version={comanda.version}
-          onClose={() => setCancelando(null)}
-          onSuccess={() => setCancelando(null)}
-        />
-      )}
+      <CancelarItemModal
+        open={!!cancelando && !!comanda}
+        comanda_id={comanda?.id ?? 0}
+        item_id={cancelando?.id ?? 0}
+        version={comanda?.version ?? 0}
+        onClose={() => setCancelando(null)}
+        onSuccess={() => setCancelando(null)}
+      />
     </div>
   );
 }
