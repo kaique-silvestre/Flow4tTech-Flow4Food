@@ -17,7 +17,6 @@ import {
   BookOpen,
   ChevronDown,
   ChevronRight,
-  ScrollText,
   FlaskConical,
   type LucideIcon,
 } from "lucide-react";
@@ -50,7 +49,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Compras", to: "/compras", icon: ShoppingCart },
   { label: "Estoque", to: "/estoque", icon: Package },
   { label: "Movimentos", to: "/estoque/movimentos", icon: History },
-  { label: "Histórico", to: "/historico", icon: ScrollText },
   { label: "Relatórios", to: "/relatorios", icon: BarChart3 },
   { label: "Cadastros", to: null, icon: BookOpen, children: CADASTROS_CHILDREN },
   { label: "Configurações", to: "/configuracoes", icon: Settings },

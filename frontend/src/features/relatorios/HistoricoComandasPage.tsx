@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDebounce } from "use-debounce";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useGarcons } from "@/features/cadastros/garcons/useGarcons";
@@ -9,6 +10,7 @@ function toIsoDate(d: Date): string {
 }
 
 export function HistoricoComandasPage() {
+  const navigate = useNavigate();
   const hoje = new Date();
   const seteDiasAtras = new Date(hoje);
   seteDiasAtras.setDate(hoje.getDate() - 7);
@@ -96,7 +98,11 @@ export function HistoricoComandasPage() {
             </thead>
             <tbody>
               {data.comandas.map((c) => (
-                <tr key={c.id} className="border-b">
+                <tr
+                  key={c.id}
+                  onClick={() => navigate(`/comandas/${c.id}`)}
+                  className="border-b hover:bg-gray-50 cursor-pointer"
+                >
                   <td className="py-2 text-gray-400">#{c.id}</td>
                   <td className="py-2">{c.identificacao}</td>
                   <td className="py-2">{c.garcom_nome}</td>
