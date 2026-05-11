@@ -207,7 +207,7 @@ export default function FechamentoPage() {
                         <span className="font-medium">{formatCurrency(valorBase)} cada</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">1ª pessoa paga:</span>
+                        <span className="text-gray-600">Última pessoa paga:</span>
                         <span className="font-medium">{formatCurrency(ultimo)}</span>
                       </div>
                       <div className="flex justify-between border-t pt-1 font-semibold">
