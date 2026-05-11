@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDebounce } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { useCategorias } from "@/features/cadastros/categorias/useCategorias";
 import { formatCurrency } from "@/lib/format";
@@ -7,7 +8,9 @@ import { useSaldoEstoque, type SaldoFilters } from "./useEstoque";
 
 export function EstoquePage() {
   const [filters, setFilters] = useState<SaldoFilters>({});
-  const { data: itens = [], isLoading } = useSaldoEstoque(filters);
+  const [debouncedBusca] = useDebounce(filters.busca, 350);
+  const queryFilters: SaldoFilters = { ...filters, busca: filters.busca === "" || filters.busca == null ? filters.busca : debouncedBusca };
+  const { data: itens = [], isLoading } = useSaldoEstoque(queryFilters);
   const { data: categorias = [] } = useCategorias();
   const [baixaOpen, setBaixaOpen] = useState(false);
 

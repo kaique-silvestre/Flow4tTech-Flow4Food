@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDebounce } from "use-debounce";
 import { LayoutList, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,13 +38,15 @@ function todayISODate(): string {
 export function ComandasPage() {
   const navigate = useNavigate();
   const [busca, setBusca] = useState("");
+  const [debouncedBusca] = useDebounce(busca, 350);
   const [showModal, setShowModal] = useState(false);
   const [showHistorico, setShowHistorico] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(getInitialViewMode);
 
   const today = todayISODate();
 
-  const { data: comandas = [], isLoading } = useComandas(busca || undefined);
+  const queryBusca = busca === "" ? undefined : debouncedBusca || undefined;
+  const { data: comandas = [], isLoading } = useComandas(queryBusca);
   const { data: fechadasHoje = [], isLoading: loadingFechadas } = useComandasFechadas(
     showHistorico ? { data_inicio: today, data_fim: today } : undefined
   );

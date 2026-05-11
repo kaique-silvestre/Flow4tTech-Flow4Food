@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useDebounce } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,8 @@ export function ComandaAbertaPage() {
   }
 
   const [busca, setBusca] = useState("");
-  const { data: itens = [] } = useProdutos(busca || undefined);
+  const [debouncedBusca] = useDebounce(busca, 350);
+  const { data: itens = [] } = useProdutos(busca === "" ? undefined : debouncedBusca || undefined);
 
   const [itemSelecionado, setItemSelecionado] = useState<number | null>(null);
   const [quantidade, setQuantidade] = useState("1");

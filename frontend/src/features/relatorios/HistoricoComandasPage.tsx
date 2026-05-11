@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDebounce } from "use-debounce";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useGarcons } from "@/features/cadastros/garcons/useGarcons";
 import { useHistoricoComandas } from "./useRelatorios";
@@ -16,13 +17,14 @@ export function HistoricoComandasPage() {
   const [dataFim, setDataFim] = useState(toIsoDate(hoje));
   const [garcomId, setGarcomId] = useState<number | null>(null);
   const [busca, setBusca] = useState("");
+  const [debouncedBusca] = useDebounce(busca, 350);
 
   const { data: garcons = [] } = useGarcons();
   const { data, isLoading } = useHistoricoComandas({
     data_inicio: dataInicio,
     data_fim: dataFim,
     garcom_id: garcomId,
-    busca,
+    busca: busca === "" ? "" : debouncedBusca,
   });
 
   return (
