@@ -145,29 +145,34 @@ export default function FechamentoPage() {
         {/* Modo de divisão */}
         <div>
           <Label className="text-base font-semibold">Como dividir?</Label>
-          <div className="mt-2 space-y-2">
-            {modoOpcoes.map((opt) => (
-              <div key={opt.value} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  id={`modo-${opt.value}`}
-                  name="modo_divisao"
-                  value={opt.value}
-                  checked={modo === opt.value}
-                  onChange={() => {
-                    setValue("modo_divisao", opt.value);
-                    if (opt.value === "sem_divisao") {
-                      setValue("pagamentos.0.valor", Number(baseTotal.toFixed(2)));
-                    } else {
-                      setValue("pagamentos.0.valor", 0);
-                    }
-                  }}
-                  className="h-4 w-4 accent-blue-600"
-                />
-                <Label htmlFor={`modo-${opt.value}`}>{opt.label}</Label>
+          <Controller
+            name="modo_divisao"
+            control={control}
+            render={({ field }) => (
+              <div className="mt-2 space-y-2">
+                {modoOpcoes.map((opt) => (
+                  <div key={opt.value} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id={`modo-${opt.value}`}
+                      value={opt.value}
+                      checked={field.value === opt.value}
+                      onChange={() => {
+                        field.onChange(opt.value);
+                        if (opt.value === "sem_divisao") {
+                          setValue("pagamentos.0.valor", Number(baseTotal.toFixed(2)));
+                        } else {
+                          setValue("pagamentos.0.valor", 0);
+                        }
+                      }}
+                      className="h-4 w-4 accent-blue-600"
+                    />
+                    <Label htmlFor={`modo-${opt.value}`}>{opt.label}</Label>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          />
         </div>
 
         {/* Divisão por N pessoas */}
