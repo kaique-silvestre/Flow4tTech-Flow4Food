@@ -46,11 +46,15 @@ export interface FechamentoCaixaResponse {
   por_metodo: PagamentoResumo[];
 }
 
-export function useVendasDoDia() {
+export function useVendasDoDia(data?: string) {
   return useQuery<VendasDoDiaResponse>({
-    queryKey: ["relatorios", "vendas-do-dia"],
+    queryKey: ["relatorios", "vendas-do-dia", data],
     queryFn: () =>
-      api.get<VendasDoDiaResponse>("/api/relatorios/vendas-do-dia").then((r) => r.data),
+      api
+        .get<VendasDoDiaResponse>("/api/relatorios/vendas-do-dia", {
+          params: data ? { data } : {},
+        })
+        .then((r) => r.data),
   });
 }
 

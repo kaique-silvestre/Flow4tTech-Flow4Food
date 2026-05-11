@@ -21,10 +21,11 @@ router = APIRouter()
 
 @router.get("/vendas-do-dia", response_model=VendasDoDiaResponse)
 def vendas_do_dia(
+    data: Optional[datetime.date] = Query(None),
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ) -> VendasDoDiaResponse:
-    return relatorio_service.vendas_do_dia(db)
+    return relatorio_service.vendas_do_dia(db, data)
 
 
 @router.get("/historico-comandas", response_model=HistoricoResponse)

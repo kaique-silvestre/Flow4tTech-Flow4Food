@@ -59,8 +59,8 @@ def _aggregate(
     return garcom_names, cortesias_map, pagamentos_map, por_metodo
 
 
-def vendas_do_dia(db: Session) -> VendasDoDiaResponse:
-    hoje = datetime.datetime.now(rr.TZ).date()
+def vendas_do_dia(db: Session, data: Optional[datetime.date] = None) -> VendasDoDiaResponse:
+    hoje = data if data is not None else datetime.datetime.now(rr.TZ).date()
     start, end = rr._day_utc_range(hoje)
     comandas = rr.list_fechadas_no_periodo(db, start, end)
     garcom_names, cortesias_map, pagamentos_map, por_metodo = _aggregate(db, comandas)
