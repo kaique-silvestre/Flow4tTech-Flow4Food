@@ -267,7 +267,7 @@ Em `FechamentoPage.tsx`, no bloco de divisão igualitária, substituir o label "
 
 ---
 
-## Issue 11 — CA1: Select de pessoa no modo edição de item
+## Issue 11 — CA1: Select de pessoa no modo edição de item ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -278,10 +278,10 @@ Em `ComandaAbertaPage.tsx`, quando um item lançado entra em modo de edição in
 
 ### Critérios de aceite
 
-- [ ] Comanda com pessoas ["Ana", "Bruno"] → editar item → campo pessoa é `<select>` com "Ana", "Bruno", "— nenhuma —"
-- [ ] Comanda sem pessoas → editar item → campo pessoa é `<input>` texto livre (comportamento atual)
-- [ ] Selecionar pessoa no select → salvar → GET confirma persistência
-- [ ] Selecionar "— nenhuma —" → campo `pessoa_associada` salvo como vazio/null
+- [x] Comanda com pessoas ["Ana", "Bruno"] → editar item → campo pessoa é `<select>` com "Ana", "Bruno", "— nenhuma —"
+- [x] Comanda sem pessoas → editar item → campo pessoa é `<input>` texto livre (comportamento atual)
+- [x] Selecionar pessoa no select → salvar → GET confirma persistência
+- [x] Selecionar "— nenhuma —" → campo `pessoa_associada` salvo como vazio/null
 
 ### User stories endereçadas
 
@@ -289,7 +289,7 @@ Em `ComandaAbertaPage.tsx`, quando um item lançado entra em modo de edição in
 
 ---
 
-## Issue 12 — CA2: Recalcular "Aberta há X min" no frontend
+## Issue 12 — CA2: Recalcular "Aberta há X min" no frontend ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -300,10 +300,10 @@ Calcular `tempo_aberta_minutos` no frontend a partir de `comanda.created_at`, at
 
 ### Critérios de aceite
 
-- [ ] Abrir comanda → aguardar 1 minuto sem refresh → contador "Aberta há X min" incrementa
-- [ ] Comanda fechada não dispara o interval (cleanup correto)
-- [ ] Lista de comandas em `ComandasPage` atualiza igualmente
-- [ ] `setInterval` é limpo no `useEffect` cleanup ao desmontar componente
+- [x] Abrir comanda → aguardar 1 minuto sem refresh → contador "Aberta há X min" incrementa
+- [x] Comanda fechada não dispara o interval (cleanup correto)
+- [x] Lista de comandas em `ComandasPage` atualiza igualmente
+- [x] `setInterval` é limpo no `useEffect` cleanup ao desmontar componente
 
 ### User stories endereçadas
 
@@ -311,7 +311,7 @@ Calcular `tempo_aberta_minutos` no frontend a partir de `comanda.created_at`, at
 
 ---
 
-## Issue 13 — MV1 + MV2: Tipo `ESTORNO_COMPRA` + ano na data de Movimentos
+## Issue 13 — MV1 + MV2: Tipo `ESTORNO_COMPRA` + ano na data de Movimentos ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -326,10 +326,10 @@ Em `MovimentosPage.tsx`:
 
 ### Critérios de aceite
 
-- [ ] Cancelar uma compra → movimentação `estorno_compra` aparece com badge cinza e label "Estorno compra"
-- [ ] Filtro "Estorno compra" disponível no seletor de tipo
-- [ ] Coluna data exibe ano (ex: "11/05/26 14:30")
-- [ ] Outros tipos de movimento permanecem com badges e labels inalterados
+- [x] Cancelar uma compra → movimentação `estorno_compra` aparece com badge cinza e label "Estorno compra"
+- [x] Filtro "Estorno compra" disponível no seletor de tipo
+- [x] Coluna data exibe ano (ex: "11/05/26 14:30")
+- [x] Outros tipos de movimento permanecem com badges e labels inalterados
 
 ### User stories endereçadas
 
@@ -339,7 +339,7 @@ Em `MovimentosPage.tsx`:
 
 ---
 
-## Issue 14 — CP4: `total_periodo` real no backend e exibição correta
+## Issue 14 — CP4: `total_periodo` real no backend e exibição correta ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -350,11 +350,11 @@ Adicionar campo `total_periodo: Decimal` ao `ComprasPageResponse` no backend, ca
 
 ### Critérios de aceite
 
-- [ ] `GET /api/compras?pagina=1&por_pagina=10` retorna `total_periodo` com soma de todas as compras do filtro
-- [ ] Criar 25 compras de R$10 → filtrar tudo → UI exibe "Total no período: R$250,00" em qualquer página
-- [ ] Filtro por fornecedor → `total_periodo` recalcula corretamente
-- [ ] Filtro por data → `total_periodo` recalcula corretamente
-- [ ] Frontend não soma mais via `compras.reduce(...)`
+- [x] `GET /api/compras?pagina=1&por_pagina=10` retorna `total_periodo` com soma de todas as compras do filtro
+- [x] Criar 25 compras de R$10 → filtrar tudo → UI exibe "Total no período: R$250,00" em qualquer página
+- [x] Filtro por fornecedor → `total_periodo` recalcula corretamente
+- [x] Filtro por data → `total_periodo` recalcula corretamente
+- [x] Frontend não soma mais via `compras.reduce(...)`
 
 ### User stories endereçadas
 
@@ -362,7 +362,7 @@ Adicionar campo `total_periodo: Decimal` ao `ComprasPageResponse` no backend, ca
 
 ---
 
-## Issue 15 — CP5: Filtro de status (Todas / Ativas / Canceladas) em compras
+## Issue 15 — CP5: Filtro de status (Todas / Ativas / Canceladas) em compras ✅ Concluída
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -373,11 +373,11 @@ Adicionar filtro de status à listagem de compras com 3 opções (Todas / Ativas
 
 ### Critérios de aceite
 
-- [ ] Toggle de 3 botões aparece no topo da listagem (padrão visual de `InsumosPage`)
-- [ ] Default selecionado é "Ativas"
-- [ ] Cancelar 3 de 5 compras → filtrar "Ativas" → 2 resultados. "Canceladas" → 3. "Todas" → 5
-- [ ] Backend retorna lista filtrada respeitando o parâmetro
-- [ ] Mudança de filtro reseta paginação para 1
+- [x] Toggle de 3 botões aparece no topo da listagem (padrão visual de `InsumosPage`)
+- [x] Default selecionado é "Ativas"
+- [x] Cancelar 3 de 5 compras → filtrar "Ativas" → 2 resultados. "Canceladas" → 3. "Todas" → 5
+- [x] Backend retorna lista filtrada respeitando o parâmetro
+- [x] Mudança de filtro reseta paginação para 1
 
 ### User stories endereçadas
 

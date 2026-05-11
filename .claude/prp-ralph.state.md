@@ -194,3 +194,23 @@ started_at: "2026-05-11T00:00:00Z"
 - Issue 11 (CA1): Select de pessoa no modo edição de item em ComandaAbertaPage
 
 ---
+
+## Iteration 11 - 2026-05-11T10:00:00Z
+
+### Completed
+- Issue 11 (CA1): select de pessoa no edit mode de item — `<select>` quando `comanda.pessoas.length > 0`, `<Input>` senão
+- Issue 12 (CA2): `useEffect`+`setInterval(60s)` em ComandaAbertaPage (só quando aberta) e ComandasPage; `minutesAgo(created_at)` substitui `tempo_aberta_minutos`
+- Issue 13 (MV1+MV2): `estorno_compra` em `TIPO_OPTIONS/BADGE/LABEL`; `year: "2-digit"` no `toLocaleString` de MovimentosPage
+- Issue 14 (CP4): `total_periodo` real via `SUM(total)` no repository; adicionado ao schema + service + frontend `ComprasPageResponse`; `compras.reduce` removido
+- Issue 15 (CP5): filtro status Ativas/Todas/Canceladas; default "ativa"; backend aceita `status: Optional[str]`; `atualizarFiltro` reseta pagina
+- Doc marcada ✅ para issues 11-15
+- Committed: d3afdb7
+
+### Validation Status
+- Type-check: PASS
+- Lint: PASS
+
+### Next Steps
+- Issue 16 (CP6): Modal de edição de compra com Dialog padronizado em ComprasPage
+
+---
