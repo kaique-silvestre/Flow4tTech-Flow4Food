@@ -5,10 +5,8 @@ export interface UnitOption {
 }
 
 const FAMILIES: Record<string, { alt: string; altFactor: number }> = {
-  kg: { alt: "g",  altFactor: 0.001  },
-  g:  { alt: "kg", altFactor: 1000   },
-  l:  { alt: "ml", altFactor: 0.001  },
-  ml: { alt: "l",  altFactor: 1000   },
+  kg: { alt: "g",  altFactor: 0.001 },
+  g:  { alt: "kg", altFactor: 1000  },
 };
 
 export function getFamilyOptions(

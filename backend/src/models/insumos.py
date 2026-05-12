@@ -12,8 +12,6 @@ class UnidadeBase(str, enum.Enum):
     UNIDADE = "un"
     GRAMA = "g"
     QUILOGRAMA = "kg"
-    MILILITRO = "ml"
-    LITRO = "l"
 
 
 class Insumo(Base):

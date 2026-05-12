@@ -17,7 +17,7 @@ import { useCreateInsumo, useUpdateInsumo, type InsumoResponse } from "@/feature
 const schema = z.object({
   nome: z.string().min(1, "Nome obrigatório"),
   categoria_id: z.coerce.number().int().positive("Selecione uma categoria"),
-  unidade_base: z.enum(["un", "g", "kg", "ml", "l"], { required_error: "Selecione uma unidade" }),
+  unidade_base: z.enum(["un", "g", "kg"], { required_error: "Selecione uma unidade" }),
   quantidade_caixa: z.coerce.number().int().positive().optional().or(z.literal("")),
 });
 
@@ -125,14 +125,11 @@ export function InsumoEditModal({ open, onClose, editing }: Props) {
               <option value="un">un (unidade)</option>
               <option value="g">g (gramas)</option>
               <option value="kg">kg (quilos)</option>
-              <option value="ml">ml (mililitros)</option>
-              <option value="l">l (litros)</option>
             </select>
             {errors.unidade_base && <p className="text-xs text-red-500">{errors.unidade_base.message}</p>}
             {unidade === "kg" && <p className="text-xs text-gray-400">Compras poderão ser registradas em kg ou g</p>}
             {unidade === "g" && <p className="text-xs text-gray-400">Compras poderão ser registradas em g ou kg</p>}
-            {unidade === "l" && <p className="text-xs text-gray-400">Compras poderão ser registradas em l ou ml</p>}
-            {unidade === "ml" && <p className="text-xs text-gray-400">Compras poderão ser registradas em ml ou l</p>}
+
             {unidade === "un" && <p className="text-xs text-gray-400">Informe qtd por caixa abaixo para permitir compra em cx</p>}
           </div>
 
