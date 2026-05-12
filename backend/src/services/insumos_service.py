@@ -1,9 +1,11 @@
 from typing import Optional
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
+from src.models.insumos import Insumo
 from src.repositories import insumos_repository
 from src.schemas.insumos import InsumoCreateRequest, InsumoResponse, InsumoUpdateRequest
 
@@ -37,6 +39,9 @@ def create_insumo(db: Session, data: InsumoCreateRequest) -> InsumoResponse:
         obj = insumos_repository.create(db, data)
     except IntegrityError:
         db.rollback()
+        existing = db.execute(select(Insumo).where(Insumo.nome == data.nome)).scalar_one_or_none()
+        if existing and not existing.ativo:
+            raise AppError(ErrorCode.CONFLICT, "Insumo inativo com este nome já existe. Reative-o em Cadastros → Insumos.", http_status=409) from None
         raise AppError(ErrorCode.CONFLICT, "Já existe um insumo com este nome", http_status=409) from None
     return InsumoResponse.model_validate(obj)
 
