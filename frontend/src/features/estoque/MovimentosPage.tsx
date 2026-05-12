@@ -103,11 +103,18 @@ export function MovimentosPage() {
                 <th className="py-2 pr-4">Item</th>
                 <th className="py-2 pr-4">Tipo</th>
                 <th className="py-2 pr-4">Quantidade</th>
+                <th className="py-2 pr-4">Unidade</th>
                 <th className="py-2">Saldo após</th>
               </tr>
             </thead>
             <tbody>
-              {result.itens.map((mov) => (
+              {result.itens.map((mov) => {
+                const isKg = mov.unidade_base === "kg";
+                const fmtQty = (v: number) =>
+                  isKg
+                    ? v.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 })
+                    : Math.round(v).toLocaleString("pt-BR");
+                return (
                 <tr key={mov.id} className="border-b last:border-0">
                   <td className="py-2 pr-4 text-gray-500">
                     {new Date(mov.created_at).toLocaleString("pt-BR", {
@@ -121,13 +128,15 @@ export function MovimentosPage() {
                     </span>
                   </td>
                   <td className={`py-2 pr-4 ${mov.tipo === "entrada" ? "text-green-700" : "text-red-600"}`}>
-                    {mov.tipo === "entrada" ? "+" : "-"}{Number(mov.quantidade).toLocaleString("pt-BR")}
+                    {mov.tipo === "entrada" ? "+" : "-"}{fmtQty(Number(mov.quantidade))}
                   </td>
+                  <td className="py-2 pr-4 text-gray-500">{mov.unidade_base}</td>
                   <td className="py-2 text-gray-600">
-                    {Number(mov.saldo_apos).toLocaleString("pt-BR")}
+                    {fmtQty(Number(mov.saldo_apos))}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
 

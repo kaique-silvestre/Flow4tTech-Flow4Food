@@ -25,16 +25,17 @@ def _get_categoria_nome(db: Session, categoria_id: Optional[int]) -> Optional[st
     return cat.nome if cat else None
 
 
-def _get_insumo_nome(db: Session, insumo_id: int) -> str:
-    insumo = db.execute(select(Insumo).where(Insumo.id == insumo_id)).scalar_one_or_none()
-    return insumo.nome if insumo else ""
+def _get_insumo(db: Session, insumo_id: int) -> Optional[Insumo]:
+    return db.execute(select(Insumo).where(Insumo.id == insumo_id)).scalar_one_or_none()
 
 
 def _build_movimento_response(db: Session, mov: MovimentoEstoque) -> MovimentoResponse:
+    insumo = _get_insumo(db, mov.insumo_id)
     return MovimentoResponse(
         id=mov.id,
         item_id=mov.insumo_id,
-        item_nome=_get_insumo_nome(db, mov.insumo_id),
+        item_nome=insumo.nome if insumo else "",
+        unidade_base=insumo.unidade_base if insumo else "un",
         tipo=mov.tipo,
         quantidade=mov.quantidade,
         custo_unitario=mov.custo_unitario,

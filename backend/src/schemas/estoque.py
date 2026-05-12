@@ -39,6 +39,7 @@ class MovimentoResponse(BaseModel):
     id: int
     item_id: int
     item_nome: str
+    unidade_base: str
     tipo: str
     quantidade: Decimal
     custo_unitario: Optional[Decimal]

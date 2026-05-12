@@ -17,6 +17,7 @@ export interface MovimentoResponse {
   id: number;
   item_id: number;
   item_nome: string;
+  unidade_base: string;
   tipo: "entrada" | "saida_venda" | "saida_perda";
   quantidade: number;
   custo_unitario: number | null;
