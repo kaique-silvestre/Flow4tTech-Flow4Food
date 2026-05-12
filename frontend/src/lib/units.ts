@@ -11,18 +11,12 @@ const FAMILIES: Record<string, { alt: string; altFactor: number }> = {
 
 export function getFamilyOptions(
   unidadeBase: string,
-  quantidadeCaixa?: number | null
+  _quantidadeCaixa?: number | null
 ): UnitOption[] {
   const base: UnitOption = { value: unidadeBase, label: unidadeBase, factor: 1 };
   const family = FAMILIES[unidadeBase];
   if (family) {
     return [base, { value: family.alt, label: family.alt, factor: family.altFactor }];
-  }
-  if (quantidadeCaixa && quantidadeCaixa > 0) {
-    return [
-      base,
-      { value: "cx", label: `cx (${quantidadeCaixa} ${unidadeBase})`, factor: quantidadeCaixa },
-    ];
   }
   return [base];
 }

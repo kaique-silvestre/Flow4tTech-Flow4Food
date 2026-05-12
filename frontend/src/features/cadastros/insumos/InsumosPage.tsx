@@ -69,8 +69,8 @@ export function InsumosPage() {
           <thead>
             <tr className="border-b text-left text-gray-500">
               <th className="py-2 pr-4">Nome</th>
-              <th className="py-2 pr-4">Unidade</th>
               <th className="py-2 pr-4">Qtd/caixa</th>
+              <th className="py-2 pr-4">Unidade</th>
               <th className="py-2 pr-4">Status</th>
               <th className="py-2" />
             </tr>
@@ -81,8 +81,8 @@ export function InsumosPage() {
                 <td className={`py-2 pr-4 ${!insumo.ativo ? "text-gray-400 line-through" : ""}`}>
                   {insumo.nome}
                 </td>
-                <td className="py-2 pr-4 text-gray-600">{insumo.unidade_base}</td>
                 <td className="py-2 pr-4 text-gray-600">{insumo.quantidade_caixa ?? "—"}</td>
+                <td className="py-2 pr-4 text-gray-600">{insumo.unidade_base}</td>
                 <td className="py-2 pr-4">
                   {insumo.ativo ? (
                     <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">

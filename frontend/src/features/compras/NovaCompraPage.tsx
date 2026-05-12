@@ -267,10 +267,10 @@ export function NovaCompraPage() {
 
           <div className="grid grid-cols-[1fr_90px_110px_100px_110px_32px] gap-2 text-xs text-gray-500 px-1">
             <span>Item</span>
-            <span>Qtd</span>
+            <span>Quantidade</span>
             <span>Unidade</span>
-            <span>Custo Unit. (R$/base)</span>
-            <span>Custo Total (R$)</span>
+            <span>Preço/unid. base</span>
+            <span>Total (R$)</span>
             <span />
           </div>
 
@@ -334,13 +334,22 @@ export function NovaCompraPage() {
                     <select
                       className="w-full rounded border px-2 py-1.5 text-sm"
                       value={selUnit}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const newUnit = e.target.value;
                         setUnitSels((prev) => {
                           const next = [...prev];
-                          next[index] = e.target.value;
+                          next[index] = newUnit;
                           return next;
-                        })
-                      }
+                        });
+                        setValue(`itens.${index}.quantidade`, 0 as never);
+                        setValue(`itens.${index}.custo_total`, 0 as never);
+                        setUnitarios((prev) => {
+                          const next = [...prev];
+                          next[index] = "";
+                          return next;
+                        });
+                        delete lastEditedRef.current[index];
+                      }}
                     >
                       {familyOpts.map((o) => (
                         <option key={o.value} value={o.value}>{o.label}</option>
@@ -362,7 +371,7 @@ export function NovaCompraPage() {
                     placeholder="0.00"
                   />
                   {item && (
-                    <p className="text-xs text-gray-400 mt-0.5">por {item.unidade_base}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">R$ por {item.unidade_base}</p>
                   )}
                 </div>
 
