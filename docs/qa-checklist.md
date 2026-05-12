@@ -1,4 +1,4 @@
-# QA Checklist — Smoke Test Visual
+# QA Checklist — Smoke Test Visual.
 
 **Resoluções alvo:** 1280×720 e 1366×768
 
