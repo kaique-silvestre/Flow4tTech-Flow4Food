@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { stockDisplay } from "@/lib/format";
 import { useSaldoEstoque } from "./useEstoque";
 import { useMovimentos, type MovimentoFilters } from "./useEstoque";
 
@@ -109,11 +110,8 @@ export function MovimentosPage() {
             </thead>
             <tbody>
               {result.itens.map((mov) => {
-                const isKg = mov.unidade_base === "kg";
-                const fmtQty = (v: number) =>
-                  isKg
-                    ? v.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 })
-                    : Math.round(v).toLocaleString("pt-BR");
+                const { qty: qtdDisplay, unit: unitDisplay } = stockDisplay(mov.quantidade, mov.unidade_base);
+                const { qty: saldoDisplay } = stockDisplay(mov.saldo_apos, mov.unidade_base);
                 return (
                 <tr key={mov.id} className="border-b last:border-0">
                   <td className="py-2 pr-4 text-gray-500">
@@ -128,11 +126,11 @@ export function MovimentosPage() {
                     </span>
                   </td>
                   <td className={`py-2 pr-4 ${mov.tipo === "entrada" ? "text-green-700" : "text-red-600"}`}>
-                    {mov.tipo === "entrada" ? "+" : "-"}{fmtQty(Number(mov.quantidade))}
+                    {mov.tipo === "entrada" ? "+" : "-"}{qtdDisplay}
                   </td>
-                  <td className="py-2 pr-4 text-gray-500">{mov.unidade_base}</td>
+                  <td className="py-2 pr-4 text-gray-500">{unitDisplay}</td>
                   <td className="py-2 text-gray-600">
-                    {fmtQty(Number(mov.saldo_apos))}
+                    {saldoDisplay}
                   </td>
                 </tr>
                 );

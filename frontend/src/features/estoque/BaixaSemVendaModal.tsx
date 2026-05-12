@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { stockDisplay } from "@/lib/format";
 import { baixaSemVendaSchema, motivoPerdaOptions, type BaixaSemVendaFormValues } from "./estoqueSchemas";
 import { useBaixaSemVenda, type SaldoItemResponse } from "./useEstoque";
 
@@ -68,11 +69,14 @@ export function BaixaSemVendaModal({ open, onClose, itens, preSelectedItemId }: 
               {...register("item_id", { setValueAs: (v) => Number(v) })}
             >
               <option value={0}>Selecione...</option>
-              {itens.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.nome} ({Number(i.estoque_atual).toLocaleString("pt-BR")} {i.unidade_base})
-                </option>
-              ))}
+              {itens.map((i) => {
+                const { qty, unit } = stockDisplay(i.estoque_atual, i.unidade_base);
+                return (
+                  <option key={i.id} value={i.id}>
+                    {i.nome} ({qty} {unit})
+                  </option>
+                );
+              })}
             </select>
             {errors.item_id && <p className="text-xs text-red-500">{errors.item_id.message}</p>}
           </div>

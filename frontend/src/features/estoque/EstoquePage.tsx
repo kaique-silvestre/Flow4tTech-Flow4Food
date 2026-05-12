@@ -3,7 +3,7 @@ import { useDebounce } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Pagination, paginar } from "@/components/ui/pagination";
 import { useCategorias } from "@/features/cadastros/categorias/useCategorias";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatCustoMedio, stockDisplay } from "@/lib/format";
 import { BaixaSemVendaModal } from "./BaixaSemVendaModal";
 import { useSaldoEstoque, type SaldoFilters } from "./useEstoque";
 
@@ -73,17 +73,16 @@ export function EstoquePage() {
                   item.custo_medio != null
                     ? Number(item.estoque_atual) * item.custo_medio
                     : null;
+                const { qty, unit } = stockDisplay(item.estoque_atual, item.unidade_base);
                 return (
                   <tr key={item.id} className="border-b last:border-0">
                     <td className="py-2 pr-4 font-medium">{item.nome}</td>
                     <td className="py-2 pr-4 text-gray-500">{item.categoria_nome ?? "—"}</td>
                     <td className={`py-2 pr-4 font-medium ${Number(item.estoque_atual) < 0 ? "text-red-600" : ""}`}>
-                      {Number(item.estoque_atual).toLocaleString("pt-BR")} {item.unidade_base}
+                      {qty} {unit}
                     </td>
                     <td className="py-2 pr-4 text-gray-600">
-                      {item.custo_medio != null
-                        ? `${formatCurrency(item.custo_medio)}/${item.unidade_base}`
-                        : "—"}
+                      {formatCustoMedio(item.custo_medio, item.unidade_base)}
                     </td>
                     <td className="py-2 text-right text-gray-600">
                       {valorEstoque != null ? formatCurrency(valorEstoque) : "—"}
