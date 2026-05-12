@@ -29,6 +29,13 @@ def update_fornecedor(db: Session, fornecedor_id: int, data: FornecedorUpdateReq
     return obj
 
 
+def toggle_ativo_fornecedor(db: Session, fornecedor_id: int) -> Fornecedor:
+    obj = fornecedores_repository.toggle_ativo(db, fornecedor_id)
+    if obj is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Fornecedor não encontrado", http_status=404)
+    return obj
+
+
 def delete_fornecedor(db: Session, fornecedor_id: int) -> None:
     deleted = fornecedores_repository.delete(db, fornecedor_id)
     if not deleted:

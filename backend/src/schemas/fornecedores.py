@@ -22,3 +22,4 @@ class FornecedorResponse(BaseModel):
     nome: str
     telefone: Optional[str]
     email: Optional[str]
+    ativo: bool = True

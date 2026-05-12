@@ -8,6 +8,7 @@ export interface Fornecedor {
   nome: string;
   telefone: string | null;
   email: string | null;
+  ativo: boolean;
 }
 
 const QK = "fornecedores";
@@ -42,6 +43,17 @@ export function useUpdateFornecedor() {
       toast.success("Fornecedor atualizado.");
     },
     onError: () => toast.error("Erro ao atualizar fornecedor."),
+  });
+}
+
+export function useToggleFornecedorAtivo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.patch<Fornecedor>(`/api/fornecedores/${id}/toggle-ativo`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [QK] });
+    },
+    onError: () => toast.error("Erro ao alterar status do fornecedor."),
   });
 }
 

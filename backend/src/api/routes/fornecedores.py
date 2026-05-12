@@ -40,6 +40,15 @@ def update_fornecedor(
     return fornecedores_service.update_fornecedor(db, fornecedor_id, body)  # type: ignore[return-value]
 
 
+@router.patch("/{fornecedor_id}/toggle-ativo", response_model=FornecedorResponse)
+def toggle_ativo_fornecedor(
+    fornecedor_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> FornecedorResponse:
+    return fornecedores_service.toggle_ativo_fornecedor(db, fornecedor_id)  # type: ignore[return-value]
+
+
 @router.delete("/{fornecedor_id}", status_code=204)
 def delete_fornecedor(
     fornecedor_id: int,
