@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -160,8 +160,8 @@ export function CardapioPage() {
               const temFicha = p.ficha_tecnica && p.ficha_tecnica.length > 0;
 
               return (
-                <>
-                  <tr key={p.id} className={`border-b ${!expandido ? "last:border-0" : ""} ${!p.ativo ? "opacity-50" : ""}`}>
+                <React.Fragment key={p.id}>
+                  <tr className={`border-b ${!expandido ? "last:border-0" : ""} ${!p.ativo ? "opacity-50" : ""}`}>
                     <td className="py-2 pr-2">
                       <button
                         type="button"
@@ -230,7 +230,7 @@ export function CardapioPage() {
                   </tr>
 
                   {expandido && temFicha && (
-                    <tr key={`${p.id}-ficha`} className="border-b last:border-0 bg-gray-50">
+                    <tr className="border-b last:border-0 bg-gray-50">
                       <td />
                       <td colSpan={7} className="py-2 px-2 pb-3">
                         <table className="w-full text-xs">
@@ -270,7 +270,7 @@ export function CardapioPage() {
                       </td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               );
             })}
           </tbody>
