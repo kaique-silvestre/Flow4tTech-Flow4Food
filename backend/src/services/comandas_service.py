@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
 from src.models.comandas import Comanda, StatusComanda
+from src.models.comissoes_garcom import ComissaoGarcom
 from src.models.eventos_comanda import TipoEvento
 from src.models.ficha_tecnica import FichaTecnica
 from src.models.insumos import Insumo
@@ -393,6 +394,16 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
             negativos = _dar_baixa_estoque(db, ic.produto_id, ic.quantidade)
             itens_negativos.extend(negativos)
         comandas_repository.fechar_comanda_repo(db, comanda_id, total_com_desconto)
+
+    if not pagamento_parcial and data.taxa_servico and comanda.garcom_id is not None:
+        valor_comissao = (total_com_desconto * Decimal("0.10")).quantize(Decimal("0.01"))
+        comissao = ComissaoGarcom(
+            garcom_id=comanda.garcom_id,
+            comanda_id=comanda_id,
+            valor=valor_comissao,
+            percentual=Decimal("10.00"),
+        )
+        db.add(comissao)
 
     db.commit()
     db.refresh(comanda)

@@ -17,6 +17,7 @@ export const pagamentoSchema = z.object({
 export const fecharComandaSchema = z.object({
   pagamentos: z.array(pagamentoSchema),
   modo_divisao: z.enum(["sem_divisao", "igualmente", "por_pessoa", "parcial"]),
+  taxa_servico: z.boolean().default(false),
 });
 
 export type FecharComandaValues = z.infer<typeof fecharComandaSchema>;

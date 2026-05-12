@@ -1,6 +1,7 @@
 from src.models.auth import ConfigSeguranca  # noqa: F401
 from src.models.categorias import Categoria  # noqa: F401
 from src.models.comandas import Comanda  # noqa: F401
+from src.models.comissoes_garcom import ComissaoGarcom  # noqa: F401
 from src.models.compras import Compra, ItemCompra  # noqa: F401
 from src.models.estabelecimento import Estabelecimento  # noqa: F401
 from src.models.eventos_comanda import EventoComanda  # noqa: F401

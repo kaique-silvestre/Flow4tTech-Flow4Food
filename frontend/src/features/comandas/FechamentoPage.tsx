@@ -25,12 +25,14 @@ export default function FechamentoPage() {
     defaultValues: {
       pagamentos: [{ metodo_id: 0, valor: 0 }],
       modo_divisao: "sem_divisao",
+      taxa_servico: false,
     },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "pagamentos" });
   const modo = watch("modo_divisao");
   const pagamentos = watch("pagamentos");
+  const taxaServico = watch("taxa_servico");
   const pagamentosWatched = useWatch({ control, name: "pagamentos" });
   const hasInvalidMethod = pagamentosWatched.some((p) => !p.metodo_id);
 
@@ -61,11 +63,13 @@ export default function FechamentoPage() {
     : (comanda.desconto_valor ?? 0);
   const totalComDesconto = subtotal - desconto;
   const baseTotal = comanda.saldo_pendente ?? totalComDesconto;
+  const taxa = taxaServico ? Number((baseTotal * 0.1).toFixed(2)) : 0;
+  const totalComTaxa = Number((baseTotal + taxa).toFixed(2));
   const totalPago = pagamentos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
-  const bate = Math.abs(totalPago - baseTotal) <= 0.01;
+  const bate = Math.abs(totalPago - totalComTaxa) <= 0.01;
 
   function onSubmit(data: FecharComandaValues) {
-    if (baseTotal > 0 && data.pagamentos.length === 0) {
+    if (totalComTaxa > 0 && data.pagamentos.length === 0) {
       setError("pagamentos", { message: "Adicione ao menos um pagamento" });
       return;
     }
@@ -116,17 +120,46 @@ export default function FechamentoPage() {
               <span>-{formatCurrency(desconto)}</span>
             </div>
           )}
+          {taxaServico && taxa > 0 && (
+            <div className="flex justify-between text-sm text-blue-600">
+              <span>Taxa de serviço (10%)</span>
+              <span>+{formatCurrency(taxa)}</span>
+            </div>
+          )}
           <div className="flex justify-between font-bold">
             <span>TOTAL</span>
-            <span>{formatCurrency(comanda.saldo_pendente ?? totalComDesconto)}</span>
+            <span>{formatCurrency(taxaServico ? totalComTaxa : (comanda.saldo_pendente ?? totalComDesconto))}</span>
           </div>
+        </div>
+        <div className="flex items-center gap-2 pt-1">
+          <Controller
+            name="taxa_servico"
+            control={control}
+            render={({ field }) => (
+              <input
+                type="checkbox"
+                id="taxa_servico"
+                checked={field.value}
+                onChange={(e) => {
+                  field.onChange(e.target.checked);
+                  const newBase = baseTotal;
+                  const newTaxa = e.target.checked ? Number((newBase * 0.1).toFixed(2)) : 0;
+                  setValue("pagamentos.0.valor", Number((newBase + newTaxa).toFixed(2)));
+                }}
+                className="h-4 w-4 accent-blue-600"
+              />
+            )}
+          />
+          <Label htmlFor="taxa_servico" className="text-sm cursor-pointer">
+            Incluir 10% taxa de serviço para o garçom
+          </Label>
         </div>
         <Button variant="outline" size="sm" onClick={() => setDescontoOpen(true)}>
           {desconto > 0 ? "Editar Desconto" : "Aplicar Desconto"}
         </Button>
       </div>
 
-      {baseTotal === 0 && (
+      {totalComTaxa === 0 && (
         <div className="space-y-4">
           <div className="rounded border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
             Total R$0,00 — todos os itens são cortesia ou desconto integral.
@@ -136,7 +169,7 @@ export default function FechamentoPage() {
               Cancelar
             </Button>
             <Button
-              onClick={() => fechar({ pagamentos: [], modo_divisao: "sem_divisao" })}
+              onClick={() => fechar({ pagamentos: [], modo_divisao: "sem_divisao", taxa_servico: false })}
               disabled={isPending}
             >
               {isPending ? "Processando..." : "Confirmar Fechamento (sem cobrança)"}
@@ -145,7 +178,7 @@ export default function FechamentoPage() {
         </div>
       )}
 
-      {baseTotal > 0 && <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {totalComTaxa > 0 && <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Modo de divisão */}
         <div>
           <Label className="text-base font-semibold">Como dividir?</Label>
@@ -164,7 +197,7 @@ export default function FechamentoPage() {
                       onChange={() => {
                         field.onChange(opt.value);
                         if (opt.value === "sem_divisao") {
-                          setValue("pagamentos.0.valor", Number(baseTotal.toFixed(2)));
+                          setValue("pagamentos.0.valor", Number(totalComTaxa.toFixed(2)));
                         } else {
                           setValue("pagamentos.0.valor", 0);
                         }
@@ -291,8 +324,8 @@ export default function FechamentoPage() {
         </div>
         {!bate && modo !== "parcial" && (
           <p className="text-sm text-destructive">
-            Diferença: {formatCurrency(Math.abs(totalPago - baseTotal))} (faltam{" "}
-            {formatCurrency(baseTotal - totalPago)})
+            Diferença: {formatCurrency(Math.abs(totalPago - totalComTaxa))} (faltam{" "}
+            {formatCurrency(totalComTaxa - totalPago)})
           </p>
         )}
 

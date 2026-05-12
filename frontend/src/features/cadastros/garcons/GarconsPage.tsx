@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { GarcomModal } from "./GarcomModal";
+import { GarcomComissoesModal } from "./GarcomComissoesModal";
 import { useGarcons, useToggleGarcomAtivo, type Garcom } from "./useGarcons";
 
 export function GarconsPage() {
@@ -10,6 +11,7 @@ export function GarconsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Garcom | null>(null);
   const [filtro, setFiltro] = useState<"ativos" | "inativos" | "todos">("ativos");
+  const [comissoesGarcom, setComissoesGarcom] = useState<Garcom | null>(null);
 
   const garconsFiltrados = garcons.filter((g) =>
     filtro === "todos" ? true : filtro === "ativos" ? g.ativo : !g.ativo
@@ -23,6 +25,10 @@ export function GarconsPage() {
   function openEdit(g: Garcom) {
     setEditing(g);
     setModalOpen(true);
+  }
+
+  function openComissoes(g: Garcom) {
+    setComissoesGarcom(g);
   }
 
   return (
@@ -79,6 +85,9 @@ export function GarconsPage() {
                   )}
                 </td>
                 <td className="py-2 text-right space-x-2">
+                  <Button size="sm" variant="outline" onClick={() => openComissoes(g)}>
+                    Ver Comissões
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => openEdit(g)}>
                     Editar
                   </Button>
@@ -102,6 +111,14 @@ export function GarconsPage() {
         onClose={() => setModalOpen(false)}
         editing={editing}
       />
+
+      {comissoesGarcom && (
+        <GarcomComissoesModal
+          open={comissoesGarcom !== null}
+          onClose={() => setComissoesGarcom(null)}
+          garcom={comissoesGarcom}
+        />
+      )}
     </div>
   );
 }

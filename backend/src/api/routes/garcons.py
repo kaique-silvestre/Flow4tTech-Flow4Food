@@ -1,8 +1,14 @@
 
-from fastapi import APIRouter, Depends
+from decimal import Decimal
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_current_user, get_db
+from src.models.comandas import Comanda
+from src.models.comissoes_garcom import ComissaoGarcom
+from src.schemas.comissoes import ComissaoResponse, ComissaoUpdateRequest, GarcomStatsResponse
 from src.schemas.garcons import GarcomCreateRequest, GarcomResponse, GarcomUpdateRequest
 from src.services import garcons_service
 
@@ -43,3 +49,83 @@ def toggle_ativo_garcom(
     _user: dict = Depends(get_current_user),
 ) -> GarcomResponse:
     return garcons_service.toggle_ativo_garcom(db, garcom_id)  # type: ignore[return-value]
+
+
+@router.get("/{garcom_id}/stats", response_model=GarcomStatsResponse)
+def get_garcom_stats(
+    garcom_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> GarcomStatsResponse:
+    total_comandas = db.execute(
+        select(func.count()).select_from(Comanda).where(Comanda.garcom_id == garcom_id)
+    ).scalar_one()
+
+    comandas_fechadas = db.execute(
+        select(func.count())
+        .select_from(Comanda)
+        .where(Comanda.garcom_id == garcom_id, Comanda.status == "fechada")
+    ).scalar_one()
+
+    comissao_pendente = db.execute(
+        select(func.coalesce(func.sum(ComissaoGarcom.valor), Decimal("0")))
+        .where(ComissaoGarcom.garcom_id == garcom_id, ComissaoGarcom.pago == False)  # noqa: E712
+    ).scalar_one()
+
+    comissoes_db = db.execute(
+        select(ComissaoGarcom)
+        .where(ComissaoGarcom.garcom_id == garcom_id)
+        .order_by(ComissaoGarcom.created_at.desc())
+    ).scalars().all()
+
+    return GarcomStatsResponse(
+        garcom_id=garcom_id,
+        total_comandas=total_comandas,
+        comandas_fechadas=comandas_fechadas,
+        comissao_pendente=Decimal(str(comissao_pendente)),
+        comissoes=[ComissaoResponse.model_validate(c) for c in comissoes_db],
+    )
+
+
+@router.patch("/comissoes/{comissao_id}", response_model=ComissaoResponse)
+def update_comissao(
+    comissao_id: int,
+    body: ComissaoUpdateRequest,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> ComissaoResponse:
+    comissao = db.get(ComissaoGarcom, comissao_id)
+    if comissao is None:
+        raise HTTPException(status_code=404, detail="Comissão não encontrada")
+    comissao.valor = body.valor
+    db.commit()
+    db.refresh(comissao)
+    return ComissaoResponse.model_validate(comissao)
+
+
+@router.patch("/comissoes/{comissao_id}/toggle-pago", response_model=ComissaoResponse)
+def toggle_pago_comissao(
+    comissao_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> ComissaoResponse:
+    comissao = db.get(ComissaoGarcom, comissao_id)
+    if comissao is None:
+        raise HTTPException(status_code=404, detail="Comissão não encontrada")
+    comissao.pago = not comissao.pago
+    db.commit()
+    db.refresh(comissao)
+    return ComissaoResponse.model_validate(comissao)
+
+
+@router.delete("/comissoes/{comissao_id}", status_code=204)
+def delete_comissao(
+    comissao_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> None:
+    comissao = db.get(ComissaoGarcom, comissao_id)
+    if comissao is None:
+        raise HTTPException(status_code=404, detail="Comissão não encontrada")
+    db.delete(comissao)
+    db.commit()

@@ -25,6 +25,7 @@ class PagamentoRequest(BaseModel):
 class FecharComandaRequest(BaseModel):
     pagamentos: list[PagamentoRequest] = Field(..., min_length=0)
     modo_divisao: Literal["sem_divisao", "igualmente", "por_pessoa", "parcial"]
+    taxa_servico: bool = False
 
 
 class PagamentoResponse(BaseModel):
