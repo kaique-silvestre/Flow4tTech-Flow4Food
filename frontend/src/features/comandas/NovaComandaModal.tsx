@@ -114,7 +114,7 @@ export function NovaComandaModal({ open, onClose }: Props) {
               type={tipo === "mesa" ? "number" : "text"}
               min={tipo === "mesa" ? 1 : undefined}
               step={tipo === "mesa" ? 1 : undefined}
-              {...register("identificacao", tipo === "mesa" ? { valueAsNumber: true } : {})}
+              {...register("identificacao")}
               className="mt-1"
             />
             {errors.identificacao && (
