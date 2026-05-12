@@ -19,6 +19,7 @@ class CategoriaResponse(BaseModel):
     id: int
     nome: str
     parent_id: Optional[int] = None
+    ativo: bool = True
     children: list["CategoriaResponse"] = []
 
 

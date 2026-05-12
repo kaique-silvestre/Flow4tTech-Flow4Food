@@ -371,7 +371,8 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
             )
     else:
         base_total: Decimal = comanda.saldo_pendente if comanda.saldo_pendente is not None else total_com_desconto
-        if abs(total_pago - base_total) > Decimal("0.01"):
+        esperado: Decimal = (base_total * Decimal("1.10")).quantize(Decimal("0.01")) if data.taxa_servico else base_total
+        if abs(total_pago - esperado) > Decimal("0.01"):
             raise AppError(
                 ErrorCode.PAGAMENTO_NAO_BATE,
                 f"Soma dos pagamentos (R$ {total_pago}) nao confere com o total (R$ {base_total})",

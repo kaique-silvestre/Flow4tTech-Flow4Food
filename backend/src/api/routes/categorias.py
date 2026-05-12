@@ -35,6 +35,15 @@ def update_categoria(
     return categorias_service.update_categoria(db, categoria_id, body)
 
 
+@router.patch("/{categoria_id}/toggle-ativo", response_model=CategoriaResponse)
+def toggle_ativo_categoria(
+    categoria_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> CategoriaResponse:
+    return categorias_service.toggle_ativo_categoria(db, categoria_id)
+
+
 @router.delete("/{categoria_id}", status_code=204)
 def delete_categoria(
     categoria_id: int,

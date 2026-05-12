@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.models.comandas import Comanda, StatusComanda
+from src.models.comissoes_garcom import ComissaoGarcom
 from src.models.ficha_tecnica import FichaTecnica
 from src.models.garcons import Garcom
 from src.models.insumos import Insumo
@@ -226,6 +227,32 @@ def produtos_sem_custo(db: Session, comanda_ids: list[int]) -> list[dict]:
             if produto:
                 result.append({"item_id": produto.id, "nome": produto.nome})
     return result
+
+
+def comissoes_total_por_comanda_ids(db: Session, comanda_ids: list[int]) -> Decimal:
+    if not comanda_ids:
+        return Decimal("0")
+    row = db.execute(
+        select(func.sum(ComissaoGarcom.valor)).where(
+            ComissaoGarcom.comanda_id.in_(comanda_ids)
+        )
+    ).scalar()
+    return row or Decimal("0")
+
+
+def comissoes_por_garcom_periodo(
+    db: Session, start_utc: datetime.datetime, end_utc: datetime.datetime
+) -> dict[int, Decimal]:
+    rows = db.execute(
+        select(ComissaoGarcom.garcom_id, func.sum(ComissaoGarcom.valor).label("total"))
+        .join(Comanda, ComissaoGarcom.comanda_id == Comanda.id)
+        .where(
+            Comanda.data_fechamento >= start_utc,
+            Comanda.data_fechamento <= end_utc,
+        )
+        .group_by(ComissaoGarcom.garcom_id)
+    ).all()
+    return {r.garcom_id: r.total or Decimal("0") for r in rows}
 
 
 def todos_produtos_ativos(db: Session) -> list[Produto]:

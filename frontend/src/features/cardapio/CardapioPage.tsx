@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Pagination, paginar } from "@/components/ui/pagination";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useCategorias } from "@/features/cadastros/categorias/useCategorias";
 import {
@@ -14,6 +15,8 @@ import {
 import { ProdutoModal } from "./ProdutoModal";
 
 type FiltroAtivo = "ativos" | "inativos" | "todos";
+
+const POR_PAGINA = 20;
 
 function calcCusto(produto: ProdutoResponse): number | null {
   if (!produto.ficha_tecnica?.length) return null;
@@ -46,6 +49,7 @@ export function CardapioPage() {
   const [filtro, setFiltro] = useState<FiltroAtivo>("ativos");
   const [busca, setBusca] = useState("");
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
+  const [pagina, setPagina] = useState(1);
 
   function toggleExpand(id: number) {
     setExpandidos((prev) => {
@@ -93,7 +97,7 @@ export function CardapioPage() {
           {filtroOpcoes.map((o) => (
             <button
               key={o.value}
-              onClick={() => setFiltro(o.value)}
+              onClick={() => { setFiltro(o.value); setPagina(1); }}
               className={`px-3 py-1.5 ${
                 filtro === o.value
                   ? "bg-gray-900 text-white"
@@ -107,7 +111,7 @@ export function CardapioPage() {
         <Input
           placeholder="Buscar produto..."
           value={busca}
-          onChange={(e) => setBusca(e.target.value)}
+          onChange={(e) => { setBusca(e.target.value); setPagina(1); }}
           className="w-52 text-sm"
         />
       </div>
@@ -121,6 +125,7 @@ export function CardapioPage() {
       ) : produtosFiltrados.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum produto encontrado.</p>
       ) : (
+        <div>
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b text-left text-gray-500">
@@ -135,7 +140,7 @@ export function CardapioPage() {
             </tr>
           </thead>
           <tbody>
-            {produtosFiltrados.map((p) => {
+            {paginar(produtosFiltrados, pagina, POR_PAGINA).map((p) => {
               const custo = calcCusto(p);
               const lucro =
                 p.preco_venda !== null && custo !== null ? p.preco_venda - custo : null;
@@ -258,6 +263,14 @@ export function CardapioPage() {
             })}
           </tbody>
         </table>
+        <Pagination
+          pagina={pagina}
+          totalPaginas={Math.ceil(produtosFiltrados.length / POR_PAGINA)}
+          total={produtosFiltrados.length}
+          label="produtos"
+          onPageChange={setPagina}
+        />
+        </div>
       )}
 
       <ProdutoModal

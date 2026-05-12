@@ -74,6 +74,12 @@ export function FechamentoCaixaPage() {
                 {formatCurrency(relatorio.cortesias)}
               </span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Comissões garçons (a pagar):</span>
+              <span className="font-semibold text-blue-600">
+                {formatCurrency(relatorio.total_comissoes)}
+              </span>
+            </div>
             <div className="flex justify-between border-t pt-2">
               <span className="font-semibold">Faturamento líquido:</span>
               <span className="font-bold text-green-700">

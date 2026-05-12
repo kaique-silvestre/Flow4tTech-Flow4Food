@@ -7,6 +7,7 @@ export interface Categoria {
   id: number;
   nome: string;
   parent_id?: number | null;
+  ativo: boolean;
   children: Categoria[];
 }
 
@@ -61,6 +62,17 @@ export function useUpdateCategoria() {
       toast.success("Categoria atualizada.");
     },
     onError: () => toast.error("Erro ao atualizar categoria."),
+  });
+}
+
+export function useToggleCategoriaAtivo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.patch<Categoria>(`/api/categorias/${id}/toggle-ativo`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [QK] });
+    },
+    onError: () => toast.error("Erro ao alterar status da categoria."),
   });
 }
 

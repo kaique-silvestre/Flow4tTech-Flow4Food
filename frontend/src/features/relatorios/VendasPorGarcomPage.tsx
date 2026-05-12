@@ -22,6 +22,7 @@ export function VendasPorGarcomPage() {
   });
 
   const totalFaturamento = data?.garcons.reduce((acc, g) => acc + g.faturamento, 0) ?? 0;
+  const totalComissoes = data?.garcons.reduce((acc, g) => acc + g.comissao, 0) ?? 0;
 
   return (
     <div className="p-6">
@@ -65,6 +66,7 @@ export function VendasPorGarcomPage() {
               <th className="pb-2 text-right">Comandas</th>
               <th className="pb-2 text-right">Faturamento</th>
               <th className="pb-2 text-right">Ticket Médio</th>
+              <th className="pb-2 text-right">Comissão (a pagar)</th>
             </tr>
           </thead>
           <tbody>
@@ -75,6 +77,7 @@ export function VendasPorGarcomPage() {
                 <td className="py-2 text-right">{g.qtd_comandas}</td>
                 <td className="py-2 text-right">{formatCurrency(g.faturamento)}</td>
                 <td className="py-2 text-right">{formatCurrency(g.ticket_medio)}</td>
+                <td className="py-2 text-right text-blue-600">{formatCurrency(g.comissao)}</td>
               </tr>
             ))}
           </tbody>
@@ -85,6 +88,7 @@ export function VendasPorGarcomPage() {
               </td>
               <td className="pt-2 text-right">{formatCurrency(totalFaturamento)}</td>
               <td />
+              <td className="pt-2 text-right text-blue-600">{formatCurrency(totalComissoes)}</td>
             </tr>
           </tfoot>
         </table>

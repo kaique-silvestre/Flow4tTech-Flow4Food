@@ -86,6 +86,10 @@ export function DrePage() {
                 <span>Perdas / Quebras</span>
                 <span>{formatCurrency(data.perdas)}</span>
               </div>
+              <div className="flex justify-between">
+                <span>Comissões garçons (10%)</span>
+                <span className="text-blue-600">{formatCurrency(data.comissoes)}</span>
+              </div>
               <div className="flex justify-between border-t pt-1 font-semibold">
                 <span>Total de custos</span>
                 <span>{formatCurrency(data.total_custos)}</span>

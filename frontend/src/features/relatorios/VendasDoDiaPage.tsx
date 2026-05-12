@@ -41,7 +41,7 @@ export function VendasDoDiaPage() {
       ) : !vendas ? null : (
         <>
           {/* Resumo */}
-          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <div className="rounded border p-3">
               <p className="text-xs text-gray-500">Comandas</p>
               <p className="text-lg font-semibold">{vendas.qtd_comandas}</p>
@@ -60,6 +60,12 @@ export function VendasDoDiaPage() {
               <p className="text-xs text-gray-500">Cortesias</p>
               <p className="text-lg font-semibold text-orange-600">
                 {formatCurrency(vendas.total_cortesias)}
+              </p>
+            </div>
+            <div className="rounded border p-3">
+              <p className="text-xs text-gray-500">Comissões Garçons</p>
+              <p className="text-lg font-semibold text-blue-600">
+                {formatCurrency(vendas.total_comissoes)}
               </p>
             </div>
             <div className="rounded border bg-green-50 p-3">

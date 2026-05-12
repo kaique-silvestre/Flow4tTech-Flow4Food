@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useDebounce } from "use-debounce";
 import { Button } from "@/components/ui/button";
+import { Pagination, paginar } from "@/components/ui/pagination";
 import { useCategorias } from "@/features/cadastros/categorias/useCategorias";
 import { formatCurrency } from "@/lib/format";
 import { BaixaSemVendaModal } from "./BaixaSemVendaModal";
 import { useSaldoEstoque, type SaldoFilters } from "./useEstoque";
+
+const POR_PAGINA = 20;
 
 export function EstoquePage() {
   const [filters, setFilters] = useState<SaldoFilters>({});
@@ -13,6 +16,7 @@ export function EstoquePage() {
   const { data: itens = [], isLoading } = useSaldoEstoque(queryFilters);
   const { data: categorias = [] } = useCategorias();
   const [baixaOpen, setBaixaOpen] = useState(false);
+  const [pagina, setPagina] = useState(1);
 
   return (
     <div className="p-6">
@@ -40,7 +44,7 @@ export function EstoquePage() {
           className="rounded border px-2 py-1 text-sm"
           placeholder="Buscar item..."
           value={filters.busca ?? ""}
-          onChange={(e) => setFilters((f) => ({ ...f, busca: e.target.value || null }))}
+          onChange={(e) => { setFilters((f) => ({ ...f, busca: e.target.value || null })); setPagina(1); }}
         />
       </div>
 
@@ -52,55 +56,64 @@ export function EstoquePage() {
       ) : itens.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum item em estoque.</p>
       ) : (
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b text-left text-gray-500">
-              <th className="py-2 pr-4">Item</th>
-              <th className="py-2 pr-4">Categoria</th>
-              <th className="py-2 pr-4">Saldo</th>
-              <th className="py-2 pr-4">Custo médio</th>
-              <th className="py-2 text-right">Valor em estoque</th>
-            </tr>
-          </thead>
-          <tbody>
-            {itens.map((item) => {
-              const valorEstoque =
-                item.custo_medio != null
-                  ? Number(item.estoque_atual) * item.custo_medio
-                  : null;
-              return (
-                <tr key={item.id} className="border-b last:border-0">
-                  <td className="py-2 pr-4 font-medium">{item.nome}</td>
-                  <td className="py-2 pr-4 text-gray-500">{item.categoria_nome ?? "—"}</td>
-                  <td className={`py-2 pr-4 font-medium ${Number(item.estoque_atual) < 0 ? "text-red-600" : ""}`}>
-                    {Number(item.estoque_atual).toLocaleString("pt-BR")} {item.unidade_base}
-                  </td>
-                  <td className="py-2 pr-4 text-gray-600">
-                    {item.custo_medio != null
-                      ? `${formatCurrency(item.custo_medio)}/${item.unidade_base}`
-                      : "—"}
-                  </td>
-                  <td className="py-2 text-right text-gray-600">
-                    {valorEstoque != null ? formatCurrency(valorEstoque) : "—"}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot className="border-t font-medium">
-            <tr>
-              <td colSpan={4} className="pt-2 text-gray-700">Total em estoque</td>
-              <td className="pt-2 text-right text-gray-900">
-                {formatCurrency(
-                  itens.reduce((sum, item) => {
-                    if (item.custo_medio == null) return sum;
-                    return sum + Number(item.estoque_atual) * item.custo_medio;
-                  }, 0)
-                )}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+        <>
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b text-left text-gray-500">
+                <th className="py-2 pr-4">Item</th>
+                <th className="py-2 pr-4">Categoria</th>
+                <th className="py-2 pr-4">Saldo</th>
+                <th className="py-2 pr-4">Custo médio</th>
+                <th className="py-2 text-right">Valor em estoque</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginar(itens, pagina, POR_PAGINA).map((item) => {
+                const valorEstoque =
+                  item.custo_medio != null
+                    ? Number(item.estoque_atual) * item.custo_medio
+                    : null;
+                return (
+                  <tr key={item.id} className="border-b last:border-0">
+                    <td className="py-2 pr-4 font-medium">{item.nome}</td>
+                    <td className="py-2 pr-4 text-gray-500">{item.categoria_nome ?? "—"}</td>
+                    <td className={`py-2 pr-4 font-medium ${Number(item.estoque_atual) < 0 ? "text-red-600" : ""}`}>
+                      {Number(item.estoque_atual).toLocaleString("pt-BR")} {item.unidade_base}
+                    </td>
+                    <td className="py-2 pr-4 text-gray-600">
+                      {item.custo_medio != null
+                        ? `${formatCurrency(item.custo_medio)}/${item.unidade_base}`
+                        : "—"}
+                    </td>
+                    <td className="py-2 text-right text-gray-600">
+                      {valorEstoque != null ? formatCurrency(valorEstoque) : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot className="border-t font-medium">
+              <tr>
+                <td colSpan={4} className="pt-2 text-gray-700">Total em estoque</td>
+                <td className="pt-2 text-right text-gray-900">
+                  {formatCurrency(
+                    itens.reduce((sum, item) => {
+                      if (item.custo_medio == null) return sum;
+                      return sum + Number(item.estoque_atual) * item.custo_medio;
+                    }, 0)
+                  )}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+          <Pagination
+            pagina={pagina}
+            totalPaginas={Math.ceil(itens.length / POR_PAGINA)}
+            total={itens.length}
+            label="itens"
+            onPageChange={setPagina}
+          />
+        </>
       )}
 
       <BaixaSemVendaModal open={baixaOpen} onClose={() => setBaixaOpen(false)} itens={itens} />

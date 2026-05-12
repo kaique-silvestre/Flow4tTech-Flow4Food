@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Pagination, paginar } from "@/components/ui/pagination";
 import { InsumoEditModal } from "./InsumoEditModal";
 import {
   useAllInsumos,
@@ -11,6 +12,8 @@ import {
 
 type Filtro = "ativos" | "inativos" | "todos";
 
+const POR_PAGINA = 20;
+
 export function InsumosPage() {
   const { data: insumos = [], isLoading } = useAllInsumos();
   const toggleAtivo = useToggleInsumoAtivo();
@@ -20,6 +23,7 @@ export function InsumosPage() {
   const [editing, setEditing] = useState<InsumoResponse | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [filtro, setFiltro] = useState<Filtro>("ativos");
+  const [pagina, setPagina] = useState(1);
 
   const insumosFiltrados = insumos.filter((i) =>
     filtro === "todos" ? true : filtro === "ativos" ? i.ativo : !i.ativo,
@@ -46,7 +50,7 @@ export function InsumosPage() {
         {(["ativos", "inativos", "todos"] as const).map((f) => (
           <button
             key={f}
-            onClick={() => setFiltro(f)}
+            onClick={() => { setFiltro(f); setPagina(1); }}
             className={`rounded border px-3 py-1 text-sm capitalize ${
               filtro === f ? "bg-gray-900 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
             }`}
@@ -65,6 +69,7 @@ export function InsumosPage() {
       ) : insumosFiltrados.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum insumo encontrado.</p>
       ) : (
+        <div>
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b text-left text-gray-500">
@@ -76,7 +81,7 @@ export function InsumosPage() {
             </tr>
           </thead>
           <tbody>
-            {insumosFiltrados.map((insumo) => (
+            {paginar(insumosFiltrados, pagina, POR_PAGINA).map((insumo) => (
               <tr key={insumo.id} className="border-b last:border-0">
                 <td className={`py-2 pr-4 ${!insumo.ativo ? "text-gray-400 line-through" : ""}`}>
                   {insumo.nome}
@@ -127,6 +132,14 @@ export function InsumosPage() {
             ))}
           </tbody>
         </table>
+        <Pagination
+          pagina={pagina}
+          totalPaginas={Math.ceil(insumosFiltrados.length / POR_PAGINA)}
+          total={insumosFiltrados.length}
+          label="insumos"
+          onPageChange={setPagina}
+        />
+        </div>
       )}
 
       <InsumoEditModal

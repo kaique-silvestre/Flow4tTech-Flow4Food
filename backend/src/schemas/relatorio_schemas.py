@@ -30,6 +30,7 @@ class VendasDoDiaResponse(BaseModel):
     faturamento_bruto: Decimal
     total_descontos: Decimal
     total_cortesias: Decimal
+    total_comissoes: Decimal
     faturamento_liquido: Decimal
     por_metodo: list[PagamentoResumo]
     comandas: list[ComandaRelatorioItem]
@@ -46,6 +47,7 @@ class FechamentoCaixaResponse(BaseModel):
     faturamento_bruto: Decimal
     descontos: Decimal
     cortesias: Decimal
+    total_comissoes: Decimal
     faturamento_liquido: Decimal
     por_metodo: list[PagamentoResumo]
 
@@ -63,6 +65,7 @@ class DREResponse(BaseModel):
     faturamento_liquido: Decimal
     cmv: Decimal
     perdas: Decimal
+    comissoes: Decimal
     total_custos: Decimal
     lucro_bruto: Decimal
     margem_percentual: Decimal
@@ -102,6 +105,7 @@ class VendasGarcomItem(BaseModel):
     qtd_comandas: int
     faturamento: Decimal
     ticket_medio: Decimal
+    comissao: Decimal
 
 
 class VendasPorGarcomResponse(BaseModel):

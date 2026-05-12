@@ -65,9 +65,11 @@ def vendas_do_dia(db: Session, data: Optional[datetime.date] = None) -> VendasDo
     comandas = rr.list_fechadas_no_periodo(db, start, end)
     garcom_names, cortesias_map, pagamentos_map, por_metodo = _aggregate(db, comandas)
 
+    ids = [c.id for c in comandas]
     bruto = sum((c.total or Decimal("0") for c in comandas), Decimal("0"))
     descontos = sum((c.desconto_valor or Decimal("0") for c in comandas), Decimal("0"))
     cortesias_total = sum(cortesias_map.values(), Decimal("0"))
+    comissoes = rr.comissoes_total_por_comanda_ids(db, ids)
 
     return VendasDoDiaResponse(
         data=hoje,
@@ -75,6 +77,7 @@ def vendas_do_dia(db: Session, data: Optional[datetime.date] = None) -> VendasDo
         faturamento_bruto=bruto,
         total_descontos=descontos,
         total_cortesias=cortesias_total,
+        total_comissoes=comissoes,
         faturamento_liquido=bruto - descontos,
         por_metodo=[PagamentoResumo(**p) for p in por_metodo],
         comandas=_build_comanda_items(comandas, garcom_names, cortesias_map, pagamentos_map),
@@ -103,9 +106,11 @@ def fechamento_caixa(db: Session, data: datetime.date) -> FechamentoCaixaRespons
     comandas = rr.list_fechadas_no_periodo(db, start, end)
     garcom_names, cortesias_map, pagamentos_map, por_metodo = _aggregate(db, comandas)
 
+    ids = [c.id for c in comandas]
     bruto = sum((c.total or Decimal("0") for c in comandas), Decimal("0"))
     descontos = sum((c.desconto_valor or Decimal("0") for c in comandas), Decimal("0"))
     cortesias_total = sum(cortesias_map.values(), Decimal("0"))
+    comissoes = rr.comissoes_total_por_comanda_ids(db, ids)
 
     return FechamentoCaixaResponse(
         data=data,
@@ -113,6 +118,7 @@ def fechamento_caixa(db: Session, data: datetime.date) -> FechamentoCaixaRespons
         faturamento_bruto=bruto,
         descontos=descontos,
         cortesias=cortesias_total,
+        total_comissoes=comissoes,
         faturamento_liquido=bruto - descontos,
         por_metodo=[PagamentoResumo(**p) for p in por_metodo],
     )
@@ -131,7 +137,8 @@ def dre(db: Session, mes: str) -> DREResponse:
 
     cmv = rr.cmv_total(db, ids)
     perdas = rr.perdas_total(db, start, end)
-    total_custos = cmv + perdas
+    comissoes = rr.comissoes_total_por_comanda_ids(db, ids)
+    total_custos = cmv + perdas + comissoes
     lucro_bruto = faturamento_liquido - total_custos
     margem = (
         (lucro_bruto / faturamento_liquido * Decimal("100")).quantize(Decimal("0.01"))
@@ -149,6 +156,7 @@ def dre(db: Session, mes: str) -> DREResponse:
         faturamento_liquido=faturamento_liquido,
         cmv=cmv,
         perdas=perdas,
+        comissoes=comissoes,
         total_custos=total_custos,
         lucro_bruto=lucro_bruto,
         margem_percentual=margem,
@@ -223,6 +231,7 @@ def vendas_por_garcom(
     rows = rr.vendas_por_garcom_periodo(db, start, end)
     garcom_ids = [r["garcom_id"] for r in rows]
     nomes = rr._garcom_names(db, garcom_ids)
+    comissoes_map = rr.comissoes_por_garcom_periodo(db, start, end)
     garcons = []
     for r in rows:
         fat = r["faturamento"]
@@ -235,6 +244,7 @@ def vendas_por_garcom(
                 qtd_comandas=qtd,
                 faturamento=fat,
                 ticket_medio=ticket,
+                comissao=comissoes_map.get(r["garcom_id"], Decimal("0")),
             )
         )
     return VendasPorGarcomResponse(

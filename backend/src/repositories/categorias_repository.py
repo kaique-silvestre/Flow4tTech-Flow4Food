@@ -42,6 +42,16 @@ def update(
     return obj
 
 
+def toggle_ativo(db: Session, categoria_id: int) -> Optional[Categoria]:
+    obj = get_by_id(db, categoria_id)
+    if obj is None:
+        return None
+    obj.ativo = not obj.ativo
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+
 def delete(db: Session, categoria_id: int) -> bool:
     obj = get_by_id(db, categoria_id)
     if obj is None:

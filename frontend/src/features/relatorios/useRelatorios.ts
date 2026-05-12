@@ -26,6 +26,7 @@ export interface VendasDoDiaResponse {
   faturamento_bruto: number;
   total_descontos: number;
   total_cortesias: number;
+  total_comissoes: number;
   faturamento_liquido: number;
   por_metodo: PagamentoResumo[];
   comandas: ComandaRelatorioItem[];
@@ -42,6 +43,7 @@ export interface FechamentoCaixaResponse {
   faturamento_bruto: number;
   descontos: number;
   cortesias: number;
+  total_comissoes: number;
   faturamento_liquido: number;
   por_metodo: PagamentoResumo[];
 }
@@ -105,6 +107,7 @@ export interface DREResponse {
   faturamento_liquido: number;
   cmv: number;
   perdas: number;
+  comissoes: number;
   total_custos: number;
   lucro_bruto: number;
   margem_percentual: number;
@@ -144,6 +147,7 @@ export interface VendasGarcomItem {
   qtd_comandas: number;
   faturamento: number;
   ticket_medio: number;
+  comissao: number;
 }
 
 export interface VendasPorGarcomResponse {

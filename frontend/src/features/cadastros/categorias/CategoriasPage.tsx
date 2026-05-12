@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CategoriaModal } from "./CategoriaModal";
-import { useCategorias, useDeleteCategoria, type Categoria } from "./useCategorias";
+import { useCategorias, useToggleCategoriaAtivo, type Categoria } from "./useCategorias";
+
+type Filtro = "ativos" | "inativos" | "todos";
 
 export function CategoriasPage() {
   const { data: categorias = [], isLoading } = useCategorias();
-  const deleteMutation = useDeleteCategoria();
+  const toggleAtivo = useToggleCategoriaAtivo();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Categoria | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [filtro, setFiltro] = useState<Filtro>("ativos");
 
   function openCreate() {
     setEditing(null);
@@ -32,11 +33,31 @@ export function CategoriasPage() {
     });
   }
 
+  const categoriasFiltradas = categorias.filter((cat) => {
+    if (filtro === "ativos") return cat.ativo;
+    if (filtro === "inativos") return !cat.ativo;
+    return true;
+  });
+
   return (
     <div className="p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Categorias</h1>
         <Button onClick={openCreate}>Nova Categoria</Button>
+      </div>
+
+      <div className="mb-3 flex gap-1">
+        {(["ativos", "inativos", "todos"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFiltro(f)}
+            className={`rounded border px-3 py-1 text-sm capitalize ${
+              filtro === f ? "bg-gray-900 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            {f === "ativos" ? "Ativos" : f === "inativos" ? "Inativos" : "Todos"}
+          </button>
+        ))}
       </div>
 
       {isLoading ? (
@@ -45,18 +66,22 @@ export function CategoriasPage() {
             <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />
           ))}
         </div>
-      ) : categorias.length === 0 ? (
-        <p className="text-sm text-gray-500">Nenhuma categoria cadastrada.</p>
+      ) : categoriasFiltradas.length === 0 ? (
+        <p className="text-sm text-gray-500">Nenhuma categoria encontrada.</p>
       ) : (
         <div className="rounded border divide-y text-sm">
-          {categorias.map((cat) => {
-            const hasChildren = (cat.children ?? []).length > 0;
+          {categoriasFiltradas.map((cat) => {
+            const childrenVisiveis = (cat.children ?? []).filter((ch) => {
+              if (filtro === "ativos") return ch.ativo;
+              if (filtro === "inativos") return !ch.ativo;
+              return true;
+            });
+            const hasChildren = childrenVisiveis.length > 0;
             const isOpen = expanded.has(cat.id);
 
             return (
               <div key={cat.id}>
-                {/* Parent row */}
-                <div className="flex items-center justify-between px-4 py-2 bg-white hover:bg-gray-50">
+                <div className={`flex items-center justify-between px-4 py-2 hover:bg-gray-50 ${!cat.ativo ? "opacity-60" : "bg-white"}`}>
                   <div className="flex items-center gap-2">
                     {hasChildren ? (
                       <button
@@ -68,10 +93,12 @@ export function CategoriasPage() {
                     ) : (
                       <span className="w-4" />
                     )}
-                    <span className="font-medium text-gray-900">{cat.nome}</span>
+                    <span className={`font-medium ${cat.ativo ? "text-gray-900" : "text-gray-400 line-through"}`}>
+                      {cat.nome}
+                    </span>
                     {hasChildren && (
                       <span className="text-xs text-gray-400">
-                        ({cat.children.length} subcategoria{cat.children.length !== 1 ? "s" : ""})
+                        ({childrenVisiveis.length} subcategoria{childrenVisiveis.length !== 1 ? "s" : ""})
                       </span>
                     )}
                   </div>
@@ -82,23 +109,25 @@ export function CategoriasPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setConfirmDelete(cat.id)}
-                      className="text-red-600 hover:text-red-700"
+                      onClick={() => toggleAtivo.mutate(cat.id)}
+                      disabled={toggleAtivo.isPending}
+                      className={cat.ativo ? "text-yellow-600 hover:text-yellow-700" : "text-green-600 hover:text-green-700"}
                     >
-                      Remover
+                      {cat.ativo ? "Desativar" : "Reativar"}
                     </Button>
                   </div>
                 </div>
 
-                {/* Children rows */}
                 {hasChildren && isOpen && (
                   <div className="divide-y border-t bg-gray-50">
-                    {cat.children.map((child) => (
+                    {childrenVisiveis.map((child) => (
                       <div
                         key={child.id}
                         className="flex items-center justify-between px-4 py-2 pl-10 hover:bg-gray-100"
                       >
-                        <span className="text-gray-700">{child.nome}</span>
+                        <span className={child.ativo ? "text-gray-700" : "text-gray-400 line-through"}>
+                          {child.nome}
+                        </span>
                         <div className="flex gap-2">
                           <Button size="sm" variant="outline" onClick={() => openEdit(child)}>
                             Editar
@@ -106,10 +135,11 @@ export function CategoriasPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setConfirmDelete(child.id)}
-                            className="text-red-600 hover:text-red-700"
+                            onClick={() => toggleAtivo.mutate(child.id)}
+                            disabled={toggleAtivo.isPending}
+                            className={child.ativo ? "text-yellow-600 hover:text-yellow-700" : "text-green-600 hover:text-green-700"}
                           >
-                            Remover
+                            {child.ativo ? "Desativar" : "Reativar"}
                           </Button>
                         </div>
                       </div>
@@ -126,17 +156,6 @@ export function CategoriasPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         editing={editing}
-      />
-      <ConfirmDialog
-        open={confirmDelete !== null}
-        title="Remover categoria?"
-        confirmLabel="Remover"
-        onConfirm={() => {
-          deleteMutation.mutate(confirmDelete!);
-          setConfirmDelete(null);
-        }}
-        onCancel={() => setConfirmDelete(null)}
-        isPending={deleteMutation.isPending}
       />
     </div>
   );
