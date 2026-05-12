@@ -81,7 +81,11 @@ export function InsumosPage() {
                 <td className={`py-2 pr-4 ${!insumo.ativo ? "text-gray-400 line-through" : ""}`}>
                   {insumo.nome}
                 </td>
-                <td className="py-2 pr-4 text-gray-600">{Number(insumo.estoque_atual).toFixed(2)}</td>
+                <td className="py-2 pr-4 text-gray-600">
+                  {insumo.unidade_base === "kg"
+                    ? Number(insumo.estoque_atual).toFixed(3)
+                    : Math.round(Number(insumo.estoque_atual)).toString()}
+                </td>
                 <td className="py-2 pr-4 text-gray-600">{insumo.unidade_base}</td>
                 <td className="py-2 pr-4">
                   {insumo.ativo ? (

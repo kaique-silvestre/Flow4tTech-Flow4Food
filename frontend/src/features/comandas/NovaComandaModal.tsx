@@ -45,7 +45,8 @@ export function NovaComandaModal({ open, onClose }: Props) {
 
   useEffect(() => {
     if (tipo !== "nome") return;
-    const trimmed = (identificacao ?? "").trim();
+    const raw = typeof identificacao === "string" ? identificacao : "";
+    const trimmed = raw.trim();
     const prev = prevIdentificacaoRef.current;
     prevIdentificacaoRef.current = trimmed;
     const atual = getValues("pessoas") ?? [];
