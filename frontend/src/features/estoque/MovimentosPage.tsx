@@ -26,7 +26,7 @@ const TIPO_LABEL: Record<string, string> = {
 };
 
 export function MovimentosPage() {
-  const [filters, setFilters] = useState<MovimentoFilters>({ pagina: 1, por_pagina: 50 });
+  const [filters, setFilters] = useState<MovimentoFilters>({ pagina: 1, por_pagina: 15 });
   const { data: result, isLoading } = useMovimentos(filters);
   const { data: itens = [] } = useSaldoEstoque();
 
@@ -150,7 +150,7 @@ export function MovimentosPage() {
                 value={filters.por_pagina ?? 50}
                 onChange={(e) => setFilters((f) => ({ ...f, por_pagina: Number(e.target.value), pagina: 1 }))}
               >
-                {[25, 50, 100].map((n) => (
+                {[15, 25, 50, 100].map((n) => (
                   <option key={n} value={n}>{n} por página</option>
                 ))}
               </select>

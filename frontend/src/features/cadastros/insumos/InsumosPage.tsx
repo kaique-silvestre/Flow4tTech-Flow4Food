@@ -12,7 +12,7 @@ import {
 
 type Filtro = "ativos" | "inativos" | "todos";
 
-const POR_PAGINA = 20;
+const POR_PAGINA = 12;
 
 export function InsumosPage() {
   const { data: insumos = [], isLoading } = useAllInsumos();
