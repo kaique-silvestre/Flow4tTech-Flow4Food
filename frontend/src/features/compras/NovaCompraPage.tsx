@@ -136,8 +136,17 @@ export function NovaCompraPage() {
 
   function handleInsumoCreated(insumo: InsumoResponse) {
     if (insumoModalIndex !== null) {
-      setValue(`itens.${insumoModalIndex}.item_id`, insumo.id);
-      handleItemChange(insumoModalIndex, insumo);
+      const currentItemId = Number(getValues(`itens.${insumoModalIndex}.item_id`));
+      if (currentItemId !== 0) {
+        // Row already has an insumo — append a new row below
+        append({ item_id: insumo.id, quantidade: 0, custo_total: 0 });
+        setUnitarios((prev) => [...prev, ""]);
+        setUnitSels((prev) => [...prev, insumo.unidade_base]);
+      } else {
+        // Empty row — fill it
+        setValue(`itens.${insumoModalIndex}.item_id`, insumo.id);
+        handleItemChange(insumoModalIndex, insumo);
+      }
     }
     setInsumoModalIndex(null);
   }

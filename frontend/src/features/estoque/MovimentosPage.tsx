@@ -153,25 +153,14 @@ export function MovimentosPage() {
             <span className="text-gray-500">
               Página {filters.pagina ?? 1} de {totalPaginas} · {result.total} movimentos
             </span>
-            <div className="flex items-center gap-2">
-              <select
-                className="rounded border px-2 py-1 text-sm"
-                value={filters.por_pagina ?? 50}
-                onChange={(e) => setFilters((f) => ({ ...f, por_pagina: Number(e.target.value), pagina: 1 }))}
-              >
-                {[15, 25, 50, 100].map((n) => (
-                  <option key={n} value={n}>{n} por página</option>
-                ))}
-              </select>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={(filters.pagina ?? 1) >= totalPaginas}
-                onClick={() => setPage((filters.pagina ?? 1) + 1)}
-              >
-                Próximo →
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={(filters.pagina ?? 1) >= totalPaginas}
+              onClick={() => setPage((filters.pagina ?? 1) + 1)}
+            >
+              Próximo →
+            </Button>
           </div>
         </>
       )}
