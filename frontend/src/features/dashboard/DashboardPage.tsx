@@ -236,21 +236,21 @@ export function DashboardPage() {
               </>
             ) : (
               <>
-                <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-                  <p className="text-xs text-green-700 uppercase tracking-wide">Faturamento Hoje</p>
-                  <p className="mt-1 text-2xl font-bold text-green-700">
+                <div className="rounded-lg border bg-white p-4">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Faturamento Hoje</p>
+                  <p className="mt-1 text-2xl font-bold text-green-600">
                     {formatCurrency(data?.faturamento_hoje ?? 0)}
                   </p>
                 </div>
-                <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-                  <p className="text-xs text-green-700 uppercase tracking-wide">Ticket Médio</p>
-                  <p className="mt-1 text-2xl font-bold text-green-700">
+                <div className="rounded-lg border bg-white p-4">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Ticket Médio</p>
+                  <p className="mt-1 text-2xl font-bold text-green-600">
                     {formatCurrency(data?.ticket_medio_hoje ?? 0)}
                   </p>
                 </div>
-                <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-                  <p className="text-xs text-green-700 uppercase tracking-wide">CMV Hoje</p>
-                  <p className="mt-1 text-2xl font-bold text-green-700">
+                <div className="rounded-lg border bg-white p-4">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">CMV Hoje</p>
+                  <p className="mt-1 text-2xl font-bold text-green-600">
                     {formatCurrency(data?.cmv_hoje ?? 0)}
                   </p>
                   <p className="mt-0.5 text-sm font-medium text-green-600">
