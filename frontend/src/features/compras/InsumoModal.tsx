@@ -17,7 +17,6 @@ const insumoRapidoSchema = z.object({
   nome: z.string().min(1, "Nome obrigatório"),
   categoria_id: z.coerce.number().int().positive("Selecione uma categoria"),
   unidade_base: z.enum(["un", "g", "kg"], { required_error: "Selecione uma unidade" }),
-  quantidade_caixa: z.coerce.number().int().positive().optional().or(z.literal("")),
 });
 
 type InsumoRapidoFormValues = z.infer<typeof insumoRapidoSchema>;
@@ -37,13 +36,10 @@ export function InsumoModal({ open, onClose, onSuccess }: Props) {
     register,
     handleSubmit,
     reset,
-    watch,
     formState: { errors },
   } = useForm<InsumoRapidoFormValues>({
     resolver: zodResolver(insumoRapidoSchema),
   });
-
-  const unidade = watch("unidade_base");
 
   function handleClose() {
     reset();
@@ -56,7 +52,7 @@ export function InsumoModal({ open, onClose, onSuccess }: Props) {
         nome: data.nome,
         categoria_id: data.categoria_id,
         unidade_base: data.unidade_base,
-        quantidade_caixa: data.quantidade_caixa ? Number(data.quantidade_caixa) : null,
+        quantidade_caixa: null,
       },
       {
         onSuccess: (insumo) => {
@@ -108,25 +104,7 @@ export function InsumoModal({ open, onClose, onSuccess }: Props) {
               <option value="kg">kg (quilos)</option>
             </select>
             {errors.unidade_base && <p className="text-xs text-red-500">{errors.unidade_base.message}</p>}
-            {unidade === "kg" && <p className="text-xs text-gray-400">Compras poderão ser registradas em kg ou g</p>}
-            {unidade === "g" && <p className="text-xs text-gray-400">Compras poderão ser registradas em g ou kg</p>}
-
-            {unidade === "un" && <p className="text-xs text-gray-400">Informe qtd por caixa abaixo para permitir compra em cx</p>}
           </div>
-
-          {unidade === "un" && (
-            <div className="space-y-1">
-              <Label htmlFor="qtd-caixa">Qtd por caixa (opcional)</Label>
-              <Input
-                id="qtd-caixa"
-                type="number"
-                min="1"
-                step="1"
-                placeholder="Ex: 24"
-                {...register("quantidade_caixa")}
-              />
-            </div>
-          )}
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={handleClose}>

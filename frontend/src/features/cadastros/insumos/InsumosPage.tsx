@@ -69,7 +69,7 @@ export function InsumosPage() {
           <thead>
             <tr className="border-b text-left text-gray-500">
               <th className="py-2 pr-4">Nome</th>
-              <th className="py-2 pr-4">Qtd/caixa</th>
+              <th className="py-2 pr-4">Estoque</th>
               <th className="py-2 pr-4">Unidade</th>
               <th className="py-2 pr-4">Status</th>
               <th className="py-2" />
@@ -81,7 +81,7 @@ export function InsumosPage() {
                 <td className={`py-2 pr-4 ${!insumo.ativo ? "text-gray-400 line-through" : ""}`}>
                   {insumo.nome}
                 </td>
-                <td className="py-2 pr-4 text-gray-600">{insumo.quantidade_caixa ?? "—"}</td>
+                <td className="py-2 pr-4 text-gray-600">{Number(insumo.estoque_atual).toFixed(2)}</td>
                 <td className="py-2 pr-4 text-gray-600">{insumo.unidade_base}</td>
                 <td className="py-2 pr-4">
                   {insumo.ativo ? (
