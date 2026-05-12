@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useFornecedores, useCreateFornecedor } from "@/features/cadastros/fornecedores/useFornecedores";
 import { useInsumos, type InsumoResponse } from "@/features/estoque/useInsumos";
 import { formatCurrency } from "@/lib/format";
+import { getFamilyOptions, toBase } from "@/lib/units";
 import { compraSchema, type CompraFormValues } from "./compraSchemas";
 import { useCreateCompra } from "./useCompras";
 import { InsumoModal } from "./InsumoModal";
@@ -26,6 +27,7 @@ export function NovaCompraPage() {
 
   // custo_unitario per row (not in RHF schema — UI only)
   const [unitarios, setUnitarios] = useState<string[]>([""]); // one per row
+  const [unitSels, setUnitSels] = useState<string[]>([""]); // selected unit per row
   const lastEditedRef = useRef<Record<number, LastEdited>>({});
 
   const today = new Date().toISOString().split("T")[0];
@@ -127,14 +129,20 @@ export function NovaCompraPage() {
   function handleAppend() {
     append({ item_id: 0, quantidade: 0, custo_total: 0 });
     setUnitarios((prev) => [...prev, ""]);
+    setUnitSels((prev) => [...prev, ""]);
   }
 
-  function handleItemChange(index: number) {
+  function handleItemChange(index: number, item?: InsumoResponse) {
     setValue(`itens.${index}.quantidade`, 0 as never);
     setValue(`itens.${index}.custo_total`, 0 as never);
     setUnitarios((prev) => {
       const next = [...prev];
       next[index] = "";
+      return next;
+    });
+    setUnitSels((prev) => {
+      const next = [...prev];
+      next[index] = item?.unidade_base ?? "";
       return next;
     });
     delete lastEditedRef.current[index];
@@ -143,6 +151,7 @@ export function NovaCompraPage() {
   function handleRemove(index: number) {
     remove(index);
     setUnitarios((prev) => prev.filter((_, i) => i !== index));
+    setUnitSels((prev) => prev.filter((_, i) => i !== index));
     const newLastEdited: Record<number, LastEdited> = {};
     Object.entries(lastEditedRef.current).forEach(([k, v]) => {
       const ki = parseInt(k);
@@ -153,7 +162,19 @@ export function NovaCompraPage() {
   }
 
   function onSubmit(data: CompraFormValues) {
-    createCompra.mutate(data);
+    const converted: CompraFormValues = {
+      ...data,
+      itens: data.itens.map((row, index) => {
+        const itemId = row.item_id;
+        const item = itensSimples.find((i) => i.id === Number(itemId));
+        if (!item) return row;
+        const options = getFamilyOptions(item.unidade_base, item.quantidade_caixa);
+        const selVal = unitSels[index] || item.unidade_base;
+        const opt = options.find((o) => o.value === selVal) ?? options[0];
+        return { ...row, quantidade: toBase(Number(row.quantidade), opt) };
+      }),
+    };
+    createCompra.mutate(converted);
   }
 
   return (
@@ -229,7 +250,7 @@ export function NovaCompraPage() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-[1fr_90px_70px_100px_110px_32px] gap-2 text-xs text-gray-500 px-1">
+          <div className="grid grid-cols-[1fr_90px_110px_100px_110px_32px] gap-2 text-xs text-gray-500 px-1">
             <span>Item</span>
             <span>Qtd</span>
             <span>Unidade</span>
@@ -241,16 +262,21 @@ export function NovaCompraPage() {
           {fields.map((field, index) => {
             const itemId = itensWatch?.[index]?.item_id;
             const item = itensSimples.find((i) => i.id === Number(itemId));
+            const familyOpts = item ? getFamilyOptions(item.unidade_base, item.quantidade_caixa) : [];
+            const selUnit = unitSels[index] || item?.unidade_base || "";
 
             return (
-              <div key={field.id} className="grid grid-cols-[1fr_90px_70px_100px_110px_32px] gap-2 items-start">
+              <div key={field.id} className="grid grid-cols-[1fr_90px_110px_100px_110px_32px] gap-2 items-start">
                 {/* Item selector */}
                 <div>
                   <select
                     className="w-full rounded border px-2 py-1.5 text-sm"
                     {...register(`itens.${index}.item_id`, {
                       setValueAs: (v) => Number(v),
-                      onChange: () => handleItemChange(index),
+                      onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
+                        const found = itensSimples.find((i) => i.id === Number(e.target.value));
+                        handleItemChange(index, found);
+                      },
                     })}
                   >
                     <option value={0}>Selecione...</option>
@@ -287,7 +313,27 @@ export function NovaCompraPage() {
                 </div>
 
                 {/* Unidade */}
-                <div className="py-1.5 text-sm text-gray-500">{item?.unidade_base ?? "—"}</div>
+                <div>
+                  {familyOpts.length > 1 ? (
+                    <select
+                      className="w-full rounded border px-2 py-1.5 text-sm"
+                      value={selUnit}
+                      onChange={(e) =>
+                        setUnitSels((prev) => {
+                          const next = [...prev];
+                          next[index] = e.target.value;
+                          return next;
+                        })
+                      }
+                    >
+                      {familyOpts.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="py-1.5 text-sm text-gray-500">{item?.unidade_base ?? "—"}</div>
+                  )}
+                </div>
 
                 {/* Custo Unitário — UI only, not in RHF */}
                 <div>

@@ -724,7 +724,7 @@ Em `ConfiguracoesPage.tsx → TabBackup → download`, adicionar a data ISO no n
 
 ---
 
-## Issue 30 — UNI2: Reset de tabelas operacionais do banco
+## Issue 30 — UNI2: Reset de tabelas operacionais do banco ✅ Concluída
 
 **Tipo:** HITL
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -762,7 +762,7 @@ Criar uma migração Alembic que executa `DELETE FROM` nas tabelas operacionais 
 
 ---
 
-## Issue 31 — UNI1 + CP12 + FT1: Sistema de unidades por família (compra + ficha técnica)
+## Issue 31 — UNI1 + CP12 + FT1: Sistema de unidades por família (compra + ficha técnica) ✅ Concluída
 
 **Tipo:** HITL
 **Bloqueado por:** Issue 30 (UNI2) — reset banco precisa ocorrer antes para testes consistentes

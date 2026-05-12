@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import {
   type ProdutoResponse,
 } from "@/features/cadastros/produtos/useProdutos";
 import { produtoSchema, type ProdutoFormValues } from "./produtoSchemas";
+import { getFamilyOptions, toBase } from "@/lib/units";
 
 interface Props {
   open: boolean;
@@ -25,15 +26,24 @@ interface Props {
   editing?: ProdutoResponse | null;
 }
 
-function calcCmv(ficha: ProdutoFormValues["ficha_tecnica"], preco: string | undefined, insumos: ReturnType<typeof useInsumos>["data"]) {
+function calcCmv(
+  ficha: ProdutoFormValues["ficha_tecnica"],
+  preco: string | undefined,
+  insumos: ReturnType<typeof useInsumos>["data"],
+  selectedUnits: string[]
+) {
   if (!ficha?.length || !insumos) return null;
   let custo = 0;
-  for (const item of ficha) {
-    const insumo = insumos.find((i) => i.id === item.insumo_id);
+  for (let i = 0; i < ficha.length; i++) {
+    const item = ficha[i];
+    const insumo = insumos.find((ins) => ins.id === item.insumo_id);
     if (!insumo || insumo.custo_medio === null) return null;
     const qty = parseFloat(item.quantidade);
     if (isNaN(qty)) return null;
-    custo += insumo.custo_medio * qty;
+    const opts = getFamilyOptions(insumo.unidade_base, insumo.quantidade_caixa);
+    const selVal = selectedUnits[i] || insumo.unidade_base;
+    const opt = opts.find((o) => o.value === selVal) ?? opts[0];
+    custo += insumo.custo_medio * toBase(qty, opt);
   }
   const precoNum = parseFloat(preco ?? "");
   if (!precoNum) return { custo };
@@ -52,6 +62,8 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
   const { data: categoriasTree = [] } = useCategorias();
   const categorias = flattenCategorias(categoriasTree);
   const { data: insumos = [] } = useInsumos();
+
+  const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
 
   const {
     register,
@@ -79,24 +91,36 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
           quantidade: f.quantidade.toString(),
         })) ?? [],
       });
+      setSelectedUnits(
+        editing.ficha_tecnica?.map((f) => {
+          const ins = insumos.find((i) => i.id === f.insumo_id);
+          return ins?.unidade_base ?? "";
+        }) ?? []
+      );
     } else {
       reset({ nome: "", categoria_id: null, preco_venda: "", ficha_tecnica: [] });
+      setSelectedUnits([]);
     }
-  }, [editing, open, reset]);
+  }, [editing, open, reset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isPending = create.isPending || update.isPending;
 
-  const calc = calcCmv(watchedFicha, watchedPreco, insumos);
+  const calc = calcCmv(watchedFicha, watchedPreco, insumos, selectedUnits);
 
   function onSubmit(data: ProdutoFormValues) {
     const payload = {
       nome: data.nome,
       categoria_id: data.categoria_id ?? null,
       preco_venda: data.preco_venda || null,
-      ficha_tecnica: data.ficha_tecnica?.map((f) => ({
-        insumo_id: f.insumo_id,
-        quantidade: f.quantidade,
-      })) ?? [],
+      ficha_tecnica: data.ficha_tecnica?.map((f, i) => {
+        const insumo = insumos.find((ins) => ins.id === f.insumo_id);
+        if (!insumo) return { insumo_id: f.insumo_id, quantidade: f.quantidade };
+        const opts = getFamilyOptions(insumo.unidade_base, insumo.quantidade_caixa);
+        const selVal = selectedUnits[i] || insumo.unidade_base;
+        const opt = opts.find((o) => o.value === selVal) ?? opts[0];
+        const baseQty = toBase(parseFloat(f.quantidade) || 0, opt);
+        return { insumo_id: f.insumo_id, quantidade: String(baseQty) };
+      }) ?? [],
     };
     if (editing) {
       update.mutate({ id: editing.id, data: payload }, { onSuccess: onClose });
@@ -147,38 +171,84 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
                 type="button"
                 size="sm"
                 variant="outline"
-                onClick={() => append({ insumo_id: 0, quantidade: "" })}
+                onClick={() => {
+                  append({ insumo_id: 0, quantidade: "" });
+                  setSelectedUnits((prev) => [...prev, ""]);
+                }}
               >
                 + Insumo
               </Button>
             </div>
 
-            {fields.map((field, idx) => (
-              <div key={field.id} className="flex gap-2 items-start">
-                <select
-                  className="flex-1 rounded border px-2 py-1 text-sm"
-                  {...register(`ficha_tecnica.${idx}.insumo_id`, { setValueAs: (v) => Number(v) })}
-                >
-                  <option value={0}>Selecione insumo</option>
-                  {insumos.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.nome} ({i.unidade_base})
-                    </option>
-                  ))}
-                </select>
-                <Input
-                  className="w-24"
-                  type="number"
-                  step="0.001"
-                  min="0.001"
-                  placeholder="Qtd"
-                  {...register(`ficha_tecnica.${idx}.quantidade`)}
-                />
-                <Button type="button" size="sm" variant="outline" onClick={() => remove(idx)}>
-                  ✕
-                </Button>
-              </div>
-            ))}
+            {fields.map((field, idx) => {
+              const insumoId = watchedFicha?.[idx]?.insumo_id;
+              const insumo = insumos.find((i) => i.id === Number(insumoId));
+              const opts = insumo ? getFamilyOptions(insumo.unidade_base, insumo.quantidade_caixa) : [];
+              const selUnit = selectedUnits[idx] || insumo?.unidade_base || "";
+              return (
+                <div key={field.id} className="flex gap-2 items-start">
+                  <select
+                    className="flex-1 rounded border px-2 py-1 text-sm"
+                    {...register(`ficha_tecnica.${idx}.insumo_id`, {
+                      setValueAs: (v) => Number(v),
+                      onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
+                        const found = insumos.find((i) => i.id === Number(e.target.value));
+                        setSelectedUnits((prev) => {
+                          const next = [...prev];
+                          next[idx] = found?.unidade_base ?? "";
+                          return next;
+                        });
+                      },
+                    })}
+                  >
+                    <option value={0}>Selecione insumo</option>
+                    {insumos.map((i) => (
+                      <option key={i.id} value={i.id}>
+                        {i.nome} ({i.unidade_base})
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    className="w-20"
+                    type="number"
+                    step="0.001"
+                    min="0.001"
+                    placeholder="Qtd"
+                    {...register(`ficha_tecnica.${idx}.quantidade`)}
+                  />
+                  {opts.length > 1 ? (
+                    <select
+                      className="w-20 rounded border px-2 py-1 text-sm"
+                      value={selUnit}
+                      onChange={(e) =>
+                        setSelectedUnits((prev) => {
+                          const next = [...prev];
+                          next[idx] = e.target.value;
+                          return next;
+                        })
+                      }
+                    >
+                      {opts.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="w-20 py-1 text-sm text-gray-500">{insumo?.unidade_base ?? ""}</div>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      remove(idx);
+                      setSelectedUnits((prev) => prev.filter((_, i) => i !== idx));
+                    }}
+                  >
+                    ✕
+                  </Button>
+                </div>
+              );
+            })}
           </div>
 
           {calc && (
