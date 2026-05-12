@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMemo, useRef, useState } from "react";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,6 +137,7 @@ export function NovaCompraPage() {
   function handleInsumoCreated(insumo: InsumoResponse) {
     if (insumoModalIndex !== null) {
       setValue(`itens.${insumoModalIndex}.item_id`, insumo.id);
+      handleItemChange(insumoModalIndex, insumo);
     }
     setInsumoModalIndex(null);
   }
@@ -284,21 +285,29 @@ export function NovaCompraPage() {
               <div key={field.id} className="grid grid-cols-[1fr_90px_110px_100px_110px_32px] gap-2 items-start">
                 {/* Item selector */}
                 <div>
-                  <select
-                    className="w-full rounded border px-2 py-1.5 text-sm"
-                    {...register(`itens.${index}.item_id`, {
-                      setValueAs: (v) => Number(v),
-                      onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
-                        const found = itensSimples.find((i) => i.id === Number(e.target.value));
-                        handleItemChange(index, found);
-                      },
-                    })}
-                  >
-                    <option value={0}>Selecione...</option>
-                    {itensSimples.map((i) => (
-                      <option key={i.id} value={i.id}>{i.nome}</option>
-                    ))}
-                  </select>
+                  <Controller
+                    control={control}
+                    name={`itens.${index}.item_id`}
+                    render={({ field }) => (
+                      <select
+                        className="w-full rounded border px-2 py-1.5 text-sm"
+                        value={field.value || 0}
+                        onChange={(e) => {
+                          const newVal = Number(e.target.value);
+                          field.onChange(newVal);
+                          const found = itensSimples.find((i) => i.id === newVal);
+                          handleItemChange(index, found);
+                        }}
+                        onBlur={field.onBlur}
+                        ref={field.ref}
+                      >
+                        <option value={0}>Selecione...</option>
+                        {itensSimples.map((i) => (
+                          <option key={i.id} value={i.id}>{i.nome}</option>
+                        ))}
+                      </select>
+                    )}
+                  />
                   {errors.itens?.[index]?.item_id && (
                     <p className="text-xs text-red-500">{errors.itens[index]?.item_id?.message}</p>
                   )}
