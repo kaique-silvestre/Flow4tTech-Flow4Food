@@ -10,6 +10,12 @@ export function VendasDoDiaPage() {
 
   return (
     <div className="p-6">
+      <button
+        onClick={() => navigate("/relatorios")}
+        className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
+      >
+        ← Relatórios
+      </button>
       <div className="mb-6 flex items-center gap-4">
         <div>
           <h1 className="text-xl font-semibold">Vendas do Dia</h1>

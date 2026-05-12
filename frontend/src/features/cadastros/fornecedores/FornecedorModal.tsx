@@ -18,9 +18,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   editing?: Fornecedor | null;
+  onCreated?: (forn: Fornecedor) => void;
 }
 
-export function FornecedorModal({ open, onClose, editing }: Props) {
+export function FornecedorModal({ open, onClose, editing, onCreated }: Props) {
   const create = useCreateFornecedor();
   const update = useUpdateFornecedor();
 
@@ -50,7 +51,12 @@ export function FornecedorModal({ open, onClose, editing }: Props) {
     if (editing) {
       update.mutate({ id: editing.id, data: payload }, { onSuccess: onClose });
     } else {
-      create.mutate(payload, { onSuccess: onClose });
+      create.mutate(payload, {
+        onSuccess: (created) => {
+          onCreated?.(created);
+          onClose();
+        },
+      });
     }
   }
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { useFechamentoCaixa } from "./useRelatorios";
@@ -8,11 +9,18 @@ function toIsoDate(d: Date): string {
 }
 
 export function FechamentoCaixaPage() {
+  const navigate = useNavigate();
   const [data, setData] = useState(toIsoDate(new Date()));
   const { data: relatorio, isLoading } = useFechamentoCaixa(data);
 
   return (
     <div className="p-6">
+      <button
+        onClick={() => navigate("/relatorios")}
+        className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 print:hidden"
+      >
+        ← Relatórios
+      </button>
       {/* Controles — ocultos na impressão */}
       <div className="mb-6 flex items-center justify-between print:hidden">
         <h1 className="text-xl font-semibold">Fechamento de Caixa</h1>

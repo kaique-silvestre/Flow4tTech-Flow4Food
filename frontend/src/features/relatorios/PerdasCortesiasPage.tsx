@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/format";
 import { usePerdasCortesias } from "./useRelatorios";
 
@@ -21,6 +22,7 @@ function hoje(): string {
 }
 
 export function PerdasCortesiasPage() {
+  const navigate = useNavigate();
   const [dataInicio, setDataInicio] = useState(() => diasAtras(30));
   const [dataFim, setDataFim] = useState(hoje);
 
@@ -31,6 +33,12 @@ export function PerdasCortesiasPage() {
 
   return (
     <div className="p-6">
+      <button
+        onClick={() => navigate("/relatorios")}
+        className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
+      >
+        ← Relatórios
+      </button>
       <h1 className="mb-6 text-xl font-semibold">Perdas e Cortesias</h1>
 
       <div className="mb-6 flex flex-wrap gap-3">

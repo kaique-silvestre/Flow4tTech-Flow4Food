@@ -31,6 +31,12 @@ export function HistoricoComandasPage() {
 
   return (
     <div className="p-6">
+      <button
+        onClick={() => navigate("/relatorios")}
+        className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
+      >
+        ← Relatórios
+      </button>
       <h1 className="mb-4 text-xl font-semibold">Histórico de Comandas</h1>
 
       {/* Filtros */}

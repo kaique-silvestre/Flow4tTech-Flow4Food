@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/format";
 import { useDRE } from "./useRelatorios";
 
@@ -8,6 +9,7 @@ function mesAtual(): string {
 }
 
 export function DrePage() {
+  const navigate = useNavigate();
   const [mes, setMes] = useState(mesAtual);
   const { data, isLoading } = useDRE(mes);
 
@@ -15,6 +17,12 @@ export function DrePage() {
 
   return (
     <div className="p-6">
+      <button
+        onClick={() => navigate("/relatorios")}
+        className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
+      >
+        ← Relatórios
+      </button>
       <div className="mb-6 flex items-center gap-4">
         <h1 className="text-xl font-semibold">DRE Simplificado</h1>
         <input

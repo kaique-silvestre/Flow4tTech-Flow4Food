@@ -2,10 +2,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMemo, useRef, useState } from "react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useFornecedores, useCreateFornecedor } from "@/features/cadastros/fornecedores/useFornecedores";
+import { useFornecedores, type Fornecedor } from "@/features/cadastros/fornecedores/useFornecedores";
+import { FornecedorModal } from "@/features/cadastros/fornecedores/FornecedorModal";
 import { useInsumos, type InsumoResponse } from "@/features/estoque/useInsumos";
 import { formatCurrency } from "@/lib/format";
 import { getFamilyOptions, toBase } from "@/lib/units";
@@ -16,13 +18,12 @@ import { calculateLine, type LastEdited } from "./compraCalculations";
 
 export function NovaCompraPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const createCompra = useCreateCompra();
-  const { data: fornecedores = [], refetch: refetchFornecedores } = useFornecedores();
+  const { data: fornecedores = [] } = useFornecedores();
   const { data: itensSimples = [] } = useInsumos();
-  const createFornecedor = useCreateFornecedor();
 
-  const [novoFornNome, setNovoFornNome] = useState("");
-  const [showNovoForn, setShowNovoForn] = useState(false);
+  const [novoFornOpen, setNovoFornOpen] = useState(false);
   const [insumoModalIndex, setInsumoModalIndex] = useState<number | null>(null);
 
   // custo_unitario per row (not in RHF schema — UI only)
@@ -135,18 +136,11 @@ export function NovaCompraPage() {
     }
   }
 
-  function handleAddFornecedor() {
-    if (!novoFornNome.trim()) return;
-    createFornecedor.mutate(
-      { nome: novoFornNome.trim(), telefone: null, email: null },
-      {
-        onSuccess: () => {
-          refetchFornecedores();
-          setNovoFornNome("");
-          setShowNovoForn(false);
-        },
-      }
+  function handleFornecedorCreated(forn: Fornecedor) {
+    qc.setQueryData<Fornecedor[]>(["fornecedores"], (old = []) =>
+      old.some((f) => f.id === forn.id) ? old : [...old, forn]
     );
+    setValue("fornecedor_id", forn.id as never);
   }
 
   function handleInsumoCreated(insumo: InsumoResponse) {
@@ -237,30 +231,13 @@ export function NovaCompraPage() {
               <option key={f.id} value={f.id}>{f.nome}</option>
             ))}
           </select>
-          {!showNovoForn ? (
-            <button
-              type="button"
-              className="text-xs text-blue-600 hover:underline"
-              onClick={() => setShowNovoForn(true)}
-            >
-              + Cadastrar novo fornecedor
-            </button>
-          ) : (
-            <div className="flex gap-2 items-center">
-              <Input
-                className="text-sm"
-                placeholder="Nome do fornecedor"
-                value={novoFornNome}
-                onChange={(e) => setNovoFornNome(e.target.value)}
-              />
-              <Button type="button" size="sm" onClick={handleAddFornecedor} disabled={createFornecedor.isPending}>
-                Salvar
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => setShowNovoForn(false)}>
-                Cancelar
-              </Button>
-            </div>
-          )}
+          <button
+            type="button"
+            className="text-xs text-blue-600 hover:underline mt-0.5"
+            onClick={() => setNovoFornOpen(true)}
+          >
+            [ + Cadastrar novo fornecedor ]
+          </button>
         </div>
 
         {/* Data + Nota */}
@@ -335,13 +312,15 @@ export function NovaCompraPage() {
                   {errors.itens?.[index]?.item_id && (
                     <p className="text-xs text-red-500">{errors.itens[index]?.item_id?.message}</p>
                   )}
-                  <button
-                    type="button"
-                    className="text-xs text-blue-600 hover:underline mt-0.5"
-                    onClick={() => setInsumoModalIndex(index)}
-                  >
-                    [ + Cadastrar novo insumo ]
-                  </button>
+                  {index === fields.length - 1 && (
+                    <button
+                      type="button"
+                      className="text-xs text-blue-600 hover:underline mt-0.5"
+                      onClick={() => setInsumoModalIndex(index)}
+                    >
+                      [ + Cadastrar novo insumo ]
+                    </button>
+                  )}
                 </div>
 
                 {/* Quantidade */}
@@ -468,6 +447,11 @@ export function NovaCompraPage() {
         open={insumoModalIndex !== null}
         onClose={() => setInsumoModalIndex(null)}
         onSuccess={handleInsumoCreated}
+      />
+      <FornecedorModal
+        open={novoFornOpen}
+        onClose={() => setNovoFornOpen(false)}
+        onCreated={handleFornecedorCreated}
       />
     </div>
   );

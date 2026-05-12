@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,7 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCategorias, flattenCategorias } from "@/features/cadastros/categorias/useCategorias";
+import { useCategorias, flattenCategorias, type Categoria } from "@/features/cadastros/categorias/useCategorias";
+import { CategoriaModal } from "@/features/cadastros/categorias/CategoriaModal";
 import { useCreateInsumo, type InsumoResponse } from "@/features/estoque/useInsumos";
 
 const insumoRapidoSchema = z.object({
@@ -28,18 +31,28 @@ interface Props {
 }
 
 export function InsumoModal({ open, onClose, onSuccess }: Props) {
+  const qc = useQueryClient();
   const { data: categoriasTree = [] } = useCategorias();
   const categorias = flattenCategorias(categoriasTree);
   const createInsumo = useCreateInsumo();
+  const [novaCategOpen, setNovaCategOpen] = useState(false);
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<InsumoRapidoFormValues>({
     resolver: zodResolver(insumoRapidoSchema),
   });
+
+  function handleCategoriaCreated(cat: Categoria) {
+    qc.setQueryData<Categoria[]>(["categorias"], (old = []) =>
+      old.some((c) => c.id === cat.id) ? old : [...old, { ...cat, children: [] }]
+    );
+    setValue("categoria_id", cat.id as never);
+  }
 
   function handleClose() {
     reset();
@@ -64,6 +77,7 @@ export function InsumoModal({ open, onClose, onSuccess }: Props) {
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -90,6 +104,13 @@ export function InsumoModal({ open, onClose, onSuccess }: Props) {
               ))}
             </select>
             {errors.categoria_id && <p className="text-xs text-red-500">{errors.categoria_id.message}</p>}
+            <button
+              type="button"
+              className="text-xs text-blue-600 hover:underline mt-0.5"
+              onClick={() => setNovaCategOpen(true)}
+            >
+              [ + Cadastrar nova categoria ]
+            </button>
           </div>
 
           <div className="space-y-1">
@@ -117,5 +138,11 @@ export function InsumoModal({ open, onClose, onSuccess }: Props) {
         </form>
       </DialogContent>
     </Dialog>
+    <CategoriaModal
+      open={novaCategOpen}
+      onClose={() => setNovaCategOpen(false)}
+      onCreated={handleCategoriaCreated}
+    />
+    </>
   );
 }

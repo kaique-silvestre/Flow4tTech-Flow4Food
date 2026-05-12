@@ -26,9 +26,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   editing: InsumoResponse | null;
+  onCreated?: (insumo: InsumoResponse) => void;
 }
 
-export function InsumoEditModal({ open, onClose, editing }: Props) {
+export function InsumoEditModal({ open, onClose, editing, onCreated }: Props) {
   const { data: categoriasTree = [] } = useCategorias();
   const categorias = flattenCategorias(categoriasTree);
   const createMutation = useCreateInsumo();
@@ -75,7 +76,12 @@ export function InsumoEditModal({ open, onClose, editing }: Props) {
         { onSuccess: handleClose },
       );
     } else {
-      createMutation.mutate(payload, { onSuccess: handleClose });
+      createMutation.mutate(payload, {
+        onSuccess: (created) => {
+          onCreated?.(created);
+          handleClose();
+        },
+      });
     }
   }
 

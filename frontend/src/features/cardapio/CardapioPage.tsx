@@ -16,7 +16,7 @@ import { ProdutoModal } from "./ProdutoModal";
 
 type FiltroAtivo = "ativos" | "inativos" | "todos";
 
-const POR_PAGINA = 20;
+const POR_PAGINA = 10;
 
 function calcCusto(produto: ProdutoResponse): number | null {
   if (!produto.ficha_tecnica?.length) return null;
@@ -48,6 +48,7 @@ export function CardapioPage() {
   const [confirmDeletar, setConfirmDeletar] = useState<number | null>(null);
   const [filtro, setFiltro] = useState<FiltroAtivo>("ativos");
   const [busca, setBusca] = useState("");
+  const [catFiltro, setCatFiltro] = useState<number | null>(null);
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [pagina, setPagina] = useState(1);
 
@@ -66,6 +67,7 @@ export function CardapioPage() {
     if (filtro === "ativos" && !p.ativo) return false;
     if (filtro === "inativos" && p.ativo) return false;
     if (busca && !p.nome.toLowerCase().includes(busca.toLowerCase())) return false;
+    if (catFiltro !== null && p.categoria_id !== catFiltro) return false;
     return true;
   });
 
@@ -86,7 +88,7 @@ export function CardapioPage() {
   ];
 
   return (
-    <div className="p-6">
+    <div className="p-6 min-h-full flex flex-col">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Cardápio</h1>
         <Button onClick={openCreate}>Novo Produto</Button>
@@ -108,6 +110,16 @@ export function CardapioPage() {
             </button>
           ))}
         </div>
+        <select
+          value={catFiltro ?? ""}
+          onChange={(e) => { setCatFiltro(e.target.value ? Number(e.target.value) : null); setPagina(1); }}
+          className="rounded border px-2 py-1.5 text-sm text-gray-700"
+        >
+          <option value="">Todas as categorias</option>
+          {categorias.map((c) => (
+            <option key={c.id} value={c.id}>{c.nome}</option>
+          ))}
+        </select>
         <Input
           placeholder="Buscar produto..."
           value={busca}
@@ -125,7 +137,7 @@ export function CardapioPage() {
       ) : produtosFiltrados.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum produto encontrado.</p>
       ) : (
-        <div>
+        <div className="flex-1 flex flex-col">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b text-left text-gray-500">
@@ -263,6 +275,7 @@ export function CardapioPage() {
             })}
           </tbody>
         </table>
+        <div className="flex-1" />
         <Pagination
           pagina={pagina}
           totalPaginas={Math.ceil(produtosFiltrados.length / POR_PAGINA)}

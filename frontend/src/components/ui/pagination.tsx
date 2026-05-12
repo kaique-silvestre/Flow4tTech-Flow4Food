@@ -11,7 +11,7 @@ interface PaginationProps {
 export function Pagination({ pagina, totalPaginas, total, label = "itens", onPageChange }: PaginationProps) {
   if (totalPaginas <= 1) return null;
   return (
-    <div className="mt-4 flex items-center justify-between text-sm">
+    <div className="sticky bottom-0 bg-white border-t border-gray-100 mt-4 py-2 flex items-center justify-between text-sm">
       <Button size="sm" variant="outline" disabled={pagina <= 1} onClick={() => onPageChange(pagina - 1)}>
         ← Anterior
       </Button>

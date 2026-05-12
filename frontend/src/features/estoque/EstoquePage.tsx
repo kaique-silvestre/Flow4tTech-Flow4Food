@@ -19,7 +19,7 @@ export function EstoquePage() {
   const [pagina, setPagina] = useState(1);
 
   return (
-    <div className="p-6">
+    <div className="p-6 min-h-full flex flex-col">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Estoque</h1>
         <Button onClick={() => setBaixaOpen(true)}>Baixa Sem Venda</Button>
@@ -56,7 +56,7 @@ export function EstoquePage() {
       ) : itens.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum item em estoque.</p>
       ) : (
-        <>
+        <div className="flex-1 flex flex-col">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b text-left text-gray-500">
@@ -105,6 +105,7 @@ export function EstoquePage() {
               </tr>
             </tfoot>
           </table>
+          <div className="flex-1" />
           <Pagination
             pagina={pagina}
             totalPaginas={Math.ceil(itens.length / POR_PAGINA)}
@@ -112,7 +113,7 @@ export function EstoquePage() {
             label="itens"
             onPageChange={setPagina}
           />
-        </>
+        </div>
       )}
 
       <BaixaSemVendaModal open={baixaOpen} onClose={() => setBaixaOpen(false)} itens={itens} />

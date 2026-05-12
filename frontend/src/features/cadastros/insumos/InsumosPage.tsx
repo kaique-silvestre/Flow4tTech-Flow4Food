@@ -40,7 +40,7 @@ export function InsumosPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 min-h-full flex flex-col">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Insumos</h1>
         <Button onClick={openCreate}>Novo Insumo</Button>
@@ -69,7 +69,7 @@ export function InsumosPage() {
       ) : insumosFiltrados.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum insumo encontrado.</p>
       ) : (
-        <div>
+        <div className="flex-1 flex flex-col">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b text-left text-gray-500">
@@ -132,6 +132,7 @@ export function InsumosPage() {
             ))}
           </tbody>
         </table>
+        <div className="flex-1" />
         <Pagination
           pagina={pagina}
           totalPaginas={Math.ceil(insumosFiltrados.length / POR_PAGINA)}

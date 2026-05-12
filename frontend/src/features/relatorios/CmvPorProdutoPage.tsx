@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { formatCurrency } from "@/lib/format";
 import { useCMVPorProduto } from "./useRelatorios";
 
@@ -16,10 +17,17 @@ const LABEL: Record<string, string> = {
 };
 
 export function CmvPorProdutoPage() {
+  const navigate = useNavigate();
   const { data, isLoading } = useCMVPorProduto();
 
   return (
     <div className="p-6">
+      <button
+        onClick={() => navigate("/relatorios")}
+        className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
+      >
+        ← Relatórios
+      </button>
       <h1 className="mb-6 text-xl font-semibold">CMV por Produto</h1>
 
       {isLoading ? (

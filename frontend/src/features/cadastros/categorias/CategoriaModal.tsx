@@ -18,9 +18,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   editing?: Categoria | null;
+  onCreated?: (cat: Categoria) => void;
 }
 
-export function CategoriaModal({ open, onClose, editing }: Props) {
+export function CategoriaModal({ open, onClose, editing, onCreated }: Props) {
   const create = useCreateCategoria();
   const update = useUpdateCategoria();
   const { data: categorias = [] } = useCategorias();
@@ -51,7 +52,12 @@ export function CategoriaModal({ open, onClose, editing }: Props) {
     if (editing) {
       update.mutate({ id: editing.id, data: payload }, { onSuccess: onClose });
     } else {
-      create.mutate(payload, { onSuccess: onClose });
+      create.mutate(payload, {
+        onSuccess: (created) => {
+          onCreated?.(created);
+          onClose();
+        },
+      });
     }
   }
 

@@ -38,7 +38,7 @@ export function MovimentosPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 min-h-full flex flex-col">
       <div className="mb-4">
         <h1 className="text-xl font-semibold">Histórico de Movimentações</h1>
       </div>
@@ -96,7 +96,7 @@ export function MovimentosPage() {
       ) : !result || result.itens.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum movimento encontrado.</p>
       ) : (
-        <>
+        <div className="flex-1 flex flex-col">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b text-left text-gray-500">
@@ -139,7 +139,8 @@ export function MovimentosPage() {
           </table>
 
           {/* Paginação */}
-          <div className="mt-4 flex items-center justify-between text-sm">
+          <div className="flex-1" />
+          <div className="sticky bottom-0 bg-white border-t border-gray-100 mt-4 py-2 flex items-center justify-between text-sm">
             <Button
               size="sm"
               variant="outline"
@@ -160,7 +161,7 @@ export function MovimentosPage() {
               Próximo →
             </Button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

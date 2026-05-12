@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,12 +12,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCategorias, flattenCategorias } from "@/features/cadastros/categorias/useCategorias";
-import { useInsumos } from "@/features/estoque/useInsumos";
+import { useInsumos, type InsumoResponse } from "@/features/estoque/useInsumos";
 import {
   useCreateProduto,
   useUpdateProduto,
   type ProdutoResponse,
 } from "@/features/cadastros/produtos/useProdutos";
+import { InsumoModal } from "@/features/compras/InsumoModal";
 import { produtoSchema, type ProdutoFormValues } from "./produtoSchemas";
 import { getFamilyOptions, toBase } from "@/lib/units";
 
@@ -57,6 +59,7 @@ function cmvColor(cmv: number): string {
 }
 
 export function ProdutoModal({ open, onClose, editing }: Props) {
+  const qc = useQueryClient();
   const create = useCreateProduto();
   const update = useUpdateProduto();
   const { data: categoriasTree = [] } = useCategorias();
@@ -64,11 +67,13 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
   const { data: insumos = [] } = useInsumos();
 
   const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
+  const [novoInsumoIdx, setNovoInsumoIdx] = useState<number | null>(null);
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     control,
     formState: { errors },
   } = useForm<ProdutoFormValues>({
@@ -105,6 +110,20 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
 
   const isPending = create.isPending || update.isPending;
 
+  function handleInsumoCreated(insumo: InsumoResponse) {
+    if (novoInsumoIdx === null) return;
+    qc.setQueryData<InsumoResponse[]>(["insumos", undefined], (old = []) =>
+      old.some((i) => i.id === insumo.id) ? old : [...old, insumo]
+    );
+    setValue(`ficha_tecnica.${novoInsumoIdx}.insumo_id`, insumo.id);
+    setSelectedUnits((prev) => {
+      const next = [...prev];
+      next[novoInsumoIdx] = insumo.unidade_base;
+      return next;
+    });
+    setNovoInsumoIdx(null);
+  }
+
   const calc = calcCmv(watchedFicha, watchedPreco, insumos, selectedUnits);
 
   function onSubmit(data: ProdutoFormValues) {
@@ -130,6 +149,7 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -187,27 +207,38 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
               const selUnit = selectedUnits[idx] || insumo?.unidade_base || "";
               return (
                 <div key={field.id} className="flex gap-2 items-start">
-                  <select
-                    className="flex-1 rounded border px-2 py-1 text-sm"
-                    {...register(`ficha_tecnica.${idx}.insumo_id`, {
-                      setValueAs: (v) => Number(v),
-                      onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
-                        const found = insumos.find((i) => i.id === Number(e.target.value));
-                        setSelectedUnits((prev) => {
-                          const next = [...prev];
-                          next[idx] = found?.unidade_base ?? "";
-                          return next;
-                        });
-                      },
-                    })}
-                  >
-                    <option value={0}>Selecione insumo</option>
-                    {insumos.map((i) => (
-                      <option key={i.id} value={i.id}>
-                        {i.nome} ({i.unidade_base})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex-1">
+                    <select
+                      className="w-full rounded border px-2 py-1 text-sm"
+                      {...register(`ficha_tecnica.${idx}.insumo_id`, {
+                        setValueAs: (v) => Number(v),
+                        onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
+                          const found = insumos.find((i) => i.id === Number(e.target.value));
+                          setSelectedUnits((prev) => {
+                            const next = [...prev];
+                            next[idx] = found?.unidade_base ?? "";
+                            return next;
+                          });
+                        },
+                      })}
+                    >
+                      <option value={0}>Selecione insumo</option>
+                      {insumos.map((i) => (
+                        <option key={i.id} value={i.id}>
+                          {i.nome} ({i.unidade_base})
+                        </option>
+                      ))}
+                    </select>
+                    {idx === fields.length - 1 && (
+                      <button
+                        type="button"
+                        className="text-xs text-blue-600 hover:underline mt-0.5"
+                        onClick={() => setNovoInsumoIdx(idx)}
+                      >
+                        [ + Cadastrar novo insumo ]
+                      </button>
+                    )}
+                  </div>
                   <Input
                     className="w-20"
                     type="number"
@@ -273,5 +304,12 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
         </form>
       </DialogContent>
     </Dialog>
+
+    <InsumoModal
+      open={novoInsumoIdx !== null}
+      onClose={() => setNovoInsumoIdx(null)}
+      onSuccess={handleInsumoCreated}
+    />
+    </>
   );
 }

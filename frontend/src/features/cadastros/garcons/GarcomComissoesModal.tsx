@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { paginar } from "@/components/ui/pagination";
 import {
   Dialog,
   DialogContent,
@@ -98,8 +99,11 @@ function ComissaoRow({ c, onUpdated }: { c: ComissaoResponse; onUpdated: () => v
   );
 }
 
+const COMISSOES_POR_PAGINA = 5;
+
 export function GarcomComissoesModal({ open, onClose, garcom }: Props) {
   const { data: stats, isLoading, refetch } = useGarcomStats(open ? garcom.id : 0);
+  const [pagina, setPagina] = useState(1);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -150,11 +154,35 @@ export function GarcomComissoesModal({ open, onClose, garcom }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {stats.comissoes.map((c) => (
+                    {paginar(stats.comissoes, pagina, COMISSOES_POR_PAGINA).map((c) => (
                       <ComissaoRow key={c.id} c={c} onUpdated={() => refetch()} />
                     ))}
                   </tbody>
                 </table>
+                {stats.comissoes.length > COMISSOES_POR_PAGINA && (
+                  <div className="mt-3 flex items-center justify-between text-sm text-gray-500">
+                    <span>{stats.comissoes.length} comissões</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                        disabled={pagina === 1}
+                        className="rounded border px-2 py-0.5 disabled:opacity-40 hover:bg-gray-50"
+                      >
+                        ‹
+                      </button>
+                      <span>
+                        {pagina} / {Math.ceil(stats.comissoes.length / COMISSOES_POR_PAGINA)}
+                      </span>
+                      <button
+                        onClick={() => setPagina((p) => Math.min(Math.ceil(stats.comissoes.length / COMISSOES_POR_PAGINA), p + 1))}
+                        disabled={pagina === Math.ceil(stats.comissoes.length / COMISSOES_POR_PAGINA)}
+                        className="rounded border px-2 py-0.5 disabled:opacity-40 hover:bg-gray-50"
+                      >
+                        ›
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

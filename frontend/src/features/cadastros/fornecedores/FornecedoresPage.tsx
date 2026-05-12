@@ -6,7 +6,7 @@ import { useFornecedores, useToggleFornecedorAtivo, type Fornecedor } from "./us
 
 type Filtro = "ativos" | "inativos" | "todos";
 
-const POR_PAGINA = 12;
+const POR_PAGINA = 10;
 
 export function FornecedoresPage() {
   const { data: fornecedores = [], isLoading } = useFornecedores();
@@ -34,7 +34,7 @@ export function FornecedoresPage() {
   });
 
   return (
-    <div className="p-6">
+    <div className="p-6 min-h-full flex flex-col">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Fornecedores</h1>
         <Button onClick={openCreate}>Novo Fornecedor</Button>
@@ -63,13 +63,13 @@ export function FornecedoresPage() {
       ) : fornecedoresFiltrados.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum fornecedor encontrado.</p>
       ) : (
-        <div>
+        <div className="flex-1 flex flex-col">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b text-left text-gray-500">
                 <th className="py-2 pr-4">Nome</th>
-                <th className="py-2 pr-4">Telefone</th>
                 <th className="py-2 pr-4">E-mail</th>
+                <th className="py-2 pr-4">Telefone</th>
                 <th className="py-2" />
               </tr>
             </thead>
@@ -79,8 +79,8 @@ export function FornecedoresPage() {
                   <td className={`py-2 pr-4 ${!f.ativo ? "text-gray-400 line-through" : ""}`}>
                     {f.nome}
                   </td>
-                  <td className="py-2 pr-4 text-gray-600">{f.telefone ?? "—"}</td>
                   <td className="py-2 pr-4 text-gray-600">{f.email ?? "—"}</td>
+                  <td className="py-2 pr-4 text-gray-600">{f.telefone ?? "—"}</td>
                   <td className="py-2 text-right space-x-2">
                     <Button size="sm" variant="outline" onClick={() => openEdit(f)}>
                       Editar
@@ -99,6 +99,7 @@ export function FornecedoresPage() {
               ))}
             </tbody>
           </table>
+          <div className="flex-1" />
           <Pagination
             pagina={pagina}
             totalPaginas={Math.ceil(fornecedoresFiltrados.length / POR_PAGINA)}
