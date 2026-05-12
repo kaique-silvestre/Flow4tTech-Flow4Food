@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,11 +35,15 @@ export function BaixaSemVendaModal({ open, onClose, itens, preSelectedItemId }: 
     defaultValues: { motivo: "perda" },
   });
 
+  const [inputUnit, setInputUnit] = useState<"g" | "kg">("kg");
+
   const itemId = watch("item_id");
   const selectedItem = itens.find((i) => i.id === Number(itemId));
+  const isWeight = selectedItem?.unidade_base === "g" || selectedItem?.unidade_base === "kg";
 
   useEffect(() => {
     if (open) {
+      setInputUnit("kg");
       reset({
         item_id: preSelectedItemId ?? (undefined as unknown as number),
         motivo: "perda",
@@ -50,7 +54,12 @@ export function BaixaSemVendaModal({ open, onClose, itens, preSelectedItemId }: 
   }, [open, preSelectedItemId, reset]);
 
   function onSubmit(data: BaixaSemVendaFormValues) {
-    baixa.mutate(data, { onSuccess: onClose });
+    let quantidade = Number(data.quantidade);
+    if (selectedItem && isWeight) {
+      if (inputUnit === "kg" && selectedItem.unidade_base === "g") quantidade = quantidade * 1000;
+      else if (inputUnit === "g" && selectedItem.unidade_base === "kg") quantidade = quantidade / 1000;
+    }
+    baixa.mutate({ ...data, quantidade }, { onSuccess: onClose });
   }
 
   return (
@@ -83,10 +92,24 @@ export function BaixaSemVendaModal({ open, onClose, itens, preSelectedItemId }: 
 
           {/* Quantidade */}
           <div className="space-y-1">
-            <Label htmlFor="quantidade">
-              Quantidade {selectedItem ? `(${selectedItem.unidade_base})` : ""}
-            </Label>
-            <Input id="quantidade" type="number" step="0.001" min="0" {...register("quantidade")} />
+            <Label htmlFor="quantidade">Quantidade</Label>
+            <div className="flex gap-2">
+              <Input id="quantidade" type="number" step="0.001" min="0" {...register("quantidade")} />
+              {isWeight ? (
+                <select
+                  className="rounded border px-2 py-1.5 text-sm"
+                  value={inputUnit}
+                  onChange={(e) => setInputUnit(e.target.value as "g" | "kg")}
+                >
+                  <option value="kg">kg</option>
+                  <option value="g">g</option>
+                </select>
+              ) : (
+                <span className="flex items-center text-sm text-gray-500">
+                  {selectedItem?.unidade_base ?? ""}
+                </span>
+              )}
+            </div>
             {errors.quantidade && <p className="text-xs text-red-500">{errors.quantidade.message}</p>}
           </div>
 
