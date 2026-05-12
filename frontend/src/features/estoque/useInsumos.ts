@@ -1,6 +1,14 @@
+import axios from "axios";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, type ApiErrorBody } from "@/lib/api";
 import { toast } from "@/lib/toast";
+
+function conflictMsg(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err) && err.response?.status === 409) {
+    return (err.response.data as ApiErrorBody)?.error?.message ?? "Já existe um insumo com este nome";
+  }
+  return fallback;
+}
 
 export interface InsumoResponse {
   id: number;
@@ -60,7 +68,7 @@ export function useCreateInsumo() {
       qc.invalidateQueries({ queryKey: [QK] });
       toast.success("Insumo criado.");
     },
-    onError: () => toast.error("Erro ao criar insumo."),
+    onError: (err) => toast.error(conflictMsg(err, "Erro ao criar insumo.")),
   });
 }
 
@@ -73,7 +81,7 @@ export function useUpdateInsumo() {
       qc.invalidateQueries({ queryKey: [QK] });
       toast.success("Insumo atualizado.");
     },
-    onError: () => toast.error("Erro ao atualizar insumo."),
+    onError: (err) => toast.error(conflictMsg(err, "Erro ao atualizar insumo.")),
   });
 }
 

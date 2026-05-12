@@ -302,6 +302,7 @@ export function NovaCompraPage() {
                     type="number"
                     step="0.001"
                     min="0"
+                    placeholder={selUnit ? `0.000 ${selUnit}` : "0.000"}
                     {...register(`itens.${index}.quantidade`, {
                       onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
                         handleQtdChange(index, e.target.value),

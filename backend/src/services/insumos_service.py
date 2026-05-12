@@ -1,5 +1,6 @@
 from typing import Optional
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
@@ -32,12 +33,20 @@ def get_insumo(db: Session, insumo_id: int) -> InsumoResponse:
 
 
 def create_insumo(db: Session, data: InsumoCreateRequest) -> InsumoResponse:
-    obj = insumos_repository.create(db, data)
+    try:
+        obj = insumos_repository.create(db, data)
+    except IntegrityError:
+        db.rollback()
+        raise AppError(ErrorCode.CONFLICT, "Já existe um insumo com este nome", http_status=409) from None
     return InsumoResponse.model_validate(obj)
 
 
 def update_insumo(db: Session, insumo_id: int, data: InsumoUpdateRequest) -> InsumoResponse:
-    obj = insumos_repository.update(db, insumo_id, data)
+    try:
+        obj = insumos_repository.update(db, insumo_id, data)
+    except IntegrityError:
+        db.rollback()
+        raise AppError(ErrorCode.CONFLICT, "Já existe um insumo com este nome", http_status=409) from None
     if obj is None:
         raise AppError(ErrorCode.NOT_FOUND, "Insumo não encontrado", http_status=404)
     return InsumoResponse.model_validate(obj)
