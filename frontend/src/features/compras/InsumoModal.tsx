@@ -110,6 +110,11 @@ export function InsumoModal({ open, onClose, onSuccess }: Props) {
               <option value="l">l (litros)</option>
             </select>
             {errors.unidade_base && <p className="text-xs text-red-500">{errors.unidade_base.message}</p>}
+            {unidade === "kg" && <p className="text-xs text-gray-400">Compras poderão ser registradas em kg ou g</p>}
+            {unidade === "g" && <p className="text-xs text-gray-400">Compras poderão ser registradas em g ou kg</p>}
+            {unidade === "l" && <p className="text-xs text-gray-400">Compras poderão ser registradas em l ou ml</p>}
+            {unidade === "ml" && <p className="text-xs text-gray-400">Compras poderão ser registradas em ml ou l</p>}
+            {unidade === "un" && <p className="text-xs text-gray-400">Informe qtd por caixa abaixo para permitir compra em cx</p>}
           </div>
 
           {unidade === "un" && (

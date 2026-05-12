@@ -58,6 +58,18 @@ export function NovaCompraPage() {
     return Math.round(v * 100) / 100;
   }
 
+  // Returns qty converted to the insumo's base unit for cost calculations.
+  // custo_unitario is always R$ per base unit.
+  function getBaseQty(index: number, qty: number): number {
+    const itemId = getValues(`itens.${index}.item_id`);
+    const item = itensSimples.find((i) => i.id === Number(itemId));
+    if (!item) return qty;
+    const opts = getFamilyOptions(item.unidade_base, item.quantidade_caixa);
+    const selVal = unitSels[index] || item.unidade_base;
+    const opt = opts.find((o) => o.value === selVal) ?? opts[0];
+    return toBase(qty, opt);
+  }
+
   function handleUnitarioChange(index: number, raw: string) {
     lastEditedRef.current[index] = "unitario";
     setUnitarios((prev) => {
@@ -67,8 +79,9 @@ export function NovaCompraPage() {
     });
     const unitario = parseFloat(raw) || 0;
     const qty = parseFloat(String(getValues(`itens.${index}.quantidade`))) || 0;
-    if (qty > 0 && unitario > 0) {
-      setValue(`itens.${index}.custo_total`, round2(unitario * qty) as never);
+    const baseQty = getBaseQty(index, qty);
+    if (baseQty > 0 && unitario > 0) {
+      setValue(`itens.${index}.custo_total`, round2(unitario * baseQty) as never);
     }
   }
 
@@ -76,10 +89,11 @@ export function NovaCompraPage() {
     lastEditedRef.current[index] = "total";
     const total = parseFloat(rawEvent.target.value) || 0;
     const qty = parseFloat(String(getValues(`itens.${index}.quantidade`))) || 0;
-    if (qty > 0 && total > 0) {
+    const baseQty = getBaseQty(index, qty);
+    if (baseQty > 0 && total > 0) {
       setUnitarios((prev) => {
         const next = [...prev];
-        next[index] = String(round2(total / qty));
+        next[index] = String(round2(total / baseQty));
         return next;
       });
     }
@@ -87,9 +101,10 @@ export function NovaCompraPage() {
 
   function handleQtdChange(index: number, raw: string) {
     const qty = parseFloat(raw) || 0;
+    const baseQty = getBaseQty(index, qty);
     const mode = lastEditedRef.current[index] ?? "unitario";
     const result = calculateLine({
-      quantidade: qty,
+      quantidade: baseQty,
       custo_unitario: parseFloat(unitarios[index] ?? "") || 0,
       custo_total: parseFloat(String(getValues(`itens.${index}.custo_total`))) || 0,
       lastEdited: mode,
@@ -254,7 +269,7 @@ export function NovaCompraPage() {
             <span>Item</span>
             <span>Qtd</span>
             <span>Unidade</span>
-            <span>Custo Unit. (R$)</span>
+            <span>Custo Unit. (R$/base)</span>
             <span>Custo Total (R$)</span>
             <span />
           </div>
@@ -336,16 +351,19 @@ export function NovaCompraPage() {
                   )}
                 </div>
 
-                {/* Custo Unitário — UI only, not in RHF */}
+                {/* Custo Unitário — UI only, not in RHF — always R$ per base unit */}
                 <div>
                   <Input
                     type="number"
-                    step="0.01"
+                    step="0.0001"
                     min="0"
                     value={unitarios[index] ?? ""}
                     onChange={(e) => handleUnitarioChange(index, e.target.value)}
                     placeholder="0.00"
                   />
+                  {item && (
+                    <p className="text-xs text-gray-400 mt-0.5">por {item.unidade_base}</p>
+                  )}
                 </div>
 
                 {/* Custo Total */}
