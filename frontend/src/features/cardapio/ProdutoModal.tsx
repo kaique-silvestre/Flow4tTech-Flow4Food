@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCategorias, flattenCategorias } from "@/features/cadastros/categorias/useCategorias";
+import { useCategorias, flattenCategorias, type Categoria } from "@/features/cadastros/categorias/useCategorias";
+import { CategoriaModal } from "@/features/cadastros/categorias/CategoriaModal";
 import { useInsumos, type InsumoResponse } from "@/features/estoque/useInsumos";
 import {
   useCreateProduto,
@@ -68,6 +69,7 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
 
   const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
   const [novoInsumoIdx, setNovoInsumoIdx] = useState<number | null>(null);
+  const [novaCategOpen, setNovaCategOpen] = useState(false);
 
   const {
     register,
@@ -109,6 +111,13 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
   }, [editing, open, reset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isPending = create.isPending || update.isPending;
+
+  function handleCategoriaCreated(cat: Categoria) {
+    qc.setQueryData<Categoria[]>(["categorias"], (old = []) =>
+      old.some((c) => c.id === cat.id) ? old : [...old, { ...cat, children: [] }]
+    );
+    setValue("categoria_id", cat.id as never);
+  }
 
   function handleInsumoCreated(insumo: InsumoResponse) {
     if (novoInsumoIdx === null) return;
@@ -176,6 +185,13 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
                   </option>
                 ))}
               </select>
+              <button
+                type="button"
+                className="text-xs text-blue-600 hover:underline mt-0.5"
+                onClick={() => setNovaCategOpen(true)}
+              >
+                [ + Cadastrar nova categoria ]
+              </button>
             </div>
             <div className="space-y-1">
               <Label htmlFor="preco_venda">Preço de Venda (R$)</Label>
@@ -309,6 +325,12 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
       open={novoInsumoIdx !== null}
       onClose={() => setNovoInsumoIdx(null)}
       onSuccess={handleInsumoCreated}
+    />
+
+    <CategoriaModal
+      open={novaCategOpen}
+      onClose={() => setNovaCategOpen(false)}
+      onCreated={handleCategoriaCreated}
     />
     </>
   );
