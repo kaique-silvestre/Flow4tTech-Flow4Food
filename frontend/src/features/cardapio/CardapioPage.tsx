@@ -20,7 +20,7 @@ function calcCusto(produto: ProdutoResponse): number | null {
   let total = 0;
   for (const item of produto.ficha_tecnica) {
     if (item.custo_medio_insumo === null) return null;
-    total += item.custo_medio_insumo * item.quantidade;
+    total += Number(item.custo_medio_insumo) * Number(item.quantidade);
   }
   return total;
 }
@@ -227,23 +227,20 @@ export function CardapioPage() {
                           </thead>
                           <tbody>
                             {p.ficha_tecnica!.map((ft) => {
-                              const custoItem =
-                                ft.custo_medio_insumo !== null
-                                  ? ft.custo_medio_insumo * ft.quantidade
-                                  : null;
+                              const custoMedio = ft.custo_medio_insumo !== null ? Number(ft.custo_medio_insumo) : null;
+                              const qtd = Number(ft.quantidade);
+                              const custoItem = custoMedio !== null ? custoMedio * qtd : null;
                               return (
                                 <tr key={ft.insumo_id} className="border-b border-gray-100 last:border-0">
                                   <td className="py-1 pr-4 text-gray-700">{ft.insumo_nome}</td>
                                   <td className="py-1 pr-4 text-right text-gray-600">
                                     {ft.unidade_base === "kg"
-                                      ? Number(ft.quantidade).toFixed(3)
-                                      : Math.round(Number(ft.quantidade)).toString()}{" "}
+                                      ? qtd.toFixed(3)
+                                      : Math.round(qtd).toString()}{" "}
                                     {ft.unidade_base}
                                   </td>
                                   <td className="py-1 pr-4 text-right text-gray-600">
-                                    {ft.custo_medio_insumo !== null
-                                      ? `R$ ${ft.custo_medio_insumo.toFixed(4)}`
-                                      : "—"}
+                                    {custoMedio !== null ? `R$ ${custoMedio.toFixed(4)}` : "—"}
                                   </td>
                                   <td className="py-1 text-right text-gray-700">
                                     {custoItem !== null ? `R$ ${custoItem.toFixed(4)}` : "—"}
