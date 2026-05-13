@@ -12,9 +12,22 @@ import {
   useDeleteProduto,
   type ProdutoResponse,
 } from "@/features/cadastros/produtos/useProdutos";
+import type { Categoria } from "@/features/cadastros/categorias/useCategorias";
 import { ProdutoModal } from "./ProdutoModal";
 
 type FiltroAtivo = "ativos" | "inativos" | "todos";
+
+function buildCategoryPaths(tree: Categoria[], prefix = ""): Record<number, string> {
+  const result: Record<number, string> = {};
+  for (const cat of tree) {
+    const path = prefix ? `${prefix} > ${cat.nome}` : cat.nome;
+    result[cat.id] = path;
+    if (cat.children?.length) {
+      Object.assign(result, buildCategoryPaths(cat.children, path));
+    }
+  }
+  return result;
+}
 
 const POR_PAGINA = 10;
 
@@ -61,7 +74,7 @@ export function CardapioPage() {
     });
   }
 
-  const catMap = Object.fromEntries(categorias.map((c) => [c.id, c.nome]));
+  const catPathMap = buildCategoryPaths(categorias);
 
   const produtosFiltrados = produtos.filter((p) => {
     if (filtro === "ativos" && !p.ativo) return false;
@@ -177,7 +190,7 @@ export function CardapioPage() {
                     </td>
                     <td className="py-2 pr-4 font-medium">{p.nome}</td>
                     <td className="py-2 pr-4 text-gray-500">
-                      {p.categoria_id ? (catMap[p.categoria_id] ?? "—") : "—"}
+                      {p.categoria_id ? (catPathMap[p.categoria_id] ?? "—") : "—"}
                     </td>
                     <td className="py-2 pr-4 text-right">
                       {p.preco_venda !== null ? `R$ ${Number(p.preco_venda).toFixed(2)}` : "—"}
