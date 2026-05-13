@@ -42,8 +42,9 @@ def list_produtos(
     db: Session,
     categoria_id: Optional[int] = None,
     busca: Optional[str] = None,
+    ativo: Optional[bool] = None,
 ) -> list[ProdutoResponse]:
-    items = produtos_repository.list_ativos(db, categoria_id, busca, ativo=None)
+    items = produtos_repository.list_ativos(db, categoria_id, busca, ativo=ativo)
     return [_build_response(db, p) for p in items]
 
 

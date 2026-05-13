@@ -24,10 +24,11 @@ def top_produtos(
 def list_produtos(
     categoria_id: Optional[int] = Query(None),
     busca: Optional[str] = Query(None),
+    ativo: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ) -> list[ProdutoResponse]:
-    return produtos_service.list_produtos(db, categoria_id, busca)  # type: ignore[return-value]
+    return produtos_service.list_produtos(db, categoria_id, busca, ativo)  # type: ignore[return-value]
 
 
 @router.get("/{produto_id}", response_model=ProdutoResponse)

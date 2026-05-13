@@ -56,7 +56,7 @@ export function ComandaAbertaPage() {
 
   const [busca, setBusca] = useState("");
   const [debouncedBusca] = useDebounce(busca, 350);
-  const { data: itens = [] } = useProdutos(busca === "" ? undefined : debouncedBusca || undefined);
+  const { data: itens = [] } = useProdutos(busca === "" ? undefined : debouncedBusca || undefined, { ativo: true });
 
   const [itemSelecionado, setItemSelecionado] = useState<number | null>(null);
   const [quantidade, setQuantidade] = useState("1");

@@ -30,13 +30,15 @@ export type ProdutoUpdateRequest = ProdutoCreateRequest;
 
 const QK = "produtos";
 
-export function useProdutos(busca?: string) {
+export function useProdutos(busca?: string, options?: { ativo?: boolean }) {
   return useQuery<ProdutoResponse[]>({
-    queryKey: [QK, busca],
-    queryFn: () =>
-      api
-        .get<ProdutoResponse[]>("/api/produtos", { params: busca ? { busca } : {} })
-        .then((r) => r.data),
+    queryKey: [QK, busca, options?.ativo],
+    queryFn: () => {
+      const params: Record<string, unknown> = {};
+      if (busca) params.busca = busca;
+      if (options?.ativo !== undefined) params.ativo = options.ativo;
+      return api.get<ProdutoResponse[]>("/api/produtos", { params }).then((r) => r.data);
+    },
   });
 }
 
