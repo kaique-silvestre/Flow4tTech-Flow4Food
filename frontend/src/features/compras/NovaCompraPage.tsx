@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput } from "@/components/ui/money-input";
 import { useFornecedores, type Fornecedor } from "@/features/cadastros/fornecedores/useFornecedores";
 import { FornecedorModal } from "@/features/cadastros/fornecedores/FornecedorModal";
 import { useInsumos, type InsumoResponse } from "@/features/estoque/useInsumos";
@@ -97,9 +98,8 @@ export function NovaCompraPage() {
     }
   }
 
-  function handleTotalChange(index: number, rawEvent: React.ChangeEvent<HTMLInputElement>) {
+  function handleTotalChange(index: number, total: number) {
     lastEditedRef.current[index] = "total";
-    const total = parseFloat(rawEvent.target.value) || 0;
     const qty = parseFloat(String(getValues(`itens.${index}.quantidade`))) || 0;
     const baseQty = getBaseQty(index, qty);
     const { factor } = getPriceUnitFor(index);
@@ -374,13 +374,9 @@ export function NovaCompraPage() {
 
                 {/* Custo Unitário — UI only, not in RHF — R$/kg for weight items */}
                 <div>
-                  <Input
-                    type="number"
-                    step="0.0001"
-                    min="0"
+                  <MoneyInput
                     value={unitarios[index] ?? ""}
-                    onChange={(e) => handleUnitarioChange(index, e.target.value)}
-                    placeholder="0.00"
+                    onValueChange={(raw) => handleUnitarioChange(index, raw)}
                   />
                   {item && (
                     <p className="text-xs text-gray-400 mt-0.5">
@@ -391,14 +387,19 @@ export function NovaCompraPage() {
 
                 {/* Custo Total */}
                 <div>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    {...register(`itens.${index}.custo_total`, {
-                      onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-                        handleTotalChange(index, e),
-                    })}
+                  <Controller
+                    name={`itens.${index}.custo_total`}
+                    control={control}
+                    render={({ field }) => (
+                      <MoneyInput
+                        value={field.value || ""}
+                        onValueChange={(raw) => {
+                          const total = parseFloat(raw) || 0;
+                          field.onChange(total);
+                          handleTotalChange(index, total);
+                        }}
+                      />
+                    )}
                   />
                   {errors.itens?.[index]?.custo_total && (
                     <p className="text-xs text-red-500">{errors.itens[index]?.custo_total?.message}</p>

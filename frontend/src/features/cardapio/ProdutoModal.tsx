@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput } from "@/components/ui/money-input";
 import { useCategorias, flattenCategorias, type Categoria } from "@/features/cadastros/categorias/useCategorias";
 import { CategoriaModal } from "@/features/cadastros/categorias/CategoriaModal";
 import { useInsumos, type InsumoResponse } from "@/features/estoque/useInsumos";
@@ -194,8 +195,18 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
               </button>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="preco_venda">Preço de Venda (R$)</Label>
-              <Input id="preco_venda" type="number" step="0.01" min="0" {...register("preco_venda")} />
+              <Label htmlFor="preco_venda">Preço de Venda</Label>
+              <Controller
+                name="preco_venda"
+                control={control}
+                render={({ field }) => (
+                  <MoneyInput
+                    id="preco_venda"
+                    value={field.value ?? ""}
+                    onValueChange={(raw) => field.onChange(raw)}
+                  />
+                )}
+              />
               {errors.preco_venda && <p className="text-sm text-red-500">{errors.preco_venda.message}</p>}
             </div>
           </div>
