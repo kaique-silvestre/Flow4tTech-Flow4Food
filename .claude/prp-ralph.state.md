@@ -1,8 +1,8 @@
 ---
-iteration: 1
-max_iterations: 31
-plan_path: "docs/issues/issues_matchpoint_v0.3.md"
-started_at: "2026-05-11T00:00:00Z"
+iteration: 9
+max_iterations: 10
+plan_path: "docs/issues/issues_matchpoint_v0.4.md"
+started_at: "2026-05-13T00:00:00Z"
 ---
 
 # Ralph Progress Log
@@ -10,227 +10,243 @@ started_at: "2026-05-11T00:00:00Z"
 ## Codebase Patterns
 - Backend uses `Optional[X]` (Python 3.9), not `X | None`
 - Ruff UP035: use native `dict[x]`, `list[x]`, not `Dict`/`List` from typing
-- Comanda.data_fechamento is UTC; use `_day_utc_range` + `_local_date` for SP timezone
-- Compra.data_compra is plain `datetime.date` (already local, no UTC conversion needed)
-- Frontend recharts has pre-existing TS errors (no @types/recharts) — do not fix those
 - React Query queryKey pattern: `["resource", "subkey", ...params]`
-- SQLite: `op.create_foreign_key` fails — just add column, skip FK constraint
-- `CategoriaResponse` with recursive `children` field requires `CategoriaResponse.model_rebuild()` in Pydantic v2
-- Edit tool cannot match non-ASCII whitespace (NBSP U+00A0) — use PowerShell byte-level replacement
-- pytest must be run via `python -m pytest` (not `.venv\Scripts\pytest.exe`)
-- Debounce pattern: `busca === "" ? clearValue : debouncedBusca` for immediate clear behavior
-- Dialog component available at `@/components/ui/dialog` — use for all modals
-- Controller pattern for RHF radios: `<Controller render={({ field }) => ...} />` instead of `setValue`
+- Dialog component at `@/components/ui/dialog`
+- RHF radio with register: order in array controls render order
+- defaultValues in useForm controls initial selection
+- MoneyInput em `@/components/ui/money-input` — props: value, onValueChange(rawString), id, className, placeholder
+- Para integrar MoneyInput+RHF: usar Controller; onValueChange recebe string numérica sem máscara (ex: "1050.00")
+- custo_unitario em NovaCompraPage é UI-only (não RHF) → bind direto com onValueChange
+- custo_total é RHF number → Controller + field.onChange(parseFloat(raw))
 
-## Iteration 1 - 2026-05-11T00:00:00Z
-
-### Completed
-- Issue 1 (DB2): Installed `use-debounce` package
-- Applied `useDebounce(busca, 350)` in ComandasPage, ComandaAbertaPage, EstoquePage, HistoricoComandasPage
-- Clear-input → immediate query (busca === "" path bypasses debounce)
-- Committed: bae9b34
-
-### Validation Status
-- Type-check: PASS
-- Lint: PASS (0 warnings)
-- Build: PASS
-
-### Next Steps
-- Issue 2 (CM1): Delete dead code — ItensPage.tsx, ItemModal.tsx, itemSchemas.ts, useItens.ts
-
----
-
-## Iteration 2 - 2026-05-11T01:00:00Z
+## Iteration 1 - 2026-05-13T00:00:00Z
 
 ### Completed
-- Issue 2 (CM1): Deleted 4 files from `frontend/src/features/cadastros/itens/`
-- Zero imports found — safe to delete
-- Committed: ed2e849
+- `NovaComandaModal.tsx` linha 37: `tipo_identificacao: "mesa"` → `"nome"` (default)
+- `NovaComandaModal.tsx` linha 90: array `["mesa","nome"]` → `["nome","mesa"]` (ordem)
+- Commit: 62ffd5f
 
 ### Validation Status
 - Type-check: PASS
 - Lint: PASS
 - Build: PASS
 
-### Next Steps
-- Issue 3 (EM1): Remove `reset()` from `handleClose` in `InsumoEditModal.tsx`
+### Learnings
+- `use-debounce` já estava em package.json (commit bae9b34 do v0.3)
+- Ordem do array no `.map()` controla ordem visual dos radios
+
+### Issue 1: COMPLETA ✅
 
 ---
 
-## Iteration 3 - 2026-05-11T02:00:00Z
+## Iteration 2 - 2026-05-13T01:00:00Z
 
 ### Completed
-- Issue 3 (EM1): Removed `reset()` from `handleClose` in `InsumoEditModal.tsx`
-- `useEffect([open, editing, reset])` already handles reinit — extra `reset()` caused field flash
-- Committed: 3c37c61
+- `backend/src/api/routes/produtos.py`: `ativo: Optional[bool] = Query(None)` + repassa para service
+- `backend/src/services/produtos_service.py`: `list_produtos` aceita e repassa `ativo`
+- `frontend/src/features/cadastros/produtos/useProdutos.ts`: `options?: { ativo?: boolean }` no queryKey + params
+- `frontend/src/features/comandas/ComandaAbertaPage.tsx`: passa `{ ativo: true }` para `useProdutos`
+- `backend/tests/test_produtos.py`: 2 testes corrigidos para usar `?ativo=true`
+- Commit: ce53555
 
 ### Validation Status
 - Type-check: PASS
 - Lint: PASS
+- Backend ruff: PASS
+- Backend testes produto: 9/9 PASS
+- Build: PASS
+- 43 outras falhas backend pré-existentes (não relacionadas)
 
-### Next Steps
-- Issue 4 (MOD1+NC1+NC2): `NovaComandaModal.tsx` — migrate to Dialog + valueAsNumber on mesa + radio a11y
+### Learnings
+- `GET /api/produtos` sem param retorna todos — CardapioPage depende disso
+- 2 testes pré-existentes assumiam comportamento incorreto — corrigidos
+
+### Issue 2: COMPLETA ✅
 
 ---
 
-## Iteration 4 - 2026-05-11T03:00:00Z
+## Iteration 3 - 2026-05-13T02:00:00Z
 
 ### Completed
-- Issue 4 (MOD1+NC1+NC2): NovaComandaModal migrado para Dialog
-- `valueAsNumber: true` aplicado em `identificacao` quando `tipo === "mesa"`
-- Radios com `id="tipo-identificacao-{t}"` e `htmlFor` correspondente
-- `ComandasPage.tsx` atualizado: renderização condicional → `open={showModal}` prop
-- Committed: 4d6398a
+- `CardapioPage.tsx`: importou `Categoria` type de useCategorias
+- `CardapioPage.tsx`: adicionou `buildCategoryPaths(tree, prefix)` recursivo → `Record<number, string>`
+- `CardapioPage.tsx`: substituiu `catMap` por `catPathMap`
+- Célula de categoria agora exibe "Pai > Filho" ou só "Pai" ou "—"
+- Commit: f721e1f
 
 ### Validation Status
 - Type-check: PASS
 - Lint: PASS
+- Build: PASS
 
-### Next Steps
-- Issue 5 (MOD1b): `CancelarItemModal.tsx` — migrar para Dialog
+### Learnings
+- `Categoria` já tinha `children: Categoria[]` — nenhuma mudança de backend necessária
+- `flattenCategorias` existia mas não preservava path hierárquico — criou-se `buildCategoryPaths` separado
+
+### Issue 4: COMPLETA ✅
 
 ---
 
-## Iteration 5 - 2026-05-11T04:00:00Z
+## Iteration 4 - 2026-05-13T03:00:00Z
 
 ### Completed
-- Issue 5 (MOD1b): CancelarItemModal migrado para Dialog
-- Adicionado `open` prop; caller atualizado com `open={!!cancelando && !!comanda}`
-- Committed: 1af081b
+- `npm install react-number-format` → registrado em package.json
+- Criado `frontend/src/components/ui/money-input.tsx` com NumericFormat (R$, vírgula decimal, ponto milhar, 2 casas)
+- `ProdutoModal.tsx`: adicionou Controller import + MoneyInput import; substituiu `<Input type="number" ...register("preco_venda")>` por Controller+MoneyInput
+- `NovaCompraPage.tsx`: adicionou MoneyInput import; substituiu custo_unitario Input por MoneyInput; refatorou `handleTotalChange` para aceitar `number` em vez de `React.ChangeEvent`; substituiu custo_total register+onChange por Controller+MoneyInput
+- Commit: 7253919
 
 ### Validation Status
 - Type-check: PASS
 - Lint: PASS
+- Build: PASS
 
-### Next Steps
-- Issue 6 (FE2): `modo_divisao` via Controller em FechamentoPage.tsx
+### Learnings
+- handleTotalChange antes recebia `React.ChangeEvent` — agora aceita `number` diretamente para compatibilidade com MoneyInput
+- `z.coerce.number()` no schema de custo_total: field.onChange precisa receber number, não string
+
+### Issue 5: COMPLETA ✅
 
 ---
 
-## Iteration 6 - 2026-05-11T05:00:00Z
+## Iteration 5 - 2026-05-13T04:00:00Z
 
 ### Completed
-- Issue 6 (FE2): modo_divisao via Controller em FechamentoPage — setValue("modo_divisao") removido
-- Issues 1–6 marcadas ✅ na documentação docs/issues/issues_matchpoint_v0.3.md
-- Committed: 27bed48 (FE2) + 69e200f (docs)
+- `produtoSchemas.ts`: `categoria_id` de `nullable().optional()` → `z.number({ required_error, invalid_type_error })` com `.min(1)`
+- `ProdutoModal.tsx`: select com `border-red-500` condicional + erro inline abaixo
+- `ProdutoModal.tsx`: `setValueAs` retorna `undefined` (não `null`) para opção vazia — dispara `required_error`
+- `ProdutoModal.tsx`: reset novo produto usa `categoria_id: undefined` (não `null`)
+- Commit: f678076
 
 ### Validation Status
 - Type-check: PASS
 - Lint: PASS
+- Build: PASS
 
-### Next Steps
-- Issue 7 (FE4): Schema pagamentos coerente com total R$0 — remover .min(1), validação manual no submit
+### Learnings
+- `invalid_type_error` necessário pois `null` não é `undefined` — sem ele zod diria "Expected number, received null"
+- `setValueAs` retornando `undefined` é mais limpo que `null` para campos obrigatórios no Zod
+
+### Issue 6: COMPLETA ✅
 
 ---
 
-## Iteration 7 - 2026-05-11T06:00:00Z
+## Iteration 6 - 2026-05-13T05:00:00Z
 
 ### Completed
-- Issue 7 (FE4): removido `.min(1)` de `fecharComandaSchema.pagamentos`
-- `setError` adicionado ao useForm; `onSubmit` valida manualmente quando `baseTotal > 0 && pagamentos.length === 0`
-- Doc marcada ✅
-- Committed: c40fdbd + e7251af
+- `backend/src/models/metodos_pagamento.py`: enum `TipoPagamento` + coluna `tipo` com `server_default="outro"`
+- `backend/src/schemas/metodos_pagamento.py`: `tipo: TipoPagamento` em create/update/response
+- `backend/src/repositories/metodos_pagamento_repository.py`: `tipo=data.tipo` em create/update
+- `backend/alembic/versions/0027_add_tipo_metodo_pagamento.py`: migration additive com `server_default="outro"`
+- `frontend/src/features/cadastros/metodos_pagamento/metodoPagamentoSchemas.ts`: enum `TIPOS_PAGAMENTO`, labels, schemas atualizados
+- `frontend/src/features/cadastros/metodos_pagamento/useMetodosPagamento.ts`: `tipo: TipoPagamento` na interface
+- `frontend/src/features/cadastros/metodos_pagamento/MetodoPagamentoModal.tsx`: select de tipo com 5 opções
+- Commit: 6b73d80
 
 ### Validation Status
 - Type-check: PASS
 - Lint: PASS
+- Backend ruff: PASS
+- Migration: PASS (0027 aplicada)
+- Build: PASS
 
-### Next Steps
-- Issue 8 (DE1+DE2): AplicarDescontoModal — onOpenChange correto + Controller para radio tipo
+### Learnings
+- Migration usa `sa.String()` (não `sa.Enum()`) pois model usa `native_enum=False` — mais portável com SQLite/Postgres
+- `MetodoPagamentoCreateFormValues` precisou incluir `tipo` pois modal cria com tipo escolhido pelo usuário
+
+### Issue 7: COMPLETA ✅
 
 ---
 
-## Iteration 8 - 2026-05-11T07:00:00Z
+## Iteration 7 - 2026-05-13T07:00:00Z
 
 ### Completed
-- Issue 8 (DE1+DE2): AplicarDescontoModal — onOpenChange correto + Controller para radio tipo
-- `onOpenChange={(v) => !v && onClose()}` evita fechamento ao abrir
-- `<Controller>` substitui radios com `setValue` manual
-- `useEffect` removido — modal sempre remonta (conditional render `{descontoOpen && ...}`)
-- Doc marcada ✅
-- Committed: 810b1a0
+- `backend/alembic/versions/0028_add_troco_pagamento.py`: migration additive `valor_nota` + `troco` (Numeric 10,2 nullable)
+- `backend/src/models/pagamentos.py`: `valor_nota: Mapped[Optional[Decimal]]`, `troco: Mapped[Optional[Decimal]]`
+- `backend/src/schemas/fechamento.py`: `PagamentoRequest.valor_nota` opcional; `PagamentoResponse.valor_nota+troco`
+- `backend/src/repositories/pagamentos_repository.py`: `create_pagamento` aceita `valor_nota`, `troco`
+- `backend/src/services/comandas_service.py`: detecta `metodo.tipo == "dinheiro"` + `valor_nota`, valida, calcula troco; inclui `valor_nota`+`troco` no `PagamentoResponse` ao construir resposta
+- `backend/src/schemas/comprovante.py`: `PagamentoComprovanteRow.valor_nota+troco`
+- `backend/src/services/comprovante_service.py`: inclui `valor_nota`, `troco` na row
+- `frontend/.../fechamentoSchemas.ts`: `valor_nota` opcional no `pagamentoSchema`
+- `frontend/.../useFechamento.ts`: `MetodoPagamento.tipo: string`
+- `frontend/.../useComprovante.ts`: `PagamentoComprovanteRow.valor_nota+troco`
+- `frontend/.../FechamentoPage.tsx`: UI troco inline quando `tipo="dinheiro"` — MoneyInput nota + read-only troco + aviso nota insuficiente
+- `frontend/.../ComprovantePage.tsx`: exibe "Valor recebido" e "Troco" quando `troco > 0`
+- Commit: 6513eb5
 
 ### Validation Status
 - Type-check: PASS
 - Lint: PASS
+- Backend ruff: PASS
+- Migration: PASS (0028 aplicada)
+- Build: PASS
 
-### Next Steps
-- Issue 9 (FE1+CV1): `formatQuantidade` no Fechamento e no Comprovante
+### Learnings
+- `PagamentoResponse` usa `ConfigDict(from_attributes=True)` — campos `valor_nota` e `troco` são preenchidos diretamente do model ORM quando passado, mas neste caso são construídos manualmente; precisam ser passados explicitamente no construtor
+- `setValue` para `valor_nota: undefined` ao trocar método garante que campo some ao mudar para não-dinheiro
+- `MoneyInput` retorna string numérica via `onValueChange`; usar `parseFloat` para RHF `number` field
+
+### Issue 8: COMPLETA ✅
 
 ---
 
-## Iteration 9 - 2026-05-11T08:00:00Z
+## Iteration 8 - 2026-05-13T08:00:00Z
 
 ### Completed
-- Issue 9 (FE1+CV1): `formatQuantidade` pt-BR em FechamentoPage e ComprovantePage
-- `formatQuantidade` atualizado: `toLocaleString("pt-BR", { maximumFractionDigits: 3 })` → vírgula como separador decimal
-- Testes atualizados: `"0.25"` → `"0,25"` etc.
-- `FechamentoPage.tsx`: adicionado import + `{formatQuantidade(item.quantidade)}×`
-- `ComprovantePage.tsx`: adicionado import + `{formatQuantidade(item.quantidade)}x`
-- Doc marcada ✅
-- Committed: ce51cb6
+- `backend/alembic/versions/0029_add_estoque_reservado_insumos.py`: migration additive `estoque_reservado` (Numeric 12,4, NOT NULL, server_default=0)
+- `backend/src/models/insumos.py`: `estoque_reservado: Mapped[Decimal]` + `server_default="0"`
+- `backend/src/schemas/comandas.py`: `estoque_insuficiente: list[str] = []` em `ComandaResponse`
+- `backend/src/services/comandas_service.py`: 
+  - `_reservar_estoque`: incrementa reserva, retorna nomes onde disponível < 0
+  - `_liberar_reserva_estoque`: decrementa reserva com piso em 0
+  - `lancar_item`: chama `_reservar_estoque`, anexa ao response
+  - `cancelar_item`: chama `_liberar_reserva_estoque` antes do commit
+  - `fechar_comanda` (não parcial): chama `_liberar_reserva_estoque` por item além do `_dar_baixa_estoque`
+  - `cancelar_comanda`: libera reservas de itens não-cancelados + seta status CANCELADA
+- `backend/src/repositories/comandas_repository.py`: `cancelar_comanda_repo` seta status CANCELADA
+- `backend/src/api/routes/comandas.py`: `POST /{comanda_id}/cancelar`
+- `frontend/.../useComandas.ts`: `estoque_insuficiente` em `ComandaResponse`; `useLancarItem.onSuccess` mostra toasts; `useCancelarComanda` hook
+- `frontend/.../ComandaAbertaPage.tsx`: botão "Cancelar Comanda" + ConfirmDialog
+- Commit: e16c839
 
 ### Validation Status
 - Type-check: PASS
 - Lint: PASS
+- Backend ruff: PASS
+- Migration: PASS (0029 aplicada)
+- Build: PASS
 
-### Next Steps
-- Issue 10 (FE3): Label "Última pessoa paga" no modo igualitário em FechamentoPage
+### Learnings
+- Revision ID alembic deve caber em varchar(32) — strings longas causam rollback na versão table
+- `get_itens_ativos` retorna TODOS (inclusive cancelados) — usar `get_itens_para_fechar` para liberar reservas ao cancelar comanda inteira
+- `_liberar_reserva_estoque` usa piso em zero: `novo if novo > 0 else Decimal("0")`
+
+### Issue 9: COMPLETA ✅
 
 ---
 
-## Iteration 10 - 2026-05-11T09:00:00Z
+## Iteration 9 - 2026-05-13T14:00:00Z
 
 ### Completed
-- Issue 10 (FE3): label "1ª pessoa paga:" → "Última pessoa paga:" em FechamentoPage.tsx:210
-- Doc marcada ✅
-- Committed: ae56d59
+- `backend/src/schemas/insumos.py`: `estoque_reservado: Decimal` + `@computed_field estoque_disponivel`
+- `backend/src/schemas/estoque.py`: `estoque_reservado: Decimal` + `estoque_disponivel: Decimal` em `SaldoItemResponse`
+- `backend/src/services/estoque_service.py`: popula `estoque_reservado` e `estoque_disponivel` em `get_saldo_list`
+- `frontend/src/features/estoque/useEstoque.ts`: `estoque_reservado` + `estoque_disponivel` em `SaldoItemResponse`
+- `frontend/src/features/estoque/useInsumos.ts`: mesmos campos em `InsumoResponse`
+- `frontend/src/features/estoque/EstoquePage.tsx`: colunas "Estoque atual", "Reservado", "Disponível"; Disponível em vermelho quando < 0; colSpan tfoot 4→6
+- Commit: 2a8228d
 
 ### Validation Status
 - Type-check: PASS
 - Lint: PASS
+- Backend ruff: PASS
+- Build: PASS
 
-### Next Steps
-- Issue 11 (CA1): Select de pessoa no modo edição de item em ComandaAbertaPage
+### Learnings
+- Pydantic v2 `@computed_field` + `@property` funciona com `from_attributes=True` — não precisa de campo no model ORM
+- `SaldoItemResponse` é construído manualmente no service, então `estoque_disponivel` calculado diretamente no construtor (sem computed_field)
 
----
-
-## Iteration 11 - 2026-05-11T10:00:00Z
-
-### Completed
-- Issue 11 (CA1): select de pessoa no edit mode de item — `<select>` quando `comanda.pessoas.length > 0`, `<Input>` senão
-- Issue 12 (CA2): `useEffect`+`setInterval(60s)` em ComandaAbertaPage (só quando aberta) e ComandasPage; `minutesAgo(created_at)` substitui `tempo_aberta_minutos`
-- Issue 13 (MV1+MV2): `estorno_compra` em `TIPO_OPTIONS/BADGE/LABEL`; `year: "2-digit"` no `toLocaleString` de MovimentosPage
-- Issue 14 (CP4): `total_periodo` real via `SUM(total)` no repository; adicionado ao schema + service + frontend `ComprasPageResponse`; `compras.reduce` removido
-- Issue 15 (CP5): filtro status Ativas/Todas/Canceladas; default "ativa"; backend aceita `status: Optional[str]`; `atualizarFiltro` reseta pagina
-- Doc marcada ✅ para issues 11-15
-- Committed: d3afdb7
-
-### Validation Status
-- Type-check: PASS
-- Lint: PASS
-
-### Next Steps
-- Issue 16 (CP6): Modal de edição de compra com Dialog padronizado em ComprasPage
-
----
-
-## Iteration 12 - 2026-05-11T11:00:00Z
-
-### Completed
-- Issue 16 (CP6): modal edição compra migrado para Dialog; `onOpenChange={(v) => !v && setEditando(null)}`
-- Issue 17 (CP7): já estava implementado (toast.warning duration 6000 em useCancelarCompra) — marcado ✅
-- Issue 18 (CP8): `handleItemChange(index)` no `onChange` do item selector — zera qtd, custo_total, unitarios[index], lastEditedRef
-- Issue 19 (CP9): `custo_unitario = (total/qty).quantize(Decimal("0.0001"))` em compras_service
-- Issue 20 (CP10): `find_by_numero_nota` no repo; check em `criar_compra`; `warning` no CompraResponse; toast.warning no frontend onSuccess
-- Doc marcada ✅ issues 16-20
-- Committed: 7565fe9
-
-### Validation Status
-- Type-check: PASS
-- Lint: PASS
-
-### Next Steps
-- Issue 21 (CP11): Transação atômica em criar_compra e cancelar_compra
+### Issue 10: COMPLETA ✅
 
 ---
