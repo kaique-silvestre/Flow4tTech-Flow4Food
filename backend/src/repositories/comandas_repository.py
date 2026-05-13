@@ -215,6 +215,13 @@ def reabrir_comanda_repo(db: Session, comanda_id: int) -> None:
     db.flush()
 
 
+def cancelar_comanda_repo(db: Session, comanda_id: int) -> None:
+    comanda = db.query(Comanda).filter(Comanda.id == comanda_id).first()
+    if comanda is not None:
+        comanda.status = StatusComanda.CANCELADA.value
+    db.flush()
+
+
 def top_itens(db: Session, dias: int, limit: int) -> list[tuple[int, int]]:
     result = db.execute(
         text(

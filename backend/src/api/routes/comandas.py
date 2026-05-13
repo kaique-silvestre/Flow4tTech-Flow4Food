@@ -150,6 +150,15 @@ def reabrir_comanda(
     return comandas_service.reabrir_comanda(db, comanda_id)  # type: ignore[return-value]
 
 
+@router.post("/{comanda_id}/cancelar", response_model=ComandaResponse)
+def cancelar_comanda(
+    comanda_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> ComandaResponse:
+    return comandas_service.cancelar_comanda(db, comanda_id)  # type: ignore[return-value]
+
+
 @router.get("/{comanda_id}/comprovante", response_model=ComprovanteResponse)
 def get_comprovante(
     comanda_id: int,

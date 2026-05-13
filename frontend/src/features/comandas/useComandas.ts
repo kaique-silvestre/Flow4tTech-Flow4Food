@@ -48,6 +48,7 @@ export interface ComandaResponse {
   data_fechamento: string | null;
   pagamentos: PagamentoResponse[];
   itens_negativos: string[];
+  estoque_insuficiente: string[];
 }
 
 function handle409(err: unknown, comanda_id: number | string, qc: ReturnType<typeof useQueryClient>) {
@@ -110,8 +111,11 @@ export function useLancarItem(comanda_id: number | string) {
       api
         .post<ComandaResponse>(`/api/comandas/${comanda_id}/itens`, { ...data, version })
         .then((r) => r.data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["comandas", comanda_id] });
+      for (const nome of data.estoque_insuficiente ?? []) {
+        toast.warning(`Estoque insuficiente: ${nome}`);
+      }
     },
     onError: (err: unknown) => handle409(err, comanda_id, qc),
   });
@@ -215,6 +219,24 @@ export function usePatchComanda(comanda_id: number | string) {
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.message;
       toast.error(msg ?? "Erro ao atualizar comanda");
+    },
+  });
+}
+
+export function useCancelarComanda(comanda_id: number | string) {
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  return useMutation({
+    mutationFn: () =>
+      api.post<ComandaResponse>(`/api/comandas/${comanda_id}/cancelar`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["comandas"] });
+      navigate("/comandas");
+      toast.success("Comanda cancelada.");
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.message;
+      toast.error(msg ?? "Erro ao cancelar comanda");
     },
   });
 }

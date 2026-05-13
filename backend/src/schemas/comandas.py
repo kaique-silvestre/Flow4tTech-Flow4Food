@@ -83,3 +83,4 @@ class ComandaResponse(BaseModel):
     data_fechamento: Optional[datetime.datetime] = None
     pagamentos: list[PagamentoResponse] = []
     itens_negativos: list[str] = []
+    estoque_insuficiente: list[str] = []

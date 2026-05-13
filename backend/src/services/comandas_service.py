@@ -221,6 +221,7 @@ def lancar_item(db: Session, comanda_id: int, data: LancarItemRequest) -> Comand
         data.observacao,
         data.cortesia,
     )
+    insuficientes = _reservar_estoque(db, data.item_id, data.quantidade)
     comandas_repository.add_evento(
         db,
         comanda_id,
@@ -234,7 +235,9 @@ def lancar_item(db: Session, comanda_id: int, data: LancarItemRequest) -> Comand
     )
     db.commit()
     comanda = comandas_repository.get_by_id(db, comanda_id)
-    return _build_response(db, comanda)  # type: ignore[arg-type]
+    response = _build_response(db, comanda)  # type: ignore[arg-type]
+    response.estoque_insuficiente = insuficientes
+    return response
 
 
 def editar_item(
@@ -306,7 +309,10 @@ def cancelar_item(
             http_status=409,
         )
 
+    item_c_qtd = item_c.quantidade
+    item_c_produto_id = item_c.produto_id
     comandas_repository.cancelar_item(db, item_comanda_id, data.motivo.value, data.estornado)
+    _liberar_reserva_estoque(db, item_c_produto_id, item_c_qtd)
     comandas_repository.add_evento(
         db,
         comanda_id,
@@ -412,6 +418,7 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
         for ic in itens:
             negativos = _dar_baixa_estoque(db, ic.produto_id, ic.quantidade)
             itens_negativos.extend(negativos)
+            _liberar_reserva_estoque(db, ic.produto_id, ic.quantidade)
         comandas_repository.fechar_comanda_repo(db, comanda_id, total_com_desconto)
 
     if not pagamento_parcial and data.taxa_servico and comanda.garcom_id is not None:
@@ -429,6 +436,54 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
     response = _build_response(db, comanda)
     response.itens_negativos = itens_negativos
     return response
+
+
+def _reservar_estoque(db: Session, produto_id: int, quantidade: Decimal) -> list[str]:
+    componentes = db.execute(
+        select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)
+    ).scalars().all()
+    if not componentes:
+        return []
+    insuficientes: list[str] = []
+    for comp in componentes:
+        insumo = db.execute(select(Insumo).where(Insumo.id == comp.insumo_id)).scalar_one_or_none()
+        if insumo:
+            insumo.estoque_reservado = insumo.estoque_reservado + comp.quantidade * quantidade
+            db.flush()
+            disponivel = insumo.estoque_atual - insumo.estoque_reservado
+            if disponivel < 0:
+                insuficientes.append(insumo.nome)
+    return insuficientes
+
+
+def _liberar_reserva_estoque(db: Session, produto_id: int, quantidade: Decimal) -> None:
+    componentes = db.execute(
+        select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)
+    ).scalars().all()
+    for comp in componentes:
+        insumo = db.execute(select(Insumo).where(Insumo.id == comp.insumo_id)).scalar_one_or_none()
+        if insumo:
+            novo = insumo.estoque_reservado - comp.quantidade * quantidade
+            insumo.estoque_reservado = novo if novo > Decimal("0") else Decimal("0")
+            db.flush()
+
+
+def cancelar_comanda(db: Session, comanda_id: int) -> ComandaResponse:
+    comanda = comandas_repository.get_by_id(db, comanda_id)
+    if comanda is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Comanda não encontrada", http_status=404)
+    if comanda.status not in _ABERTA_STATUSES:
+        raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
+
+    itens = comandas_repository.get_itens_para_fechar(db, comanda_id)
+    for ic in itens:
+        _liberar_reserva_estoque(db, ic.produto_id, ic.quantidade)
+
+    comandas_repository.cancelar_comanda_repo(db, comanda_id)
+    comandas_repository.add_evento(db, comanda_id, TipoEvento.COMANDA_EDITADA, {"cancelada": True})
+    db.commit()
+    db.refresh(comanda)
+    return _build_response(db, comanda)
 
 
 def _dar_baixa_estoque(db: Session, produto_id: int, quantidade: Decimal) -> list[str]:

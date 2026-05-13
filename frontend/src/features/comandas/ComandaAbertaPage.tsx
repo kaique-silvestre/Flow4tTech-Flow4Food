@@ -9,7 +9,7 @@ import { useGarcons } from "@/features/cadastros/garcons/useGarcons";
 import { useProdutos } from "@/features/cadastros/produtos/useProdutos";
 import { formatCurrency, formatQuantidade } from "@/lib/format";
 import { CancelarItemModal } from "./CancelarItemModal";
-import { useComanda, useEditarItem, useLancarItem, usePatchComanda, useReopenComanda, useTopItens, type ItemComandaResponse } from "./useComandas";
+import { useComanda, useCancelarComanda, useEditarItem, useLancarItem, usePatchComanda, useReopenComanda, useTopItens, type ItemComandaResponse } from "./useComandas";
 
 export function ComandaAbertaPage() {
   const { id } = useParams<{ id: string }>();
@@ -71,8 +71,10 @@ export function ComandaAbertaPage() {
 
   const [cancelando, setCancelando] = useState<ItemComandaResponse | null>(null);
   const [confirmReabrir, setConfirmReabrir] = useState(false);
+  const [confirmCancelar, setConfirmCancelar] = useState(false);
 
   const reopenComanda = useReopenComanda(comanda_id);
+  const cancelarComanda = useCancelarComanda(comanda_id);
 
   const [now, setNow] = useState(() => Date.now());
   const comandaStatus = comanda?.status;
@@ -604,12 +606,20 @@ export function ComandaAbertaPage() {
 
           {/* Rodapé total — fora do scroll para ficar sempre visível */}
           <div className="border-t px-4 py-3 flex items-center justify-between bg-white">
-            <Button
-              variant="default"
-              onClick={() => navigate(`/comandas/${id}/fechar`)}
-            >
-              Fechar Conta
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="default"
+                onClick={() => navigate(`/comandas/${id}/fechar`)}
+              >
+                Fechar Conta
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setConfirmCancelar(true)}
+              >
+                Cancelar Comanda
+              </Button>
+            </div>
             <div className="text-right">
               <span className="text-sm text-gray-500">Total parcial: </span>
               <span className="text-lg font-semibold">
@@ -620,7 +630,7 @@ export function ComandaAbertaPage() {
         </div>
       </div>
 
-      {/* Modal cancelar */}
+      {/* Modal cancelar item */}
       <CancelarItemModal
         open={!!cancelando && !!comanda}
         comanda_id={comanda?.id ?? 0}
@@ -628,6 +638,17 @@ export function ComandaAbertaPage() {
         version={comanda?.version ?? 0}
         onClose={() => setCancelando(null)}
         onSuccess={() => setCancelando(null)}
+      />
+
+      {/* Dialog cancelar comanda */}
+      <ConfirmDialog
+        open={confirmCancelar}
+        title="Cancelar comanda?"
+        description="A comanda será cancelada e o estoque reservado será liberado. Esta ação não pode ser desfeita."
+        confirmLabel="Cancelar Comanda"
+        onConfirm={() => cancelarComanda.mutate()}
+        onCancel={() => setConfirmCancelar(false)}
+        isPending={cancelarComanda.isPending}
       />
     </div>
   );
