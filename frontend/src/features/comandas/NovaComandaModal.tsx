@@ -34,7 +34,7 @@ export function NovaComandaModal({ open, onClose }: Props) {
     formState: { errors },
   } = useForm<NovaComandaValues>({
     resolver: zodResolver(novaComandaSchema),
-    defaultValues: { tipo_identificacao: "mesa", pessoas: [] },
+    defaultValues: { tipo_identificacao: "nome", pessoas: [] },
   });
 
   const [pessoaInput, setPessoaInput] = useState("");
@@ -87,7 +87,7 @@ export function NovaComandaModal({ open, onClose }: Props) {
           <div>
             <Label>Tipo de identificação</Label>
             <div className="mt-1 flex gap-4">
-              {(["mesa", "nome"] as const).map((t) => (
+              {(["nome", "mesa"] as const).map((t) => (
                 <div key={t} className="flex items-center gap-2">
                   <input
                     type="radio"
