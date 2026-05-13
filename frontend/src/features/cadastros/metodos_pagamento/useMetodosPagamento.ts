@@ -3,10 +3,13 @@ import { toast } from "@/lib/toast";
 import { api, type ApiErrorBody } from "@/lib/api";
 import type { MetodoPagamentoCreateFormValues, MetodoPagamentoFormValues } from "./metodoPagamentoSchemas";
 
+import type { TipoPagamento } from "./metodoPagamentoSchemas";
+
 export interface MetodoPagamento {
   id: number;
   nome: string;
   ativo: boolean;
+  tipo: TipoPagamento;
 }
 
 const QK = "metodos-pagamento";

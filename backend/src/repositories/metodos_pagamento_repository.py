@@ -16,7 +16,7 @@ def get_by_id(db: Session, metodo_id: int) -> Optional[MetodoPagamento]:
 
 
 def create(db: Session, data: MetodoPagamentoCreateRequest) -> MetodoPagamento:
-    obj = MetodoPagamento(nome=data.nome, ativo=True)
+    obj = MetodoPagamento(nome=data.nome, ativo=True, tipo=data.tipo)
     db.add(obj)
     db.commit()
     db.refresh(obj)
@@ -29,6 +29,7 @@ def update(db: Session, metodo_id: int, data: MetodoPagamentoUpdateRequest) -> O
         return None
     obj.nome = data.nome
     obj.ativo = data.ativo
+    obj.tipo = data.tipo
     db.commit()
     db.refresh(obj)
     return obj

@@ -11,6 +11,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  TIPO_LABELS,
+  TIPOS_PAGAMENTO,
   metodoPagamentoCreateSchema,
   metodoPagamentoSchema,
   type MetodoPagamentoCreateFormValues,
@@ -37,11 +39,15 @@ export function MetodoPagamentoModal({ open, onClose, editing }: Props) {
     formState: { errors },
   } = useForm<MetodoPagamentoFormValues>({
     resolver: zodResolver(editing ? metodoPagamentoSchema : metodoPagamentoCreateSchema as typeof metodoPagamentoSchema),
-    defaultValues: { ativo: true },
+    defaultValues: { ativo: true, tipo: "outro" },
   });
 
   useEffect(() => {
-    reset(editing ? { nome: editing.nome, ativo: editing.ativo } : { nome: "", ativo: true });
+    reset(
+      editing
+        ? { nome: editing.nome, ativo: editing.ativo, tipo: editing.tipo }
+        : { nome: "", ativo: true, tipo: "outro" }
+    );
   }, [editing, open, reset]);
 
   const isPending = create.isPending || update.isPending;
@@ -50,7 +56,7 @@ export function MetodoPagamentoModal({ open, onClose, editing }: Props) {
     if (editing) {
       update.mutate({ id: editing.id, data }, { onSuccess: onClose });
     } else {
-      const createData: MetodoPagamentoCreateFormValues = { nome: data.nome };
+      const createData: MetodoPagamentoCreateFormValues = { nome: data.nome, tipo: data.tipo };
       create.mutate(createData, { onSuccess: onClose });
     }
   }
@@ -68,6 +74,28 @@ export function MetodoPagamentoModal({ open, onClose, editing }: Props) {
             <Label htmlFor="nome">Nome</Label>
             <Input id="nome" {...register("nome")} />
             {errors.nome && <p className="text-sm text-red-500">{errors.nome.message}</p>}
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="tipo">Tipo</Label>
+            <Controller
+              name="tipo"
+              control={control}
+              render={({ field }) => (
+                <select
+                  id="tipo"
+                  value={field.value}
+                  onChange={field.onChange}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  {TIPOS_PAGAMENTO.map((t) => (
+                    <option key={t} value={t}>
+                      {TIPO_LABELS[t]}
+                    </option>
+                  ))}
+                </select>
+              )}
+            />
+            {errors.tipo && <p className="text-sm text-red-500">{errors.tipo.message}</p>}
           </div>
           {editing && (
             <div className="flex items-center gap-3">

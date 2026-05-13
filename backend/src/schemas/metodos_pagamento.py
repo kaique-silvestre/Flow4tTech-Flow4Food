@@ -1,13 +1,17 @@
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.models.metodos_pagamento import TipoPagamento
+
 
 class MetodoPagamentoCreateRequest(BaseModel):
     nome: str = Field(..., min_length=1)
+    tipo: TipoPagamento = TipoPagamento.OUTRO
 
 
 class MetodoPagamentoUpdateRequest(BaseModel):
     nome: str = Field(..., min_length=1)
     ativo: bool = True
+    tipo: TipoPagamento = TipoPagamento.OUTRO
 
 
 class MetodoPagamentoResponse(BaseModel):
@@ -16,3 +20,4 @@ class MetodoPagamentoResponse(BaseModel):
     id: int
     nome: str
     ativo: bool
+    tipo: TipoPagamento
