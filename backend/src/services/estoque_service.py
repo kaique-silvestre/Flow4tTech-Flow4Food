@@ -63,6 +63,8 @@ def get_saldo_list(
                 categoria_nome=_get_categoria_nome(db, insumo.categoria_id),
                 unidade_base=insumo.unidade_base,
                 estoque_atual=insumo.estoque_atual,
+                estoque_reservado=insumo.estoque_reservado,
+                estoque_disponivel=insumo.estoque_atual - insumo.estoque_reservado,
                 custo_medio=insumo.custo_medio,
             )
         )

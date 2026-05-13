@@ -16,6 +16,8 @@ class SaldoItemResponse(BaseModel):
     categoria_nome: Optional[str]
     unidade_base: str
     estoque_atual: Decimal
+    estoque_reservado: Decimal
+    estoque_disponivel: Decimal
     custo_medio: Optional[Decimal]
 
 

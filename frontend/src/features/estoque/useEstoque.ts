@@ -10,6 +10,8 @@ export interface SaldoItemResponse {
   categoria_nome: string | null;
   unidade_base: string;
   estoque_atual: number;
+  estoque_reservado: number;
+  estoque_disponivel: number;
   custo_medio: number | null;
 }
 

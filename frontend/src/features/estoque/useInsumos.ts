@@ -18,6 +18,8 @@ export interface InsumoResponse {
   quantidade_caixa: number | null;
   custo_medio: number | null;
   estoque_atual: number;
+  estoque_reservado: number;
+  estoque_disponivel: number;
   ativo: boolean;
 }
 

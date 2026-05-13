@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from src.models.insumos import UnidadeBase
 
@@ -30,4 +30,10 @@ class InsumoResponse(BaseModel):
     quantidade_caixa: Optional[int]
     custo_medio: Optional[Decimal]
     estoque_atual: Decimal
+    estoque_reservado: Decimal
     ativo: bool
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def estoque_disponivel(self) -> Decimal:
+        return self.estoque_atual - self.estoque_reservado

@@ -62,7 +62,9 @@ export function EstoquePage() {
               <tr className="border-b text-left text-gray-500">
                 <th className="py-2 pr-4">Item</th>
                 <th className="py-2 pr-4">Categoria</th>
-                <th className="py-2 pr-4">Saldo</th>
+                <th className="py-2 pr-4">Estoque atual</th>
+                <th className="py-2 pr-4">Reservado</th>
+                <th className="py-2 pr-4">Disponível</th>
                 <th className="py-2 pr-4">Custo médio</th>
                 <th className="py-2 text-right">Valor em estoque</th>
               </tr>
@@ -81,6 +83,12 @@ export function EstoquePage() {
                     <td className={`py-2 pr-4 font-medium ${Number(item.estoque_atual) < 0 ? "text-red-600" : ""}`}>
                       {qty} {unit}
                     </td>
+                    <td className="py-2 pr-4 text-gray-500">
+                      {stockDisplay(item.estoque_reservado, item.unidade_base).qty} {stockDisplay(item.estoque_reservado, item.unidade_base).unit}
+                    </td>
+                    <td className={`py-2 pr-4 font-medium ${Number(item.estoque_disponivel) < 0 ? "text-red-600" : ""}`}>
+                      {stockDisplay(item.estoque_disponivel, item.unidade_base).qty} {stockDisplay(item.estoque_disponivel, item.unidade_base).unit}
+                    </td>
                     <td className="py-2 pr-4 text-gray-600">
                       {formatCustoMedio(item.custo_medio, item.unidade_base)}
                     </td>
@@ -93,7 +101,7 @@ export function EstoquePage() {
             </tbody>
             <tfoot className="border-t font-medium">
               <tr>
-                <td colSpan={4} className="pt-2 text-gray-700">Total em estoque</td>
+                <td colSpan={6} className="pt-2 text-gray-700">Total em estoque</td>
                 <td className="pt-2 text-right text-gray-900">
                   {formatCurrency(
                     itens.reduce((sum, item) => {
