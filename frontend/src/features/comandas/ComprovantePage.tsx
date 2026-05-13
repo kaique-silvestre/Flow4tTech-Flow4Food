@@ -147,9 +147,23 @@ export function ComprovantePage() {
         {data.pagamentos.length > 0 && (
           <div className="mb-3 border-b pb-3 text-xs">
             {data.pagamentos.map((p, i) => (
-              <div key={i} className="flex justify-between">
-                <span>{p.metodo_nome}</span>
-                <span>{brl(p.valor)}</span>
+              <div key={i}>
+                <div className="flex justify-between">
+                  <span>{p.metodo_nome}</span>
+                  <span>{brl(p.valor)}</span>
+                </div>
+                {p.troco != null && p.troco > 0 && (
+                  <>
+                    <div className="flex justify-between text-gray-600 pl-2">
+                      <span>Valor recebido</span>
+                      <span>{brl(p.valor_nota)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600 pl-2">
+                      <span>Troco</span>
+                      <span>{brl(p.troco)}</span>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>

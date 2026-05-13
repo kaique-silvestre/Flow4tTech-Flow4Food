@@ -57,6 +57,8 @@ def build_comprovante(db: Session, comanda_id: int) -> ComprovanteResponse:
         PagamentoComprovanteRow(
             metodo_nome=_get_metodo_nome(db, p.metodo_id),
             valor=p.valor,
+            valor_nota=p.valor_nota,
+            troco=p.troco,
         )
         for p in pagamentos_db
     ]

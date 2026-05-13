@@ -93,7 +93,14 @@ def _build_response(db: Session, comanda: Comanda) -> ComandaResponse:
         metodo = db.get(MetodoPagamento, p.metodo_id)
         metodo_nome = metodo.nome if metodo else f"Método {p.metodo_id}"
         pagamentos_resp.append(
-            PagamentoResponse(id=p.id, metodo_id=p.metodo_id, metodo_nome=metodo_nome, valor=p.valor)
+            PagamentoResponse(
+                id=p.id,
+                metodo_id=p.metodo_id,
+                metodo_nome=metodo_nome,
+                valor=p.valor,
+                valor_nota=p.valor_nota,
+                troco=p.troco,
+            )
         )
 
     return ComandaResponse(
@@ -383,7 +390,18 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
         metodo = db.get(MetodoPagamento, p.metodo_id)
         if metodo is None:
             raise AppError(ErrorCode.NOT_FOUND, f"Metodo de pagamento {p.metodo_id} nao encontrado", http_status=404)
-        pagamentos_repository.create_pagamento(db, comanda_id, p.metodo_id, p.valor)
+        valor_nota: Optional[Decimal] = None
+        troco: Optional[Decimal] = None
+        if metodo.tipo == "dinheiro" and p.valor_nota is not None:
+            if p.valor_nota < p.valor:
+                raise AppError(
+                    ErrorCode.PAGAMENTO_NAO_BATE,
+                    "Valor da nota é inferior ao valor do pagamento",
+                    http_status=400,
+                )
+            valor_nota = p.valor_nota
+            troco = (p.valor_nota - p.valor).quantize(Decimal("0.01"))
+        pagamentos_repository.create_pagamento(db, comanda_id, p.metodo_id, p.valor, valor_nota, troco)
 
     itens_negativos: list[str] = []
 

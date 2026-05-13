@@ -9,6 +9,7 @@ export interface MetodoPagamento {
   id: number;
   nome: string;
   ativo: boolean;
+  tipo: string;
 }
 
 export function useMetodosPagamento() {

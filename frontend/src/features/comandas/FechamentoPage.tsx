@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MoneyInput } from "@/components/ui/money-input";
 import { formatCurrency, formatQuantidade } from "@/lib/format";
 import { useComanda } from "./useComandas";
 import { useFecharComanda, useMetodosPagamento } from "./useFechamento";
@@ -258,52 +259,101 @@ export default function FechamentoPage() {
         {/* Pagamentos */}
         <div className="space-y-3">
           <Label className="text-base font-semibold">Pagamento</Label>
-          {fields.map((field, idx) => (
-            <div key={field.id} className="flex gap-2 items-end">
-              <div className="flex-1">
-                <Label className="text-xs">Método</Label>
-                <Controller
-                  control={control}
-                  name={`pagamentos.${idx}.metodo_id`}
-                  render={({ field, fieldState }) => (
-                    <>
-                      <select
-                        className={`mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring ${fieldState.error || (isSubmitted && !field.value) ? "border-destructive" : "border-input"}`}
-                        value={field.value || ""}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                        onBlur={field.onBlur}
-                        ref={field.ref}
-                      >
-                        <option value="">Selecione...</option>
-                        {metodos?.filter((m) => m.ativo).map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.nome}
-                          </option>
-                        ))}
-                      </select>
-                      {(fieldState.error || (isSubmitted && !field.value)) && (
-                        <p className="text-xs text-destructive mt-1">Selecione um método</p>
+          {fields.map((field, idx) => {
+            const metodoId = pagamentosWatched[idx]?.metodo_id;
+            const metodoSelecionado = metodos?.find((m) => m.id === metodoId);
+            const isDinheiro = metodoSelecionado?.tipo === "dinheiro";
+            const valorPagamento = Number(pagamentosWatched[idx]?.valor) || 0;
+            const valorNotaRaw = Number(pagamentosWatched[idx]?.valor_nota) || 0;
+            const troco = isDinheiro && valorNotaRaw > 0 ? valorNotaRaw - valorPagamento : null;
+            const notaInsuficiente = isDinheiro && valorNotaRaw > 0 && valorNotaRaw < valorPagamento;
+
+            return (
+              <div key={field.id} className="space-y-2">
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <Label className="text-xs">Método</Label>
+                    <Controller
+                      control={control}
+                      name={`pagamentos.${idx}.metodo_id`}
+                      render={({ field, fieldState }) => (
+                        <>
+                          <select
+                            className={`mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring ${fieldState.error || (isSubmitted && !field.value) ? "border-destructive" : "border-input"}`}
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              field.onChange(Number(e.target.value));
+                              setValue(`pagamentos.${idx}.valor_nota`, undefined);
+                            }}
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                          >
+                            <option value="">Selecione...</option>
+                            {metodos?.filter((m) => m.ativo).map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.nome}
+                              </option>
+                            ))}
+                          </select>
+                          {(fieldState.error || (isSubmitted && !field.value)) && (
+                            <p className="text-xs text-destructive mt-1">Selecione um método</p>
+                          )}
+                        </>
                       )}
-                    </>
+                    />
+                  </div>
+                  <div className="w-32">
+                    <Label className="text-xs">Valor (R$)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      {...register(`pagamentos.${idx}.valor`, { valueAsNumber: true })}
+                    />
+                  </div>
+                  {fields.length > 1 && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => remove(idx)}>
+                      ✕
+                    </Button>
                   )}
-                />
+                </div>
+
+                {isDinheiro && (
+                  <div className="ml-0 pl-3 border-l-2 border-blue-200 space-y-2">
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-1">
+                        <Label className="text-xs text-gray-600">Valor da nota recebida (opcional)</Label>
+                        <Controller
+                          control={control}
+                          name={`pagamentos.${idx}.valor_nota`}
+                          render={({ field }) => (
+                            <MoneyInput
+                              id={`valor_nota_${idx}`}
+                              className="mt-1"
+                              value={field.value != null ? String(field.value) : ""}
+                              onValueChange={(raw) => {
+                                field.onChange(raw ? parseFloat(raw) : undefined);
+                              }}
+                              placeholder="R$ 0,00"
+                            />
+                          )}
+                        />
+                      </div>
+                      <div className="w-32">
+                        <Label className="text-xs text-gray-600">Troco a devolver</Label>
+                        <div className={`mt-1 h-9 flex items-center px-3 rounded-md border text-sm font-medium ${troco !== null && troco >= 0 ? "bg-green-50 border-green-200 text-green-700" : "bg-gray-50 border-input text-gray-400"}`}>
+                          {troco !== null && troco >= 0 ? formatCurrency(troco) : "—"}
+                        </div>
+                      </div>
+                    </div>
+                    {notaInsuficiente && (
+                      <p className="text-xs text-destructive">Nota insuficiente — valor menor que o pagamento</p>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="w-32">
-                <Label className="text-xs">Valor (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  {...register(`pagamentos.${idx}.valor`, { valueAsNumber: true })}
-                />
-              </div>
-              {fields.length > 1 && (
-                <Button type="button" variant="ghost" size="sm" onClick={() => remove(idx)}>
-                  ✕
-                </Button>
-              )}
-            </div>
-          ))}
+            );
+          })}
           <Button
             type="button"
             variant="outline"

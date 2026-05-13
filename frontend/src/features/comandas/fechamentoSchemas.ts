@@ -12,6 +12,7 @@ export type AplicarDescontoValues = z.infer<typeof aplicarDescontoSchema>;
 export const pagamentoSchema = z.object({
   metodo_id: z.number().int().positive("Selecione um método"),
   valor: z.coerce.number().positive("Valor deve ser positivo"),
+  valor_nota: z.coerce.number().positive().optional(),
 });
 
 export const fecharComandaSchema = z.object({

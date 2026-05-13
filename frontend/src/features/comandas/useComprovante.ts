@@ -19,6 +19,8 @@ export interface ItemComprovanteRow {
 export interface PagamentoComprovanteRow {
   metodo_nome: string;
   valor: number;
+  valor_nota: number | null;
+  troco: number | null;
 }
 
 export interface ComprovanteResponse {

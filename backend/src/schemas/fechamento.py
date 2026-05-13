@@ -20,6 +20,7 @@ class AplicarDescontoRequest(BaseModel):
 class PagamentoRequest(BaseModel):
     metodo_id: int
     valor: Decimal = Field(..., gt=0)
+    valor_nota: Optional[Decimal] = Field(None, gt=0)
 
 
 class FecharComandaRequest(BaseModel):
@@ -35,3 +36,5 @@ class PagamentoResponse(BaseModel):
     metodo_id: int
     metodo_nome: str
     valor: Decimal
+    valor_nota: Optional[Decimal] = None
+    troco: Optional[Decimal] = None

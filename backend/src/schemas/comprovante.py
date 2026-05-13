@@ -23,6 +23,8 @@ class ItemComprovanteRow(BaseModel):
 class PagamentoComprovanteRow(BaseModel):
     metodo_nome: str
     valor: Decimal
+    valor_nota: Optional[Decimal] = None
+    troco: Optional[Decimal] = None
 
 
 class ComprovanteResponse(BaseModel):
