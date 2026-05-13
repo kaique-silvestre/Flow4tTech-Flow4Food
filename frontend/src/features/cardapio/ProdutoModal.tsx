@@ -106,7 +106,7 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
         }) ?? []
       );
     } else {
-      reset({ nome: "", categoria_id: null, preco_venda: "", ficha_tecnica: [] });
+      reset({ nome: "", categoria_id: undefined, preco_venda: "", ficha_tecnica: [] });
       setSelectedUnits([]);
     }
   }, [editing, open, reset]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -176,16 +176,19 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
             <div className="space-y-1">
               <Label>Categoria</Label>
               <select
-                className="w-full rounded border px-2 py-1 text-sm"
-                {...register("categoria_id", { setValueAs: (v) => (v === "" ? null : Number(v)) })}
+                className={`w-full rounded border px-2 py-1 text-sm${errors.categoria_id ? " border-red-500" : ""}`}
+                {...register("categoria_id", { setValueAs: (v) => (v === "" ? undefined : Number(v)) })}
               >
-                <option value="">— Sem categoria —</option>
+                <option value="">— Selecione uma categoria —</option>
                 {categorias.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.indent ? `  ${c.nome}` : c.nome}
                   </option>
                 ))}
               </select>
+              {errors.categoria_id && (
+                <p className="text-sm text-red-500">{errors.categoria_id.message}</p>
+              )}
               <button
                 type="button"
                 className="text-xs text-blue-600 hover:underline mt-0.5"

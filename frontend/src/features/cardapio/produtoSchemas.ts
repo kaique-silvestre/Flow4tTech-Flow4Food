@@ -10,7 +10,9 @@ export const fichaTecnicaItemSchema = z.object({
 
 export const produtoSchema = z.object({
   nome: z.string().min(1, "Obrigatório"),
-  categoria_id: z.number().nullable().optional(),
+  categoria_id: z
+    .number({ required_error: "Selecione uma categoria", invalid_type_error: "Selecione uma categoria" })
+    .min(1, "Selecione uma categoria"),
   preco_venda: z
     .string()
     .optional()
