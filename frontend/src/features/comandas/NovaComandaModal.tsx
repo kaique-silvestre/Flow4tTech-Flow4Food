@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useGarcons } from "@/features/cadastros/garcons/useGarcons";
+import { useGarcons, type Garcom } from "@/features/cadastros/garcons/useGarcons";
+import { GarcomModal } from "@/features/cadastros/garcons/GarcomModal";
 import { novaComandaSchema, type NovaComandaValues } from "./comandaSchemas";
 import { useAbrirComanda } from "./useComandas";
 
@@ -38,6 +39,11 @@ export function NovaComandaModal({ open, onClose }: Props) {
   });
 
   const [pessoaInput, setPessoaInput] = useState("");
+  const [garcomModalOpen, setGarcomModalOpen] = useState(false);
+
+  function handleGarcomCreated(garcom: Garcom) {
+    setValue("garcom_id", garcom.id);
+  }
   const pessoas = watch("pessoas");
   const tipo = watch("tipo_identificacao");
   const identificacao = watch("identificacao");
@@ -77,6 +83,12 @@ export function NovaComandaModal({ open, onClose }: Props) {
   }
 
   return (
+    <>
+    <GarcomModal
+      open={garcomModalOpen}
+      onClose={() => setGarcomModalOpen(false)}
+      onCreated={handleGarcomCreated}
+    />
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -124,7 +136,16 @@ export function NovaComandaModal({ open, onClose }: Props) {
 
           {/* Garçom */}
           <div>
-            <Label htmlFor="garcom_id">Garçom</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="garcom_id">Garçom</Label>
+              <button
+                type="button"
+                className="text-xs text-blue-600 hover:underline"
+                onClick={() => setGarcomModalOpen(true)}
+              >
+                + Novo garçom
+              </button>
+            </div>
             <select
               id="garcom_id"
               className="mt-1 w-full rounded border px-3 py-2 text-sm"
@@ -191,5 +212,6 @@ export function NovaComandaModal({ open, onClose }: Props) {
         </form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

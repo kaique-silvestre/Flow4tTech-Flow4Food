@@ -11,16 +11,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { garcomCreateSchema, garcomSchema, type GarcomCreateFormValues, type GarcomFormValues } from "./garcomSchemas";
-import type { Garcom } from "./useGarcons";
-import { useCreateGarcom, useUpdateGarcom } from "./useGarcons";
+import { type Garcom, useCreateGarcom, useUpdateGarcom } from "./useGarcons";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   editing?: Garcom | null;
+  onCreated?: (garcom: Garcom) => void;
 }
 
-export function GarcomModal({ open, onClose, editing }: Props) {
+export function GarcomModal({ open, onClose, editing, onCreated }: Props) {
   const create = useCreateGarcom();
   const update = useUpdateGarcom();
 
@@ -46,7 +46,12 @@ export function GarcomModal({ open, onClose, editing }: Props) {
       update.mutate({ id: editing.id, data }, { onSuccess: onClose });
     } else {
       const createData: GarcomCreateFormValues = { nome: data.nome };
-      create.mutate(createData, { onSuccess: onClose });
+      create.mutate(createData, {
+        onSuccess: (garcom) => {
+          onCreated?.(garcom);
+          onClose();
+        },
+      });
     }
   }
 
