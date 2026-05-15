@@ -47,9 +47,23 @@ export function ComandasPage() {
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60_000);
+    const id = setInterval(() => setNow(Date.now()), 1_000);
     return () => clearInterval(id);
   }, []);
+
+  function parseUtc(iso: string): number {
+    const s = iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z";
+    return new Date(s).getTime();
+  }
+
+  function formatTempo(iso: string): string {
+    const ms = now - parseUtc(iso);
+    const totalMin = Math.floor(ms / 60_000);
+    if (totalMin < 60) return `${totalMin} min`;
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${h}h ${m}min`;
+  }
 
   const queryBusca = busca === "" ? undefined : debouncedBusca || undefined;
   const { data: comandas = [], isLoading } = useComandas(queryBusca);
@@ -138,7 +152,7 @@ export function ComandasPage() {
                     </div>
                     <div className="text-sm text-gray-500">
                       Garçom: {c.garcom_nome} · {ativos.length}{" "}
-                      {ativos.length === 1 ? "item" : "itens"} · {Math.floor((now - new Date(c.created_at).getTime()) / 60_000)} min
+                      {ativos.length === 1 ? "item" : "itens"} · {formatTempo(c.created_at)}
                     </div>
                   </div>
                   <div className="text-right">
@@ -175,7 +189,7 @@ export function ComandasPage() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-400">
-                    {ativos.length} {ativos.length === 1 ? "item" : "itens"} · {Math.floor((now - new Date(c.created_at).getTime()) / 60_000)} min
+                    {ativos.length} {ativos.length === 1 ? "item" : "itens"} · {formatTempo(c.created_at)}
                   </span>
                   <span className="font-medium text-gray-900">
                     {formatCurrency(Number(c.total_parcial))}

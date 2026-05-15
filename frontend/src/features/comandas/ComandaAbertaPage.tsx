@@ -80,12 +80,22 @@ export function ComandaAbertaPage() {
   const comandaStatus = comanda?.status;
   useEffect(() => {
     if (!comandaStatus || comandaStatus === "fechada") return;
-    const id = setInterval(() => setNow(Date.now()), 60_000);
+    const id = setInterval(() => setNow(Date.now()), 1_000);
     return () => clearInterval(id);
   }, [comandaStatus]);
 
-  function minutesAgo(iso: string): number {
-    return Math.floor((now - new Date(iso).getTime()) / 60_000);
+  function parseUtc(iso: string): number {
+    const s = iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z";
+    return new Date(s).getTime();
+  }
+
+  function formatTempo(iso: string): string {
+    const ms = now - parseUtc(iso);
+    const totalMin = Math.floor(ms / 60_000);
+    if (totalMin < 60) return `${totalMin} min`;
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${h}h ${m}min`;
   }
 
   const itemSelecionadoObj = itemSelecionado != null
@@ -279,7 +289,7 @@ export function ComandaAbertaPage() {
                     ✏
                   </button>
                 )}
-                <span>· Aberta há {minutesAgo(comanda.created_at)} min</span>
+                <span>· Aberta há {formatTempo(comanda.created_at)}</span>
               </div>
             </div>
           </div>
