@@ -112,7 +112,9 @@ export function useLancarItem(comanda_id: number | string) {
         .post<ComandaResponse>(`/api/comandas/${comanda_id}/itens`, { ...data, version })
         .then((r) => r.data),
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["comandas", comanda_id] });
+      qc.invalidateQueries({ queryKey: ["comandas"] });
+      qc.invalidateQueries({ queryKey: ["insumos"] });
+      qc.invalidateQueries({ queryKey: ["estoque"] });
       for (const nome of data.estoque_insuficiente ?? []) {
         toast.warning(`Estoque insuficiente: ${nome}`);
       }
@@ -145,8 +147,13 @@ export function useEditarItem(comanda_id: number | string) {
           observacao,
         })
         .then((r) => r.data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["comandas", comanda_id] });
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["comandas"] });
+      qc.invalidateQueries({ queryKey: ["insumos"] });
+      qc.invalidateQueries({ queryKey: ["estoque"] });
+      for (const nome of data.estoque_insuficiente ?? []) {
+        toast.warning(`Estoque insuficiente: ${nome}`);
+      }
     },
     onError: (err: unknown) => handle409(err, comanda_id, qc),
   });
@@ -167,7 +174,9 @@ export function useCancelarItem(comanda_id: number | string) {
         })
         .then((r) => r.data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["comandas", comanda_id] });
+      qc.invalidateQueries({ queryKey: ["comandas"] });
+      qc.invalidateQueries({ queryKey: ["insumos"] });
+      qc.invalidateQueries({ queryKey: ["estoque"] });
     },
     onError: (err: unknown) => handle409(err, comanda_id, qc),
   });
@@ -195,6 +204,7 @@ export function useReopenComanda(comanda_id: number | string) {
       api.post<ComandaResponse>(`/api/comandas/${comanda_id}/reabrir`).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comandas"] });
+      qc.invalidateQueries({ queryKey: ["insumos"] });
       navigate(`/comandas/${comanda_id}`);
       toast.success("Comanda reaberta com sucesso");
     },
@@ -231,6 +241,8 @@ export function useCancelarComanda(comanda_id: number | string) {
       api.post<ComandaResponse>(`/api/comandas/${comanda_id}/cancelar`).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comandas"] });
+      qc.invalidateQueries({ queryKey: ["insumos"] });
+      qc.invalidateQueries({ queryKey: ["estoque"] });
       navigate("/comandas");
       toast.success("Comanda cancelada.");
     },

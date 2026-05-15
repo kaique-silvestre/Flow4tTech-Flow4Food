@@ -266,6 +266,14 @@ def editar_item(
             http_status=409,
         )
 
+    qtd_antiga = item_c.quantidade
+    qtd_nova = data.quantidade if data.quantidade is not None else qtd_antiga
+
+    insuficientes: list[str] = []
+    if qtd_nova != qtd_antiga:
+        _liberar_reserva_estoque(db, item_c.produto_id, qtd_antiga)
+        insuficientes = _reservar_estoque(db, item_c.produto_id, qtd_nova)
+
     comandas_repository.update_item(db, item_comanda_id, data.quantidade, data.pessoa_associada, data.observacao)
     comandas_repository.add_evento(
         db,
@@ -280,7 +288,9 @@ def editar_item(
     )
     db.commit()
     comanda = comandas_repository.get_by_id(db, comanda_id)
-    return _build_response(db, comanda)  # type: ignore[arg-type]
+    response = _build_response(db, comanda)  # type: ignore[arg-type]
+    response.estoque_insuficiente = insuficientes
+    return response
 
 
 def cancelar_item(

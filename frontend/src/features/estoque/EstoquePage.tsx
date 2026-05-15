@@ -76,11 +76,22 @@ export function EstoquePage() {
                     ? Number(item.estoque_atual) * item.custo_medio
                     : null;
                 const { qty, unit } = stockDisplay(item.estoque_atual, item.unidade_base);
+                const isCritico = item.nivel_critico != null && item.nivel_critico > 0 && Number(item.estoque_disponivel) < Number(item.nivel_critico);
                 return (
-                  <tr key={item.id} className="border-b last:border-0">
-                    <td className="py-2 pr-4 font-medium">{item.nome}</td>
+                  <tr key={item.id} className={`border-b last:border-0 ${isCritico ? "bg-orange-50" : ""}`}>
+                    <td className="py-2 pr-4 font-medium">
+                      <span className="inline-flex items-center gap-2">
+                        {isCritico && (
+                          <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+                          </span>
+                        )}
+                        {item.nome}
+                      </span>
+                    </td>
                     <td className="py-2 pr-4 text-gray-500">{item.categoria_nome ?? "—"}</td>
-                    <td className={`py-2 pr-4 font-medium ${Number(item.estoque_atual) < 0 ? "text-red-600" : ""}`}>
+                    <td className={`py-2 pr-4 font-medium ${Number(item.estoque_atual) < 0 ? "text-red-600" : isCritico ? "text-orange-600" : ""}`}>
                       {qty} {unit}
                     </td>
                     <td className="py-2 pr-4 text-gray-500">

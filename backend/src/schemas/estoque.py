@@ -19,6 +19,7 @@ class SaldoItemResponse(BaseModel):
     estoque_reservado: Decimal
     estoque_disponivel: Decimal
     custo_medio: Optional[Decimal]
+    nivel_critico: Optional[Decimal]
 
 
 class InsumoCriticoResponse(BaseModel):

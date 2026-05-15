@@ -13,6 +13,7 @@ export interface SaldoItemResponse {
   estoque_reservado: number;
   estoque_disponivel: number;
   custo_medio: number | null;
+  nivel_critico: number | null;
 }
 
 export interface MovimentoResponse {
@@ -103,6 +104,7 @@ export function useBaixaSemVenda() {
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: [QK] });
       qc.invalidateQueries({ queryKey: ["itens"] });
+      qc.invalidateQueries({ queryKey: ["insumos"] });
       if (result.saldo_negativo) {
         toast.warning("Baixa registrada. Estoque ficou negativo.");
       } else {

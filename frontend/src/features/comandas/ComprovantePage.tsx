@@ -57,12 +57,49 @@ export function ComprovantePage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center py-8 px-4">
+    <div className="print-wrapper min-h-screen bg-gray-100 flex flex-col items-center py-8 px-4">
       <style>{`
         @media print {
+          @page {
+            size: 80mm auto;
+            margin: 0mm;
+          }
+          html {
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          body {
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 80mm !important;
+            min-height: unset !important;
+          }
           .no-print { display: none !important; }
-          body { background: white !important; }
-          .print-container { box-shadow: none !important; border: none !important; }
+          .print-wrapper {
+            display: block !important;
+            width: 80mm !important;
+            min-height: unset !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: white !important;
+          }
+          .print-container {
+            box-shadow: none !important;
+            border: none !important;
+            border-radius: 0 !important;
+            width: 80mm !important;
+            max-width: 80mm !important;
+            padding: 3mm 4mm !important;
+            margin: 0 !important;
+            font-size: 10.5px !important;
+            line-height: 1.35 !important;
+            color: #000 !important;
+          }
+          .print-container * {
+            color: #000 !important;
+          }
         }
       `}</style>
 

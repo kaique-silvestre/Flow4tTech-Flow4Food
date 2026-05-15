@@ -74,6 +74,7 @@ export function useCreateCompra() {
       qc.invalidateQueries({ queryKey: [QK] });
       qc.invalidateQueries({ queryKey: ["estoque"] });
       qc.invalidateQueries({ queryKey: ["itens"] });
+      qc.invalidateQueries({ queryKey: ["insumos"] });
       toast.success("Compra registrada.");
       if (data.warning) toast.warning(data.warning);
       navigate("/compras");
@@ -93,6 +94,7 @@ export function useCancelarCompra() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [QK] });
       qc.invalidateQueries({ queryKey: ["estoque"] });
+      qc.invalidateQueries({ queryKey: ["insumos"] });
       toast.warning("Nota cancelada. Verifique o custo médio dos insumos afetados.", { duration: 6000 });
     },
     onError: (err: unknown) => {

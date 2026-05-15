@@ -67,6 +67,7 @@ def get_saldo_list(
                 estoque_reservado=insumo.estoque_reservado,
                 estoque_disponivel=insumo.estoque_atual - insumo.estoque_reservado,
                 custo_medio=insumo.custo_medio,
+                nivel_critico=insumo.nivel_critico,
             )
         )
     return result

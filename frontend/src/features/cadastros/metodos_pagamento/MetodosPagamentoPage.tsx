@@ -86,19 +86,23 @@ export function MetodosPagamentoPage() {
                   <Button size="sm" variant="outline" onClick={() => openEdit(m)}>
                     Editar
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => toggle.mutate(m.id)}
-                    className={m.ativo ? "text-yellow-600 hover:text-yellow-700" : "text-green-600 hover:text-green-700"}
-                  >
-                    {m.ativo ? "Desativar" : "Ativar"}
-                  </Button>
+                  {!m.padrao && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggle.mutate(m.id)}
+                      className={m.ativo ? "text-yellow-600 hover:text-yellow-700" : "text-green-600 hover:text-green-700"}
+                    >
+                      {m.ativo ? "Desativar" : "Ativar"}
+                    </Button>
+                  )}
                 </td>
                 <td className="py-2 text-right">
-                  <Button size="sm" variant="destructive" onClick={() => setRemovendo(m)}>
-                    Remover
-                  </Button>
+                  {!m.padrao && (
+                    <Button size="sm" variant="destructive" onClick={() => setRemovendo(m)}>
+                      Remover
+                    </Button>
+                  )}
                 </td>
               </tr>
             ))}
