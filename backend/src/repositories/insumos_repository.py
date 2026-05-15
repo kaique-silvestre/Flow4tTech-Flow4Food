@@ -57,6 +57,7 @@ def update(db: Session, insumo_id: int, data: InsumoUpdateRequest) -> Optional[I
     obj.categoria_id = data.categoria_id
     obj.unidade_base = data.unidade_base
     obj.quantidade_caixa = data.quantidade_caixa
+    obj.nivel_critico = data.nivel_critico
     db.commit()
     db.refresh(obj)
     return obj

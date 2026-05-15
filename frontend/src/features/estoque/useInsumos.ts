@@ -20,6 +20,7 @@ export interface InsumoResponse {
   estoque_atual: number;
   estoque_reservado: number;
   estoque_disponivel: number;
+  nivel_critico: number | null;
   ativo: boolean;
 }
 
@@ -35,6 +36,7 @@ export interface InsumoUpdateRequest {
   unidade_base: string;
   categoria_id: number | null;
   quantidade_caixa: number | null;
+  nivel_critico: number | null;
 }
 
 const QK = "insumos";

@@ -25,4 +25,5 @@ class Insumo(Base):
     custo_medio: Mapped[Optional[Decimal]] = mapped_column(sa.Numeric(10, 4), nullable=True)
     estoque_atual: Mapped[Decimal] = mapped_column(sa.Numeric(12, 4), nullable=False, default=Decimal("0"))
     estoque_reservado: Mapped[Decimal] = mapped_column(sa.Numeric(12, 4), nullable=False, default=Decimal("0"), server_default="0")
+    nivel_critico: Mapped[Optional[Decimal]] = mapped_column(sa.Numeric(12, 4), nullable=True)
     ativo: Mapped[bool] = mapped_column(nullable=False, default=True)

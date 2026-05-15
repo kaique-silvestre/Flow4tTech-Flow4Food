@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import { useInsumoCriticos } from "@/features/estoque/useEstoque";
+import { toast } from "@/lib/toast";
 
 const STORAGE_KEY = "sidebar_collapsed";
 
@@ -13,6 +15,18 @@ function getInitialCollapsed(): boolean {
 
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(getInitialCollapsed);
+  const { data: criticos = [] } = useInsumoCriticos();
+  const alertedRef = useRef(false);
+
+  useEffect(() => {
+    if (alertedRef.current || criticos.length === 0) return;
+    alertedRef.current = true;
+    for (const insumo of criticos) {
+      toast.warning(
+        `Estoque crítico: ${insumo.nome} — ${Number(insumo.estoque_disponivel).toFixed(3)} ${insumo.unidade_base} restantes`
+      );
+    }
+  }, [criticos]);
 
   function handleToggle() {
     setCollapsed((c) => {

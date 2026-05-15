@@ -18,6 +18,7 @@ class InsumoUpdateRequest(BaseModel):
     categoria_id: Optional[int] = None
     unidade_base: UnidadeBase
     quantidade_caixa: Optional[int] = None
+    nivel_critico: Optional[Decimal] = None
 
 
 class InsumoResponse(BaseModel):
@@ -31,6 +32,7 @@ class InsumoResponse(BaseModel):
     custo_medio: Optional[Decimal]
     estoque_atual: Decimal
     estoque_reservado: Decimal
+    nivel_critico: Optional[Decimal]
     ativo: bool
 
     @computed_field  # type: ignore[misc]

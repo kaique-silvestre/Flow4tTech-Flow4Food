@@ -12,6 +12,7 @@ from src.models.movimentos_estoque import MovimentoEstoque, TipoMovimento
 from src.repositories import estoque_repository
 from src.schemas.estoque import (
     BaixaSemVendaRequest,
+    InsumoCriticoResponse,
     MovimentoListResponse,
     MovimentoResponse,
     SaldoItemResponse,
@@ -68,6 +69,23 @@ def get_saldo_list(
                 custo_medio=insumo.custo_medio,
             )
         )
+    return result
+
+
+def get_insumos_criticos(db: Session) -> list[InsumoCriticoResponse]:
+    stmt = select(Insumo).where(Insumo.nivel_critico.isnot(None), Insumo.ativo == True)  # noqa: E712
+    insumos = list(db.execute(stmt).scalars().all())
+    result = []
+    for i in insumos:
+        disponivel = i.estoque_atual - i.estoque_reservado
+        if i.nivel_critico is not None and disponivel < i.nivel_critico:
+            result.append(InsumoCriticoResponse(
+                id=i.id,
+                nome=i.nome,
+                unidade_base=i.unidade_base,
+                estoque_disponivel=disponivel,
+                nivel_critico=i.nivel_critico,
+            ))
     return result
 
 

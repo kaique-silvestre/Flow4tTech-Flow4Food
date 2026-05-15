@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useComandasAbertasCount } from "@/features/comandas/useComandas";
+import { useInsumoCriticos } from "@/features/estoque/useEstoque";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -64,6 +65,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [cadastrosOpen, setCadastrosOpen] = useState(true);
   const [cadastrosHovered, setCadastrosHovered] = useState(false);
   const { data: countAbertas = 0 } = useComandasAbertasCount();
+  const { data: criticos = [] } = useInsumoCriticos();
+  const countCriticos = criticos.length;
 
   return (
     <aside
@@ -193,6 +196,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               )}
               {collapsed && item.to === "/comandas" && countAbertas > 0 && (
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500" />
+              )}
+              {!collapsed && item.to === "/estoque" && countCriticos > 0 && (
+                <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs text-white">
+                  {countCriticos}
+                </span>
+              )}
+              {collapsed && item.to === "/estoque" && countCriticos > 0 && (
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
               )}
             </NavLink>
           );

@@ -53,6 +53,22 @@ export interface MovimentoFilters {
 
 const QK = "estoque";
 
+export interface InsumoCriticoResponse {
+  id: number;
+  nome: string;
+  unidade_base: string;
+  estoque_disponivel: number;
+  nivel_critico: number;
+}
+
+export function useInsumoCriticos() {
+  return useQuery<InsumoCriticoResponse[]>({
+    queryKey: [QK, "criticos"],
+    queryFn: () => api.get<InsumoCriticoResponse[]>("/api/estoque/criticos").then((r) => r.data),
+    staleTime: 60_000,
+  });
+}
+
 export function useSaldoEstoque(filters: SaldoFilters = {}) {
   const params: Record<string, string> = {};
   if (filters.categoria_id != null) params.categoria_id = String(filters.categoria_id);

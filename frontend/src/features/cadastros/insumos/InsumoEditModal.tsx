@@ -20,6 +20,7 @@ const schema = z.object({
   nome: z.string().min(1, "Nome obrigatório"),
   categoria_id: z.coerce.number().int().positive("Selecione uma categoria"),
   unidade_base: z.enum(["un", "g", "kg"], { required_error: "Selecione uma unidade" }),
+  nivel_critico: z.coerce.number().positive().optional().or(z.literal("")),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -63,9 +64,10 @@ export function InsumoEditModal({ open, onClose, editing, onCreated }: Props) {
           nome: editing.nome,
           categoria_id: editing.categoria_id ?? undefined,
           unidade_base: editing.unidade_base as FormValues["unidade_base"],
+          nivel_critico: editing.nivel_critico != null ? Number(editing.nivel_critico) : "",
         });
       } else {
-        reset({ nome: "", categoria_id: undefined, unidade_base: undefined });
+        reset({ nome: "", categoria_id: undefined, unidade_base: undefined, nivel_critico: "" });
       }
     }
   }, [open, editing, reset]);
@@ -80,6 +82,7 @@ export function InsumoEditModal({ open, onClose, editing, onCreated }: Props) {
       categoria_id: data.categoria_id,
       unidade_base: data.unidade_base,
       quantidade_caixa: null,
+      nivel_critico: data.nivel_critico !== "" && data.nivel_critico != null ? Number(data.nivel_critico) : null,
     };
 
     if (editing) {
@@ -148,6 +151,18 @@ export function InsumoEditModal({ open, onClose, editing, onCreated }: Props) {
               <option value="kg">kg (quilos)</option>
             </select>
             {errors.unidade_base && <p className="text-xs text-red-500">{errors.unidade_base.message}</p>}
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="nivel_critico">Nível crítico (opcional)</Label>
+            <Input
+              id="nivel_critico"
+              type="number"
+              step="0.001"
+              min="0"
+              placeholder="Ex: 5 — alerta quando estoque disponível ficar abaixo"
+              {...register("nivel_critico")}
+            />
           </div>
 
           <div className="flex justify-end gap-2">

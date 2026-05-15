@@ -21,6 +21,14 @@ class SaldoItemResponse(BaseModel):
     custo_medio: Optional[Decimal]
 
 
+class InsumoCriticoResponse(BaseModel):
+    id: int
+    nome: str
+    unidade_base: str
+    estoque_disponivel: Decimal
+    nivel_critico: Decimal
+
+
 class BaixaSemVendaRequest(BaseModel):
     item_id: int
     quantidade: Decimal
