@@ -10,6 +10,8 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { useFornecedores, type Fornecedor } from "@/features/cadastros/fornecedores/useFornecedores";
 import { FornecedorModal } from "@/features/cadastros/fornecedores/FornecedorModal";
 import { useInsumos, type InsumoResponse } from "@/features/estoque/useInsumos";
+import { useCategorias, flattenCategorias } from "@/features/cadastros/categorias/useCategorias";
+import type { Categoria } from "@/features/cadastros/categorias/useCategorias";
 import { formatCurrency } from "@/lib/format";
 import { getFamilyOptions, toBase } from "@/lib/units";
 import { compraSchema, type CompraFormValues } from "./compraSchemas";
@@ -26,6 +28,31 @@ export function NovaCompraPage() {
 
   const [novoFornOpen, setNovoFornOpen] = useState(false);
   const [insumoModalIndex, setInsumoModalIndex] = useState<number | null>(null);
+  const [catFiltroCompra, setCatFiltroCompra] = useState<number | null>(null);
+  const { data: categoriasTree = [] } = useCategorias();
+
+  function collectCatIds(id: number, tree: Categoria[]): Set<number> {
+    const ids = new Set<number>([id]);
+    for (const c of tree) {
+      if (c.id === id) {
+        for (const ch of c.children ?? []) {
+          ids.add(ch.id);
+          for (const gch of ch.children ?? []) ids.add(gch.id);
+        }
+      } else {
+        for (const ch of c.children ?? []) {
+          if (ch.id === id) {
+            for (const gch of ch.children ?? []) ids.add(gch.id);
+          }
+        }
+      }
+    }
+    return ids;
+  }
+
+  const insumosFiltered = catFiltroCompra !== null
+    ? itensSimples.filter((i) => i.categoria_id != null && collectCatIds(catFiltroCompra!, categoriasTree).has(i.categoria_id))
+    : itensSimples;
 
   // custo_unitario per row (not in RHF schema — UI only)
   const [unitarios, setUnitarios] = useState<string[]>([""]); // one per row
@@ -257,14 +284,28 @@ export function NovaCompraPage() {
         <div className="space-y-2 rounded border p-3">
           <div className="flex items-center justify-between mb-1">
             <Label className="font-semibold">Itens comprados</Label>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handleAppend}
-            >
-              + Adicionar item
-            </Button>
+            <div className="flex items-center gap-2">
+              <select
+                value={catFiltroCompra ?? ""}
+                onChange={(e) => setCatFiltroCompra(e.target.value ? Number(e.target.value) : null)}
+                className="rounded border px-2 py-1 text-xs text-gray-700"
+              >
+                <option value="">Todas as categorias</option>
+                {flattenCategorias(categoriasTree).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.indent ? `  ${c.nome}` : c.nome}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleAppend}
+              >
+                + Adicionar item
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-[1fr_90px_110px_100px_110px_32px] gap-2 text-xs text-gray-500 px-1">
@@ -303,7 +344,7 @@ export function NovaCompraPage() {
                         ref={field.ref}
                       >
                         <option value={0}>Selecione...</option>
-                        {itensSimples.map((i) => (
+                        {insumosFiltered.map((i) => (
                           <option key={i.id} value={i.id}>{i.nome}</option>
                         ))}
                       </select>

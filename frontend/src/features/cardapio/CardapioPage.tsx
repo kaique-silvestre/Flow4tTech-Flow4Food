@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pagination, paginar } from "@/components/ui/pagination";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useCategorias } from "@/features/cadastros/categorias/useCategorias";
+import { useCategorias, flattenCategorias } from "@/features/cadastros/categorias/useCategorias";
 import {
   useProdutos,
   useDesativarProduto,
@@ -27,6 +27,25 @@ function buildCategoryPaths(tree: Categoria[], prefix = ""): Record<number, stri
     }
   }
   return result;
+}
+
+function collectIds(id: number, tree: Categoria[]): Set<number> {
+  const ids = new Set<number>([id]);
+  for (const c of tree) {
+    if (c.id === id) {
+      for (const ch of c.children ?? []) {
+        ids.add(ch.id);
+        for (const gch of ch.children ?? []) ids.add(gch.id);
+      }
+    } else {
+      for (const ch of c.children ?? []) {
+        if (ch.id === id) {
+          for (const gch of ch.children ?? []) ids.add(gch.id);
+        }
+      }
+    }
+  }
+  return ids;
 }
 
 const POR_PAGINA = 10;
@@ -80,7 +99,10 @@ export function CardapioPage() {
     if (filtro === "ativos" && !p.ativo) return false;
     if (filtro === "inativos" && p.ativo) return false;
     if (busca && !p.nome.toLowerCase().includes(busca.toLowerCase())) return false;
-    if (catFiltro !== null && p.categoria_id !== catFiltro) return false;
+    if (catFiltro !== null) {
+      const ids = collectIds(catFiltro, categorias);
+      if (!p.categoria_id || !ids.has(p.categoria_id)) return false;
+    }
     return true;
   });
 
@@ -129,8 +151,10 @@ export function CardapioPage() {
           className="rounded border px-2 py-1.5 text-sm text-gray-700"
         >
           <option value="">Todas as categorias</option>
-          {categorias.map((c) => (
-            <option key={c.id} value={c.id}>{c.nome}</option>
+          {flattenCategorias(categorias).map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.indent ? `  ${c.nome}` : c.nome}
+            </option>
           ))}
         </select>
         <Input
