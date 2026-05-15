@@ -17,6 +17,7 @@ export interface ProdutoResponse {
   preco_venda: number | null;
   ativo: boolean;
   ficha_tecnica: FichaTecnicaItem[] | null;
+  producao_possivel: number | null;
 }
 
 export interface ProdutoCreateRequest {

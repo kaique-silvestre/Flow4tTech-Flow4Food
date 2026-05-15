@@ -185,6 +185,7 @@ export function CardapioPage() {
               <th className="py-2 pr-4 text-right">Custo Ficha</th>
               <th className="py-2 pr-4 text-right">CMV%</th>
               <th className="py-2 pr-4 text-right">Lucro Bruto</th>
+              <th className="py-2 pr-4 text-right">Produção</th>
               <th className="py-2" />
             </tr>
           </thead>
@@ -232,6 +233,15 @@ export function CardapioPage() {
                         </span>
                       ) : "—"}
                     </td>
+                    <td className="py-2 pr-4 text-right">
+                      {p.producao_possivel === null ? (
+                        <span className="text-gray-400">—</span>
+                      ) : p.producao_possivel === 0 ? (
+                        <span className="font-medium text-red-600">0</span>
+                      ) : (
+                        <span className="text-gray-700">{p.producao_possivel}</span>
+                      )}
+                    </td>
                     <td className="py-2 text-right space-x-2">
                       <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
                         Editar
@@ -269,7 +279,7 @@ export function CardapioPage() {
                   {expandido && temFicha && (
                     <tr className="border-b last:border-0 bg-gray-50">
                       <td />
-                      <td colSpan={7} className="py-2 px-2 pb-3">
+                      <td colSpan={8} className="py-2 px-2 pb-3">
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="text-gray-400 border-b border-gray-200">

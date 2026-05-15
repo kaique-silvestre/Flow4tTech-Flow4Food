@@ -15,10 +15,13 @@ from src.schemas.produtos import (
 
 
 def _build_response(db: Session, produto) -> ProdutoResponse:
+    from decimal import Decimal as D
     componentes = produtos_repository.get_ficha(db, produto.id)
     ficha_resp = None
+    producao_possivel: Optional[int] = None
     if componentes:
         ficha_resp = []
+        minimos: list[int] = []
         for comp in componentes:
             insumo = db.execute(select(Insumo).where(Insumo.id == comp.insumo_id)).scalar_one_or_none()
             ficha_resp.append(FichaTecnicaItemResponse(
@@ -28,6 +31,15 @@ def _build_response(db: Session, produto) -> ProdutoResponse:
                 unidade_base=insumo.unidade_base if insumo else "un",
                 custo_medio_insumo=insumo.custo_medio if insumo else None,
             ))
+            if insumo is None or comp.quantidade <= 0:
+                minimos.append(0)
+            else:
+                disponivel = insumo.estoque_atual - insumo.estoque_reservado
+                if disponivel <= D("0"):
+                    minimos.append(0)
+                else:
+                    minimos.append(int(disponivel // comp.quantidade))
+        producao_possivel = min(minimos) if minimos else 0
     return ProdutoResponse(
         id=produto.id,
         nome=produto.nome,
@@ -35,6 +47,7 @@ def _build_response(db: Session, produto) -> ProdutoResponse:
         preco_venda=produto.preco_venda,
         ativo=produto.ativo,
         ficha_tecnica=ficha_resp,
+        producao_possivel=producao_possivel,
     )
 
 
