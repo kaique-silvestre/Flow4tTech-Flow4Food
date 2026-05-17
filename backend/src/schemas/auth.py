@@ -13,6 +13,11 @@ class TokenResponse(BaseModel):
     expires_in: int = 28800  # 8 horas
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
 class UserInfo(BaseModel):
     user_id: int
     tenant_id: int
