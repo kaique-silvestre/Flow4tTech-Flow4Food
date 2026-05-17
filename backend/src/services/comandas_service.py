@@ -105,6 +105,7 @@ def _build_response(db: Session, comanda: Comanda) -> ComandaResponse:
 
     return ComandaResponse(
         id=comanda.id,
+        numero_dia=comanda.numero_dia,
         identificacao=comanda.identificacao,
         tipo_identificacao=comanda.tipo_identificacao,
         garcom_id=comanda.garcom_id,

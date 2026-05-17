@@ -40,6 +40,13 @@ class DashboardResumoAnualItem(BaseModel):
     total_compras: float
 
 
+class EntregaEsperadaItem(BaseModel):
+    compra_id: int
+    fornecedor_nome: str
+    data_prevista_recebimento: datetime.date
+    total: float
+
+
 class DashboardResponse(BaseModel):
     faturamento_hoje: float
     ticket_medio_hoje: float
@@ -52,3 +59,6 @@ class DashboardResponse(BaseModel):
     ultimos_30_dias: list[DiaFaturamento]
     heatmap_mes: list[DiaFaturamento]
     comandas_abertas_lista: list[ComandaAbertaItem]
+    contas_vencendo_7_dias_total: float = 0.0
+    contas_vencendo_7_dias_qtd: int = 0
+    entregas_esperadas_7_dias: list[EntregaEsperadaItem] = []

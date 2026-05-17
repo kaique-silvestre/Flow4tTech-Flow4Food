@@ -26,6 +26,13 @@ export interface ComandaAbertaItem {
   aberta_ha_minutos: number;
 }
 
+export interface EntregaEsperadaItem {
+  compra_id: number;
+  fornecedor_nome: string;
+  data_prevista_recebimento: string;
+  total: number;
+}
+
 export interface DashboardData {
   faturamento_hoje: number;
   ticket_medio_hoje: number;
@@ -38,6 +45,9 @@ export interface DashboardData {
   ultimos_30_dias: DiaFaturamento[];
   heatmap_mes: DiaFaturamento[];
   comandas_abertas_lista: ComandaAbertaItem[];
+  contas_vencendo_7_dias_total: number;
+  contas_vencendo_7_dias_qtd: number;
+  entregas_esperadas_7_dias: EntregaEsperadaItem[];
 }
 
 export function useDashboard() {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { useInsumoCriticos } from "@/features/estoque/useEstoque";
@@ -15,8 +15,14 @@ function getInitialCollapsed(): boolean {
 
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(getInitialCollapsed);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { data: criticos = [] } = useInsumoCriticos();
   const alertedRef = useRef(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (alertedRef.current || criticos.length === 0) return;
@@ -38,9 +44,15 @@ export function AppLayout() {
 
   return (
     <div className="flex h-screen">
-      <Sidebar collapsed={collapsed} onToggle={handleToggle} />
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+      <Sidebar collapsed={collapsed} onToggle={handleToggle} mobileOpen={mobileOpen} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Topbar />
+        <Topbar onMenuClick={() => setMobileOpen((o) => !o)} />
         <main className="flex-1 overflow-auto p-4">
           <Outlet />
         </main>

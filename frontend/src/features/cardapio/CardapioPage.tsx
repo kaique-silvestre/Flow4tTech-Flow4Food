@@ -9,7 +9,6 @@ import {
   useProdutos,
   useDesativarProduto,
   useReativarProduto,
-  useDeleteProduto,
   type ProdutoResponse,
 } from "@/features/cadastros/produtos/useProdutos";
 import type { Categoria } from "@/features/cadastros/categorias/useCategorias";
@@ -72,12 +71,10 @@ export function CardapioPage() {
   const { data: categorias = [] } = useCategorias();
   const desativar = useDesativarProduto();
   const reativar = useReativarProduto();
-  const deletar = useDeleteProduto();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ProdutoResponse | null>(null);
   const [confirmDesativar, setConfirmDesativar] = useState<number | null>(null);
-  const [confirmDeletar, setConfirmDeletar] = useState<number | null>(null);
   const [filtro, setFiltro] = useState<FiltroAtivo>("ativos");
   const [busca, setBusca] = useState("");
   const [catFiltro, setCatFiltro] = useState<number | null>(null);
@@ -123,8 +120,8 @@ export function CardapioPage() {
   ];
 
   return (
-    <div className="p-6 min-h-full flex flex-col">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="p-4 lg:p-6 min-h-full flex flex-col">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Cardápio</h1>
         <Button onClick={openCreate}>Novo Produto</Button>
       </div>
@@ -161,7 +158,7 @@ export function CardapioPage() {
           placeholder="Buscar produto..."
           value={busca}
           onChange={(e) => { setBusca(e.target.value); setPagina(1); }}
-          className="w-52 text-sm"
+          className="w-full sm:w-52 text-sm"
         />
       </div>
 
@@ -174,18 +171,18 @@ export function CardapioPage() {
       ) : produtosFiltrados.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum produto encontrado.</p>
       ) : (
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b text-left text-gray-500">
               <th className="py-2 pr-2 w-6" />
               <th className="py-2 pr-4">Nome</th>
-              <th className="py-2 pr-4">Categoria</th>
+              <th className="hidden sm:table-cell py-2 pr-4">Categoria</th>
               <th className="py-2 pr-4 text-right">Preço</th>
-              <th className="py-2 pr-4 text-right">Custo Ficha</th>
-              <th className="py-2 pr-4 text-right">CMV%</th>
-              <th className="py-2 pr-4 text-right">Lucro Bruto</th>
-              <th className="py-2 pr-4 text-right">Produção</th>
+              <th className="hidden sm:table-cell py-2 pr-4 text-right">Custo Ficha</th>
+              <th className="hidden sm:table-cell py-2 pr-4 text-right">CMV%</th>
+              <th className="hidden sm:table-cell py-2 pr-4 text-right">Lucro Bruto</th>
+              <th className="hidden sm:table-cell py-2 pr-4 text-right">Produção</th>
               <th className="py-2" />
             </tr>
           </thead>
@@ -214,26 +211,26 @@ export function CardapioPage() {
                       </button>
                     </td>
                     <td className="py-2 pr-4 font-medium">{p.nome}</td>
-                    <td className="py-2 pr-4 text-gray-500">
+                    <td className="hidden sm:table-cell py-2 pr-4 text-gray-500">
                       {p.categoria_id ? (catPathMap[p.categoria_id] ?? "—") : "—"}
                     </td>
                     <td className="py-2 pr-4 text-right">
                       {p.preco_venda !== null ? `R$ ${Number(p.preco_venda).toFixed(2)}` : "—"}
                     </td>
-                    <td className="py-2 pr-4 text-right">
+                    <td className="hidden sm:table-cell py-2 pr-4 text-right">
                       {custo !== null ? `R$ ${custo.toFixed(2)}` : "—"}
                     </td>
-                    <td className="py-2 pr-4 text-right">
+                    <td className="hidden sm:table-cell py-2 pr-4 text-right">
                       <CmvBadge preco={p.preco_venda} custo={custo} />
                     </td>
-                    <td className="py-2 pr-4 text-right">
+                    <td className="hidden sm:table-cell py-2 pr-4 text-right">
                       {lucro !== null ? (
                         <span className={lucro >= 0 ? "text-green-600" : "text-red-600"}>
                           R$ {lucro.toFixed(2)}
                         </span>
                       ) : "—"}
                     </td>
-                    <td className="py-2 pr-4 text-right">
+                    <td className="hidden sm:table-cell py-2 pr-4 text-right">
                       {p.producao_possivel === null ? (
                         <span className="text-gray-400">—</span>
                       ) : p.producao_possivel === 0 ? (
@@ -242,7 +239,7 @@ export function CardapioPage() {
                         <span className="text-gray-700">{p.producao_possivel}</span>
                       )}
                     </td>
-                    <td className="py-2 text-right space-x-2">
+                    <td className="py-2 text-right space-x-2 whitespace-nowrap">
                       <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
                         Editar
                       </Button>
@@ -265,21 +262,13 @@ export function CardapioPage() {
                           Reativar
                         </Button>
                       )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setConfirmDeletar(p.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        Remover
-                      </Button>
                     </td>
                   </tr>
 
                   {expandido && temFicha && (
                     <tr className="border-b last:border-0 bg-gray-50">
                       <td />
-                      <td colSpan={8} className="py-2 px-2 pb-3">
+                      <td colSpan={7} className="py-2 px-2 pb-3">
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="text-gray-400 border-b border-gray-200">
@@ -351,17 +340,6 @@ export function CardapioPage() {
         isPending={desativar.isPending}
       />
 
-      <ConfirmDialog
-        open={confirmDeletar !== null}
-        title="Remover produto?"
-        confirmLabel="Remover"
-        onConfirm={() => {
-          deletar.mutate(confirmDeletar!);
-          setConfirmDeletar(null);
-        }}
-        onCancel={() => setConfirmDeletar(null)}
-        isPending={deletar.isPending}
-      />
     </div>
   );
 }

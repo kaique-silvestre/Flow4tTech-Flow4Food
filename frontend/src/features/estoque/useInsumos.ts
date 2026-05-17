@@ -95,7 +95,11 @@ export function useToggleInsumoAtivo() {
     mutationFn: (id: number) =>
       api.patch<InsumoResponse>(`/api/insumos/${id}/toggle-ativo`).then((r) => r.data),
     onSuccess: (data) => {
+      qc.setQueriesData<InsumoResponse[]>({ queryKey: [QK] }, (old) =>
+        old?.map((i) => (i.id === data.id ? data : i)),
+      );
       qc.invalidateQueries({ queryKey: [QK] });
+      qc.invalidateQueries({ queryKey: ["estoque"] });
       toast.success(data.ativo ? "Insumo reativado." : "Insumo desativado.");
     },
     onError: () => toast.error("Erro ao alterar status do insumo."),

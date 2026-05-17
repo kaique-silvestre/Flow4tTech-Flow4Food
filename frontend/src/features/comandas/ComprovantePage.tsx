@@ -76,7 +76,8 @@ export function ComprovantePage() {
             width: 80mm !important;
             min-height: unset !important;
           }
-          .no-print { display: none !important; }
+          .no-print,
+          [data-sonner-toaster] { display: none !important; }
           .print-wrapper {
             display: block !important;
             width: 80mm !important;
@@ -107,13 +108,13 @@ export function ComprovantePage() {
       <div className="no-print flex gap-3 mb-6 w-full max-w-sm">
         <button
           onClick={() => window.print()}
-          className="flex-1 px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 font-medium"
+          className="flex-1 min-h-[44px] px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 font-medium"
         >
           Imprimir
         </button>
         <button
           onClick={() => navigate("/comandas")}
-          className="flex-1 px-4 py-2 border border-gray-400 text-gray-700 rounded hover:bg-gray-50 font-medium"
+          className="flex-1 min-h-[44px] px-4 py-2 border border-gray-400 text-gray-700 rounded hover:bg-gray-50 font-medium"
         >
           Voltar às comandas
         </button>

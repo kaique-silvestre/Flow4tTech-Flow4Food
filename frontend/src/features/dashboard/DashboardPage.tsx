@@ -267,6 +267,30 @@ export function DashboardPage() {
                   </p>
                   <p className="text-sm text-gray-500">{data?.comandas_fechadas_hoje ?? 0} fechadas hoje</p>
                 </div>
+                {(data?.contas_vencendo_7_dias_qtd ?? 0) > 0 && (
+                  <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                    <p className="text-xs text-orange-600 uppercase tracking-wide">Contas vencendo (7 dias)</p>
+                    <p className="mt-1 text-2xl font-bold text-orange-700">
+                      {formatCurrency(data?.contas_vencendo_7_dias_total ?? 0)}
+                    </p>
+                    <p className="text-sm text-orange-600">{data?.contas_vencendo_7_dias_qtd} conta(s)</p>
+                  </div>
+                )}
+                {(data?.entregas_esperadas_7_dias?.length ?? 0) > 0 && (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                    <p className="text-xs text-blue-600 uppercase tracking-wide">Entregas esperadas (7 dias)</p>
+                    <p className="mt-1 text-2xl font-bold text-blue-700">
+                      {data?.entregas_esperadas_7_dias?.length}
+                    </p>
+                    <div className="mt-1 space-y-0.5">
+                      {data?.entregas_esperadas_7_dias?.slice(0, 3).map((e) => (
+                        <p key={e.compra_id} className="text-xs text-blue-600 truncate">
+                          {new Date(e.data_prevista_recebimento + "T00:00:00").toLocaleDateString("pt-BR")} · {e.fornecedor_nome}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>

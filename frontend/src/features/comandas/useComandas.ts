@@ -30,6 +30,7 @@ export interface PagamentoResponse {
 
 export interface ComandaResponse {
   id: number;
+  numero_dia: number | null;
   identificacao: string;
   tipo_identificacao: "nome" | "mesa";
   garcom_id: number;
