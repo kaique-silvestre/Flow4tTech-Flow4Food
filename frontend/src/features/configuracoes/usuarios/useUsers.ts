@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast as sonner } from "sonner";
 import { api } from "@/lib/api";
 import { toast } from "@/lib/toast";
+import { SenhaProvisoriaToast } from "./SenhaProvisoriaToast";
 
 export interface UserResponse {
   id: number;
@@ -101,7 +103,12 @@ export function useResetPassword() {
   return useMutation({
     mutationFn: (id: number) =>
       api.post<{ temp_password: string }>(`/api/users/${id}/reset-password`).then((r) => r.data),
-    onSuccess: (data) => toast.success(`Senha provisória: ${data.temp_password}`, { duration: 10000 }),
+    onSuccess: (data) => {
+      sonner.custom(
+        (id) => SenhaProvisoriaToast({ toastId: id, password: data.temp_password }),
+        { duration: Infinity }
+      );
+    },
     onError: (e: unknown) => toast.error(errMsg(e, "Erro")),
   });
 }

@@ -28,6 +28,7 @@ interface SubNavItem {
   label: string;
   to: string;
   icon: LucideIcon;
+  screen?: string;
 }
 
 interface NavItem {
@@ -46,6 +47,11 @@ const CADASTROS_CHILDREN: SubNavItem[] = [
   { label: "Métodos Pgto.", to: "/cadastros/metodos-pagamento", icon: CreditCard },
 ];
 
+const CONFIGURACOES_CHILDREN: SubNavItem[] = [
+  { label: "Configurações Gerais", to: "/configuracoes", icon: Settings, screen: "configuracoes" },
+  { label: "Usuários", to: "/configuracoes/usuarios", icon: Users, screen: "gestao_usuarios" },
+];
+
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard, screen: "dashboard" },
   { label: "Comandas", to: "/comandas", icon: ClipboardList, screen: "comandas" },
@@ -55,8 +61,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Movimentos", to: "/estoque/movimentos", icon: History, screen: "estoque" },
   { label: "Relatórios", to: "/relatorios", icon: BarChart3, screen: "relatorios" },
   { label: "Cadastros", to: null, icon: BookOpen, screen: "cadastros", children: CADASTROS_CHILDREN },
-  { label: "Configurações", to: "/configuracoes", icon: Settings, screen: "configuracoes" },
-  { label: "Usuários", to: "/configuracoes/usuarios", icon: Users, screen: "gestao_usuarios" },
+  { label: "Configurações", to: null, icon: Settings, children: CONFIGURACOES_CHILDREN },
 ];
 
 interface SidebarProps {
@@ -65,16 +70,25 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
-  const [cadastrosOpen, setCadastrosOpen] = useState(true);
-  const [cadastrosHovered, setCadastrosHovered] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Cadastros: true, Configurações: true });
+  const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
   const { data: countAbertas = 0 } = useComandasAbertasCount();
   const { data: criticos = [] } = useInsumoCriticos();
   const countCriticos = criticos.length;
   const permissions = usePermissions();
 
-  const visibleItems = NAV_ITEMS.filter(
-    (item) => !item.screen || permissions.includes(item.screen)
-  );
+  function toggleGroup(label: string) {
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  }
+
+  function visibleChildren(children: SubNavItem[]) {
+    return children.filter((c) => !c.screen || permissions.includes(c.screen));
+  }
+
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.children) return visibleChildren(item.children).length > 0;
+    return !item.screen || permissions.includes(item.screen);
+  });
 
   return (
     <aside
@@ -92,13 +106,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <nav className="flex flex-col gap-1 overflow-hidden p-2">
         {visibleItems.map((item) => {
           if (item.children) {
+            const children = visibleChildren(item.children);
+            const isOpen = openGroups[item.label] ?? true;
+            const isHovered = hoveredGroup === item.label;
+
             if (collapsed) {
               return (
                 <div
                   key={item.label}
                   className="relative"
-                  onMouseEnter={() => setCadastrosHovered(true)}
-                  onMouseLeave={() => setCadastrosHovered(false)}
+                  onMouseEnter={() => setHoveredGroup(item.label)}
+                  onMouseLeave={() => setHoveredGroup(null)}
                 >
                   <button
                     className="flex w-full items-center justify-center rounded px-2 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900"
@@ -106,9 +124,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   >
                     {item.icon && <item.icon size={18} className="shrink-0" />}
                   </button>
-                  {cadastrosHovered && (
+                  {isHovered && (
                     <div className="absolute left-full top-0 z-50 ml-1 min-w-40 rounded-md border bg-white py-1 shadow-lg">
-                      {item.children.map((child) => (
+                      {children.map((child) => (
                         <NavLink
                           key={child.to}
                           to={child.to}
@@ -134,20 +152,20 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             return (
               <div key={item.label}>
                 <button
-                  onClick={() => setCadastrosOpen((o) => !o)}
+                  onClick={() => toggleGroup(item.label)}
                   className="flex w-full items-center gap-2 rounded px-2 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 >
                   {item.icon && <item.icon size={18} className="shrink-0" />}
                   <span className="flex-1 truncate text-left">{item.label}</span>
-                  {cadastrosOpen ? (
+                  {isOpen ? (
                     <ChevronDown size={14} className="shrink-0" />
                   ) : (
                     <ChevronRight size={14} className="shrink-0" />
                   )}
                 </button>
-                {cadastrosOpen && (
+                {isOpen && (
                   <div className="flex flex-col gap-1 pl-4">
-                    {item.children.map((child) => (
+                    {children.map((child) => (
                       <NavLink
                         key={child.to}
                         to={child.to}
