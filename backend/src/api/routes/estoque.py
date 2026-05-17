@@ -8,6 +8,7 @@ from src.schemas.estoque import (
     BaixaSemVendaRequest,
     InsumoCriticoResponse,
     MovimentoListResponse,
+    MovimentoProdutoListResponse,
     SaldoItemResponse,
 )
 from src.services import estoque_service
@@ -54,3 +55,16 @@ def list_movimentos(
     _user: dict = Depends(get_current_user),
 ) -> MovimentoListResponse:
     return estoque_service.get_historico(db, item_id, tipo, data_inicio, data_fim, pagina, por_pagina)
+
+
+@router.get("/movimentos-produtos", response_model=MovimentoProdutoListResponse)
+def list_movimentos_produtos(
+    produto_id: Optional[int] = Query(None),
+    data_inicio: Optional[str] = Query(None),
+    data_fim: Optional[str] = Query(None),
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> MovimentoProdutoListResponse:
+    return estoque_service.get_historico_produtos(db, produto_id, data_inicio, data_fim, pagina, por_pagina)

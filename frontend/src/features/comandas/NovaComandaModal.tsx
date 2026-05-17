@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useGarcons, type Garcom } from "@/features/cadastros/garcons/useGarcons";
 import { GarcomModal } from "@/features/cadastros/garcons/GarcomModal";
 import { novaComandaSchema, type NovaComandaValues } from "./comandaSchemas";
@@ -40,6 +41,8 @@ export function NovaComandaModal({ open, onClose }: Props) {
 
   const [pessoaInput, setPessoaInput] = useState("");
   const [garcomModalOpen, setGarcomModalOpen] = useState(false);
+  const garcomId = watch("garcom_id");
+  const garcomNome = garçonsAtivos.find((g) => g.id === garcomId)?.nome;
 
   function handleGarcomCreated(garcom: Garcom) {
     setValue("garcom_id", garcom.id);
@@ -146,18 +149,21 @@ export function NovaComandaModal({ open, onClose }: Props) {
                 + Novo garçom
               </button>
             </div>
-            <select
-              id="garcom_id"
-              className="mt-1 w-full rounded border px-3 py-2 text-sm"
-              {...register("garcom_id", { valueAsNumber: true })}
+            <Select
+              value={garcomId ? String(garcomId) : ""}
+              onValueChange={(v) => setValue("garcom_id", Number(v), { shouldValidate: true })}
             >
-              <option value="">Selecione um garçom</option>
-              {garçonsAtivos.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.nome}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Selecione um garçom" label={garcomNome} />
+              </SelectTrigger>
+              <SelectContent>
+                {garçonsAtivos.map((g) => (
+                  <SelectItem key={g.id} value={String(g.id)}>
+                    {g.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {errors.garcom_id && (
               <p className="mt-1 text-xs text-red-500">{errors.garcom_id.message}</p>
             )}

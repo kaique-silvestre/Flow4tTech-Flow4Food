@@ -1,8 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { stockDisplay } from "@/lib/format";
-import { useSaldoEstoque } from "./useEstoque";
-import { useMovimentos, type MovimentoFilters } from "./useEstoque";
+import { formatCurrency, stockDisplay } from "@/lib/format";
+import {
+  useSaldoEstoque,
+  useMovimentos,
+  useMovimentosProdutos,
+  type MovimentoFilters,
+  type MovimentoProdutoFilters,
+} from "./useEstoque";
+import { useProdutos } from "@/features/cadastros/produtos/useProdutos";
 
 const TIPO_OPTIONS = [
   { value: "", label: "Todos os tipos" },
@@ -26,24 +32,32 @@ const TIPO_LABEL: Record<string, string> = {
   estorno_compra: "Estorno compra",
 };
 
-export function MovimentosPage() {
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+        active ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"
+      }`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+function InsumoMovimentos() {
   const [filters, setFilters] = useState<MovimentoFilters>({ pagina: 1, por_pagina: 15 });
   const { data: result, isLoading } = useMovimentos(filters);
   const { data: itens = [] } = useSaldoEstoque();
 
-  const totalPaginas = result ? Math.ceil(result.total / (filters.por_pagina ?? 50)) : 1;
+  const totalPaginas = result ? Math.ceil(result.total / (filters.por_pagina ?? 15)) : 1;
 
   function setPage(p: number) {
     setFilters((f) => ({ ...f, pagina: p }));
   }
 
   return (
-    <div className="p-6 min-h-full flex flex-col">
-      <div className="mb-4">
-        <h1 className="text-xl font-semibold">Histórico de Movimentações</h1>
-      </div>
-
-      {/* Filtros */}
+    <>
       <div className="mb-4 flex flex-wrap gap-3 text-sm">
         <select
           className="rounded border px-2 py-1 text-sm"
@@ -52,7 +66,7 @@ export function MovimentosPage() {
             setFilters((f) => ({ ...f, item_id: e.target.value ? Number(e.target.value) : null, pagina: 1 }))
           }
         >
-          <option value="">Todos os itens</option>
+          <option value="">Todos os insumos</option>
           {itens.map((i) => (
             <option key={i.id} value={i.id}>{i.nome}</option>
           ))}
@@ -88,7 +102,6 @@ export function MovimentosPage() {
         </div>
       </div>
 
-      {/* Tabela */}
       {isLoading ? (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />)}
@@ -113,56 +126,176 @@ export function MovimentosPage() {
                 const { qty: qtdDisplay, unit: unitDisplay } = stockDisplay(mov.quantidade, mov.unidade_base);
                 const { qty: saldoDisplay } = stockDisplay(mov.saldo_apos, mov.unidade_base);
                 return (
+                  <tr key={mov.id} className="border-b last:border-0">
+                    <td className="py-2 pr-4 text-gray-500">
+                      {new Date(mov.created_at).toLocaleString("pt-BR", {
+                        day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit",
+                      })}
+                    </td>
+                    <td className="py-2 pr-4 font-medium">{mov.item_nome}</td>
+                    <td className="py-2 pr-4">
+                      <span className={`rounded-full px-2 py-0.5 text-xs ${TIPO_BADGE[mov.tipo] ?? ""}`}>
+                        {TIPO_LABEL[mov.tipo] ?? mov.tipo}
+                      </span>
+                    </td>
+                    <td className={`py-2 pr-4 ${mov.tipo === "entrada" ? "text-green-700" : "text-red-600"}`}>
+                      {mov.tipo === "entrada" ? "+" : "-"}{qtdDisplay}
+                    </td>
+                    <td className="py-2 pr-4 text-gray-500">{unitDisplay}</td>
+                    <td className="py-2 text-gray-600">{saldoDisplay}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          <div className="flex-1" />
+          <div className="sticky bottom-0 bg-white border-t border-gray-100 mt-4 py-2 flex items-center justify-between text-sm">
+            <Button size="sm" variant="outline" disabled={(filters.pagina ?? 1) <= 1} onClick={() => setPage((filters.pagina ?? 1) - 1)}>
+              ← Anterior
+            </Button>
+            <span className="text-gray-500">
+              Página {filters.pagina ?? 1} de {totalPaginas} · {result.total} movimentos
+            </span>
+            <Button size="sm" variant="outline" disabled={(filters.pagina ?? 1) >= totalPaginas} onClick={() => setPage((filters.pagina ?? 1) + 1)}>
+              Próximo →
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function ProdutoMovimentos() {
+  const [filters, setFilters] = useState<MovimentoProdutoFilters>({ pagina: 1, por_pagina: 15 });
+  const { data: result, isLoading } = useMovimentosProdutos(filters);
+  const { data: produtos = [] } = useProdutos(undefined, { ativo: undefined });
+
+  const totalPaginas = result ? Math.ceil(result.total / (filters.por_pagina ?? 15)) : 1;
+
+  function setPage(p: number) {
+    setFilters((f) => ({ ...f, pagina: p }));
+  }
+
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap gap-3 text-sm">
+        <select
+          className="rounded border px-2 py-1 text-sm"
+          value={filters.produto_id ?? ""}
+          onChange={(e) =>
+            setFilters((f) => ({ ...f, produto_id: e.target.value ? Number(e.target.value) : null, pagina: 1 }))
+          }
+        >
+          <option value="">Todos os produtos</option>
+          {produtos.map((p) => (
+            <option key={p.id} value={p.id}>{p.nome}</option>
+          ))}
+        </select>
+
+        <div className="flex items-center gap-2">
+          <label className="text-gray-500">De:</label>
+          <input
+            type="date"
+            className="rounded border px-2 py-1 text-sm"
+            value={filters.data_inicio ?? ""}
+            onChange={(e) => setFilters((f) => ({ ...f, data_inicio: e.target.value || null, pagina: 1 }))}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-gray-500">Até:</label>
+          <input
+            type="date"
+            className="rounded border px-2 py-1 text-sm"
+            value={filters.data_fim ?? ""}
+            onChange={(e) => setFilters((f) => ({ ...f, data_fim: e.target.value || null, pagina: 1 }))}
+          />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />)}
+        </div>
+      ) : !result || result.itens.length === 0 ? (
+        <p className="text-sm text-gray-500">Nenhuma saída de produto encontrada.</p>
+      ) : (
+        <div className="flex-1 flex flex-col">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b text-left text-gray-500">
+                <th className="py-2 pr-4">Data</th>
+                <th className="py-2 pr-4">Produto</th>
+                <th className="py-2 pr-4">Comanda</th>
+                <th className="py-2 pr-4">Status</th>
+                <th className="py-2 pr-4">Qtd</th>
+                <th className="py-2 pr-4">Preço unit.</th>
+                <th className="py-2">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.itens.map((mov) => (
                 <tr key={mov.id} className="border-b last:border-0">
                   <td className="py-2 pr-4 text-gray-500">
                     {new Date(mov.created_at).toLocaleString("pt-BR", {
                       day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit",
                     })}
                   </td>
-                  <td className="py-2 pr-4 font-medium">{mov.item_nome}</td>
+                  <td className="py-2 pr-4 font-medium">{mov.produto_nome}</td>
+                  <td className="py-2 pr-4 text-gray-500">{mov.comanda_label}</td>
                   <td className="py-2 pr-4">
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${TIPO_BADGE[mov.tipo] ?? ""}`}>
-                      {TIPO_LABEL[mov.tipo] ?? mov.tipo}
-                    </span>
+                    {mov.cancelado ? (
+                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600">Cancelado</span>
+                    ) : mov.cortesia ? (
+                      <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-600">Cortesia</span>
+                    ) : (
+                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">Venda</span>
+                    )}
                   </td>
-                  <td className={`py-2 pr-4 ${mov.tipo === "entrada" ? "text-green-700" : "text-red-600"}`}>
-                    {mov.tipo === "entrada" ? "+" : "-"}{qtdDisplay}
-                  </td>
-                  <td className="py-2 pr-4 text-gray-500">{unitDisplay}</td>
-                  <td className="py-2 text-gray-600">
-                    {saldoDisplay}
+                  <td className="py-2 pr-4">{Number(mov.quantidade)}</td>
+                  <td className="py-2 pr-4 text-gray-500">{formatCurrency(Number(mov.preco_unitario))}</td>
+                  <td className={`py-2 ${mov.cancelado ? "text-gray-400 line-through" : "text-gray-800"}`}>
+                    {formatCurrency(Number(mov.subtotal))}
                   </td>
                 </tr>
-                );
-              })}
+              ))}
             </tbody>
           </table>
 
-          {/* Paginação */}
           <div className="flex-1" />
           <div className="sticky bottom-0 bg-white border-t border-gray-100 mt-4 py-2 flex items-center justify-between text-sm">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={(filters.pagina ?? 1) <= 1}
-              onClick={() => setPage((filters.pagina ?? 1) - 1)}
-            >
+            <Button size="sm" variant="outline" disabled={(filters.pagina ?? 1) <= 1} onClick={() => setPage((filters.pagina ?? 1) - 1)}>
               ← Anterior
             </Button>
             <span className="text-gray-500">
-              Página {filters.pagina ?? 1} de {totalPaginas} · {result.total} movimentos
+              Página {filters.pagina ?? 1} de {totalPaginas} · {result.total} saídas
             </span>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={(filters.pagina ?? 1) >= totalPaginas}
-              onClick={() => setPage((filters.pagina ?? 1) + 1)}
-            >
+            <Button size="sm" variant="outline" disabled={(filters.pagina ?? 1) >= totalPaginas} onClick={() => setPage((filters.pagina ?? 1) + 1)}>
               Próximo →
             </Button>
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+export function MovimentosPage() {
+  const [tab, setTab] = useState<"insumos" | "produtos">("insumos");
+
+  return (
+    <div className="p-6 min-h-full flex flex-col">
+      <div className="mb-4">
+        <h1 className="text-xl font-semibold">Histórico de Movimentações</h1>
+      </div>
+
+      <div className="flex border-b mb-4">
+        <TabButton active={tab === "insumos"} onClick={() => setTab("insumos")}>Insumos</TabButton>
+        <TabButton active={tab === "produtos"} onClick={() => setTab("produtos")}>Produtos</TabButton>
+      </div>
+
+      {tab === "insumos" ? <InsumoMovimentos /> : <ProdutoMovimentos />}
     </div>
   );
 }

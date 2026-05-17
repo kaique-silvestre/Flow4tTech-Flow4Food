@@ -52,6 +52,36 @@ export interface MovimentoFilters {
   por_pagina?: number;
 }
 
+export interface MovimentoProdutoResponse {
+  id: number;
+  produto_id: number;
+  produto_nome: string;
+  comanda_id: number;
+  comanda_label: string;
+  quantidade: number;
+  preco_unitario: number;
+  subtotal: number;
+  cortesia: boolean;
+  cancelado: boolean;
+  pessoa_associada: string | null;
+  created_at: string;
+}
+
+export interface MovimentoProdutoListResponse {
+  itens: MovimentoProdutoResponse[];
+  total: number;
+  pagina: number;
+  por_pagina: number;
+}
+
+export interface MovimentoProdutoFilters {
+  produto_id?: number | null;
+  data_inicio?: string | null;
+  data_fim?: string | null;
+  pagina?: number;
+  por_pagina?: number;
+}
+
 const QK = "estoque";
 
 export interface InsumoCriticoResponse {
@@ -93,6 +123,21 @@ export function useMovimentos(filters: MovimentoFilters = {}) {
   return useQuery<MovimentoListResponse>({
     queryKey: [QK, "movimentos", filters],
     queryFn: () => api.get<MovimentoListResponse>("/api/estoque/movimentos", { params }).then((r) => r.data),
+  });
+}
+
+export function useMovimentosProdutos(filters: MovimentoProdutoFilters = {}) {
+  const params: Record<string, string> = {};
+  if (filters.produto_id != null) params.produto_id = String(filters.produto_id);
+  if (filters.data_inicio) params.data_inicio = filters.data_inicio;
+  if (filters.data_fim) params.data_fim = filters.data_fim;
+  if (filters.pagina) params.pagina = String(filters.pagina);
+  if (filters.por_pagina) params.por_pagina = String(filters.por_pagina);
+
+  return useQuery<MovimentoProdutoListResponse>({
+    queryKey: [QK, "movimentos-produtos", filters],
+    queryFn: () =>
+      api.get<MovimentoProdutoListResponse>("/api/estoque/movimentos-produtos", { params }).then((r) => r.data),
   });
 }
 

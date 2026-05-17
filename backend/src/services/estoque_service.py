@@ -7,13 +7,18 @@ from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
 from src.models.categorias import Categoria
+from src.models.comandas import Comanda
 from src.models.insumos import Insumo
+from src.models.itens_comanda import ItemComanda
 from src.models.movimentos_estoque import MovimentoEstoque, TipoMovimento
+from src.models.produtos import Produto
 from src.repositories import estoque_repository
 from src.schemas.estoque import (
     BaixaSemVendaRequest,
     InsumoCriticoResponse,
     MovimentoListResponse,
+    MovimentoProdutoListResponse,
+    MovimentoProdutoResponse,
     MovimentoResponse,
     SaldoItemResponse,
 )
@@ -133,6 +138,63 @@ def get_historico(
 
     return MovimentoListResponse(
         itens=[_build_movimento_response(db, m) for m in movimentos],
+        total=total,
+        pagina=pagina,
+        por_pagina=por_pagina,
+    )
+
+
+def get_historico_produtos(
+    db: Session,
+    produto_id: Optional[int] = None,
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    pagina: int = 1,
+    por_pagina: int = 50,
+) -> MovimentoProdutoListResponse:
+    q = (
+        db.query(ItemComanda, Produto, Comanda)
+        .join(Produto, Produto.id == ItemComanda.produto_id)
+        .join(Comanda, Comanda.id == ItemComanda.comanda_id)
+    )
+
+    if produto_id:
+        q = q.filter(ItemComanda.produto_id == produto_id)
+    if data_inicio:
+        di = datetime.date.fromisoformat(data_inicio)
+        q = q.filter(ItemComanda.created_at >= datetime.datetime(di.year, di.month, di.day))
+    if data_fim:
+        df = datetime.date.fromisoformat(data_fim)
+        q = q.filter(ItemComanda.created_at < datetime.datetime(df.year, df.month, df.day) + datetime.timedelta(days=1))
+
+    total = q.count()
+    rows = (
+        q.order_by(ItemComanda.created_at.desc())
+        .offset((pagina - 1) * por_pagina)
+        .limit(por_pagina)
+        .all()
+    )
+
+    itens = [
+        MovimentoProdutoResponse(
+            id=ic.id,
+            produto_id=ic.produto_id,
+            produto_nome=p.nome,
+            comanda_id=ic.comanda_id,
+            comanda_label=f"#{c.numero_dia or c.id} — {c.identificacao}",
+            quantidade=ic.quantidade,
+            preco_unitario=ic.preco_unitario,
+            subtotal=Decimal("0") if ic.cortesia else ic.quantidade * ic.preco_unitario,
+            cortesia=ic.cortesia,
+            cancelado=ic.cancelado,
+            pessoa_associada=ic.pessoa_associada,
+            created_at=ic.created_at,
+        )
+        for ic, p, c in rows
+    ]
+
+    return MovimentoProdutoListResponse(
+        itens=itens,
         total=total,
         pagina=pagina,
         por_pagina=por_pagina,
