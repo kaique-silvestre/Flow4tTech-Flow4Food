@@ -48,7 +48,7 @@ const CADASTROS_CHILDREN: SubNavItem[] = [
 ];
 
 const CONFIGURACOES_CHILDREN: SubNavItem[] = [
-  { label: "Configurações Gerais", to: "/configuracoes", icon: Settings, screen: "configuracoes" },
+  { label: "Configurações Gerais", to: "/configuracoes/gerais", icon: Settings, screen: "configuracoes" },
   { label: "Usuários", to: "/configuracoes/usuarios", icon: Users, screen: "gestao_usuarios" },
 ];
 

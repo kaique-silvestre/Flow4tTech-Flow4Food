@@ -69,7 +69,7 @@ export function App() {
               <Route path="/relatorios/perdas-cortesias" element={<PerdasCortesiasPage />} />
               <Route path="/relatorios/vendas-por-garcom" element={<VendasPorGarcomPage />} />
               <Route path="/cardapio" element={<CardapioPage />} />
-              <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+              <Route path="/configuracoes/gerais" element={<ConfiguracoesPage />} />
               <Route path="/configuracoes/usuarios" element={<GestaoUsuariosPage />} />
               <Route path="*" element={<PlaceholderPage />} />
             </Route>
