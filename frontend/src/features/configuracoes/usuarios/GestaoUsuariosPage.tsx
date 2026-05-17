@@ -4,11 +4,10 @@ import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/authStore";
 import {
   useUsers,
-  useDeleteUser,
   useToggleUserActive,
   type UserResponse,
 } from "./useUsers";
-import { useProfiles, useDeleteProfile, type ProfileResponse } from "./useProfiles";
+import { useProfiles, useDeleteProfile, useToggleProfileActive, type ProfileResponse } from "./useProfiles";
 import { UserModal } from "./UserModal";
 import { ProfileModal } from "./ProfileModal";
 
@@ -18,17 +17,22 @@ export function GestaoUsuariosPage() {
   const [tab, setTab] = useState<Tab>("usuarios");
   const [search, setSearch] = useState("");
   const [filterProfile, setFilterProfile] = useState<number | undefined>();
+  const [showInactiveUsers, setShowInactiveUsers] = useState(false);
+  const [showInactiveProfiles, setShowInactiveProfiles] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserResponse | undefined>();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState<ProfileResponse | undefined>();
 
   const currentUser = useAuthStore((s) => s.user);
-  const { data: users = [], isLoading: loadingUsers } = useUsers(search || undefined, filterProfile);
-  const { data: profiles = [] } = useProfiles();
-  const deleteUser = useDeleteUser();
+  const { data: allUsers = [], isLoading: loadingUsers } = useUsers(search || undefined, filterProfile);
+  const { data: allProfiles = [] } = useProfiles();
   const toggleActive = useToggleUserActive();
+  const toggleProfileActive = useToggleProfileActive();
   const deleteProfile = useDeleteProfile();
+
+  const users = showInactiveUsers ? allUsers : allUsers.filter((u) => u.is_active);
+  const profiles = showInactiveProfiles ? allProfiles : allProfiles.filter((p) => p.is_active);
 
   function openEditUser(user: UserResponse) {
     setEditingUser(user);
@@ -63,7 +67,7 @@ export function GestaoUsuariosPage() {
 
       {tab === "usuarios" && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Input
               placeholder="Buscar por nome ou usuário..."
               value={search}
@@ -76,10 +80,19 @@ export function GestaoUsuariosPage() {
               onChange={(e) => setFilterProfile(e.target.value ? Number(e.target.value) : undefined)}
             >
               <option value="">Todos os perfis</option>
-              {profiles.map((p) => (
+              {allProfiles.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
+            <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showInactiveUsers}
+                onChange={(e) => setShowInactiveUsers(e.target.checked)}
+                className="rounded"
+              />
+              Mostrar inativos
+            </label>
             <Button
               className="ml-auto"
               onClick={() => { setEditingUser(undefined); setUserModalOpen(true); }}
@@ -114,7 +127,7 @@ export function GestaoUsuariosPage() {
                   {users.map((user) => {
                     const isSelf = currentUser?.user_id === user.id;
                     return (
-                      <tr key={user.id} className="hover:bg-gray-50">
+                      <tr key={user.id} className={`hover:bg-gray-50 ${!user.is_active ? "opacity-60" : ""}`}>
                         <td className="px-4 py-3 font-medium">{user.name}</td>
                         <td className="px-4 py-3 text-gray-600">{user.username}</td>
                         <td className="px-4 py-3 text-gray-600">{user.email ?? "—"}</td>
@@ -138,20 +151,6 @@ export function GestaoUsuariosPage() {
                                 {user.is_active ? "Desativar" : "Ativar"}
                               </Button>
                             )}
-                            {!isSelf && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-600 hover:text-red-700"
-                                onClick={() => {
-                                  if (confirm(`Excluir usuário "${user.name}"?`)) {
-                                    deleteUser.mutate(user.id);
-                                  }
-                                }}
-                              >
-                                Excluir
-                              </Button>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -166,8 +165,17 @@ export function GestaoUsuariosPage() {
 
       {tab === "perfis" && (
         <div className="space-y-4">
-          <div className="flex justify-end">
-            <Button onClick={() => { setEditingProfile(undefined); setProfileModalOpen(true); }}>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showInactiveProfiles}
+                onChange={(e) => setShowInactiveProfiles(e.target.checked)}
+                className="rounded"
+              />
+              Mostrar inativos
+            </label>
+            <Button className="ml-auto" onClick={() => { setEditingProfile(undefined); setProfileModalOpen(true); }}>
               + Novo Perfil
             </Button>
           </div>
@@ -179,16 +187,22 @@ export function GestaoUsuariosPage() {
                   <th className="px-4 py-3">Usuários</th>
                   <th className="px-4 py-3">Permissões</th>
                   <th className="px-4 py-3">Sistema</th>
+                  <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {profiles.map((profile) => (
-                  <tr key={profile.id} className="hover:bg-gray-50">
+                  <tr key={profile.id} className={`hover:bg-gray-50 ${!profile.is_active ? "opacity-60" : ""}`}>
                     <td className="px-4 py-3 font-medium">{profile.name}</td>
                     <td className="px-4 py-3">{profile.user_count}</td>
                     <td className="px-4 py-3">{profile.permissions.length}/8</td>
                     <td className="px-4 py-3">{profile.is_system ? "✓" : "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${profile.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                        {profile.is_active ? "Ativo" : "Inativo"}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Button
@@ -198,6 +212,15 @@ export function GestaoUsuariosPage() {
                         >
                           {profile.name === "Admin" ? "Ver" : "Editar"}
                         </Button>
+                        {!profile.is_system && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleProfileActive.mutate(profile.id)}
+                          >
+                            {profile.is_active ? "Desativar" : "Ativar"}
+                          </Button>
+                        )}
                         {!profile.is_system && (
                           <Button
                             variant="ghost"

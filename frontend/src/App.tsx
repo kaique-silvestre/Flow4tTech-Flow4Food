@@ -5,6 +5,8 @@ import { Toaster } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { LoginPage } from "@/features/auth/LoginPage";
+import { EsqueciSenhaPage } from "@/features/auth/EsqueciSenhaPage";
+import { RedefinirSenhaPage } from "@/features/auth/RedefinirSenhaPage";
 import { CategoriasPage } from "@/features/cadastros/categorias/CategoriasPage";
 import { FornecedoresPage } from "@/features/cadastros/fornecedores/FornecedoresPage";
 import { GarconsPage } from "@/features/cadastros/garcons/GarconsPage";
@@ -40,6 +42,8 @@ export function App() {
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
+          <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
           <Route element={<RequireAuth />}>
             <Route path="/comprovante/:id" element={<ComprovantePage />} />
             <Route element={<AppLayout />}>

@@ -8,6 +8,7 @@ from src.services.profiles_service import (
     delete_existing_profile,
     get_profile,
     get_profiles,
+    toggle_profile_active,
     update_existing_profile,
 )
 
@@ -34,6 +35,11 @@ def create_profile(body: ProfileCreate, db: Session = Depends(get_db)) -> Profil
 @router.put("/{profile_id}", response_model=ProfileResponse, dependencies=[_perm])
 def update_profile(profile_id: int, body: ProfileUpdate, db: Session = Depends(get_db)) -> ProfileResponse:
     return update_existing_profile(db, profile_id, body)
+
+
+@router.patch("/{profile_id}/activate", response_model=ProfileResponse, dependencies=[_perm])
+def toggle_active(profile_id: int, db: Session = Depends(get_db)) -> ProfileResponse:
+    return toggle_profile_active(db, profile_id)
 
 
 @router.delete("/{profile_id}", status_code=204, dependencies=[_perm])

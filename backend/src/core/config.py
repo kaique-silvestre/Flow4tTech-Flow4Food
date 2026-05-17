@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     ENV: str = "dev"
     SENTRY_DSN_BACKEND: str = ""
     APP_VERSION: str = "0.1.0"
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASS: str = ""
+    SMTP_FROM: str = ""
+    FRONTEND_URL: str = "http://localhost:5173"
 
     @property
     def cors_origins_list(self) -> list[str]:

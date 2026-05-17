@@ -23,6 +23,7 @@ def _to_response(profile: Profile, user_count: int = 0) -> ProfileResponse:
         name=profile.name,
         description=profile.description,
         is_system=profile.is_system,
+        is_active=profile.is_active,
         permissions=[p.screen for p in profile.permissions if p.can_access],
         user_count=user_count,
         created_at=profile.created_at,
@@ -75,6 +76,21 @@ def update_existing_profile(db: Session, profile_id: int, data: ProfileUpdate) -
         screens = [p.screen for p in profile.permissions if p.can_access]
 
     return _to_response(update_profile(db, profile, screens))
+
+
+def toggle_profile_active(db: Session, profile_id: int) -> ProfileResponse:
+    profile = get_profile_by_id(db, profile_id)
+    if not profile or profile.tenant_id != TENANT_ID:
+        raise AppError(code=ErrorCode.NOT_FOUND, message="Perfil não encontrado", http_status=404)
+    if profile.is_system:
+        raise AppError(code=ErrorCode.CONFLICT, message="Perfis de sistema não podem ser desativados", http_status=409)
+    profile.is_active = not profile.is_active
+    profile.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(profile)
+    rows = list_profiles(db, TENANT_ID)
+    count = next((c for p, c in rows if p.id == profile_id), 0)
+    return _to_response(profile, count)
 
 
 def delete_existing_profile(db: Session, profile_id: int) -> None:

@@ -26,3 +26,20 @@ class UserInfo(BaseModel):
     profile_id: int
     profile_name: str
     permissions: list[str]
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+class GenericMessage(BaseModel):
+    message: str
+
+
+class ResetTokenInfo(BaseModel):
+    name: str

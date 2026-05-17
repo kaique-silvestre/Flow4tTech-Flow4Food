@@ -8,6 +8,7 @@ export interface ProfileResponse {
   name: string;
   description: string | null;
   is_system: boolean;
+  is_active: boolean;
   permissions: string[];
   user_count: number;
   created_at: string;
@@ -63,6 +64,19 @@ export function useUpdateProfile(profileId: number) {
       toast.success(`Permissões atualizadas para ${data.user_count} usuários`);
     },
     onError: (e: unknown) => toast.error(errMsg(e, "Erro ao salvar")),
+  });
+}
+
+export function useToggleProfileActive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      api.patch<ProfileResponse>(`/api/profiles/${id}/activate`).then((r) => r.data),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["profiles"] });
+      toast.success(data.is_active ? "Perfil ativado" : "Perfil desativado");
+    },
+    onError: (e: unknown) => toast.error(errMsg(e, "Erro")),
   });
 }
 

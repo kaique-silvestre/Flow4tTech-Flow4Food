@@ -27,6 +27,7 @@ class ProfileResponse(BaseModel):
     name: str
     description: Optional[str]
     is_system: bool
+    is_active: bool
     permissions: list[str]
     user_count: int
     created_at: datetime

@@ -1,4 +1,8 @@
+import smtplib
+import uuid
 from datetime import datetime, timedelta, timezone
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 import bcrypt
 from jose import jwt
@@ -6,12 +10,22 @@ from sqlalchemy.orm import Session
 
 from src.core.config import get_settings
 from src.core.errors import AppError, ErrorCode
+from src.core.logging import get_logger
+from src.models.system_users import PasswordReset
+from src.repositories.password_reset_repository import (
+    create_reset,
+    get_reset_by_token,
+    get_valid_reset,
+    invalidate_user_resets,
+)
 from src.repositories.users_repository import (
     get_user_by_email,
     get_user_by_id,
     get_user_by_username,
 )
-from src.schemas.auth import TokenResponse, UserInfo
+from src.schemas.auth import GenericMessage, ResetTokenInfo, TokenResponse, UserInfo
+
+log = get_logger(__name__)
 
 TENANT_ID = 1
 _INVALID_MSG = "Email/usuário ou senha inválidos"
@@ -84,6 +98,96 @@ def change_password(db: Session, user_id: int, current_password: str, new_passwo
     if not verify_password(current_password, user.password_hash):
         raise AppError(code=ErrorCode.SENHA_INCORRETA, message="Senha atual incorreta", http_status=401)
     user.password_hash = hash_password(new_password)
+    db.commit()
+
+
+def _send_reset_email(to_email: str, name: str, reset_url: str) -> None:
+    settings = get_settings()
+    if not settings.SMTP_HOST:
+        log.info("reset_link_no_smtp", email=to_email, url=reset_url)
+        return
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Redefinição de senha — Flow4Tech"
+        msg["From"] = settings.SMTP_FROM or settings.SMTP_USER
+        msg["To"] = to_email
+        body = (
+            f"Olá, {name}!\n\n"
+            f"Clique no link abaixo para redefinir sua senha (válido por 1 hora):\n\n"
+            f"{reset_url}\n\n"
+            f"Se você não solicitou a redefinição, ignore este email.\n"
+        )
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+            server.ehlo()
+            server.starttls()
+            server.login(settings.SMTP_USER, settings.SMTP_PASS)
+            server.sendmail(msg["From"], [to_email], msg.as_string())
+    except Exception as exc:
+        log.error("reset_email_failed", email=to_email, error=str(exc))
+
+
+def forgot_password(db: Session, email: str) -> GenericMessage:
+    _SUCCESS = "Se o email estiver cadastrado, você receberá um link de redefinição em instantes."
+    user = get_user_by_email(db, email)
+    if user is None or not user.is_active:
+        return GenericMessage(message=_SUCCESS)
+
+    invalidate_user_resets(db, user.id)
+    token = str(uuid.uuid4())
+    expires = datetime.now(timezone.utc) + timedelta(hours=1)
+    create_reset(db, PasswordReset(user_id=user.id, token=token, expires_at=expires))
+
+    settings = get_settings()
+    reset_url = f"{settings.FRONTEND_URL}/redefinir-senha?token={token}"
+    _send_reset_email(user.email or "", user.name, reset_url)
+    return GenericMessage(message=_SUCCESS)
+
+
+def get_reset_token_info(db: Session, token: str) -> ResetTokenInfo:
+    reset = get_valid_reset(db, token)
+    if reset is None:
+        existing = get_reset_by_token(db, token)
+        if existing and existing.used_at:
+            raise AppError(
+                code=ErrorCode.VALIDATION_ERROR,
+                message="Link já utilizado. Solicite um novo se precisar.",
+                http_status=400,
+            )
+        raise AppError(
+            code=ErrorCode.VALIDATION_ERROR,
+            message="Link expirado. Solicite um novo.",
+            http_status=400,
+        )
+    return ResetTokenInfo(name=reset.user.name)
+
+
+def reset_password(db: Session, token: str, new_password: str) -> None:
+    if len(new_password) < 6:
+        raise AppError(
+            code=ErrorCode.VALIDATION_ERROR,
+            message="Nova senha deve ter no mínimo 6 caracteres",
+            http_status=400,
+        )
+    reset = get_valid_reset(db, token)
+    if reset is None:
+        existing = get_reset_by_token(db, token)
+        if existing and existing.used_at:
+            raise AppError(
+                code=ErrorCode.VALIDATION_ERROR,
+                message="Link já utilizado. Solicite um novo se precisar.",
+                http_status=400,
+            )
+        raise AppError(
+            code=ErrorCode.VALIDATION_ERROR,
+            message="Link expirado. Solicite um novo.",
+            http_status=400,
+        )
+    user = get_user_by_id(db, reset.user_id)
+    if user is None:
+        raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=404)
+    user.password_hash = hash_password(new_password)
+    reset.used_at = datetime.now(timezone.utc)
     db.commit()
 
 

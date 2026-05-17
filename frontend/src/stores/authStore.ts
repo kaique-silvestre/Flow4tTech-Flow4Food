@@ -15,7 +15,9 @@ function parseJwtPayload(token: string): AuthUser | null {
   try {
     const base64 = token.split(".")[1];
     const json = atob(base64.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(json) as AuthUser;
+    const payload = JSON.parse(json) as AuthUser;
+    if (!Array.isArray(payload.permissions)) return null;
+    return payload;
   } catch {
     return null;
   }

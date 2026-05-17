@@ -2,8 +2,24 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_current_user, get_db
-from src.schemas.auth import ChangePasswordRequest, LoginRequest, TokenResponse, UserInfo
-from src.services.auth_service import change_password, get_current_user_info, login
+from src.schemas.auth import (
+    ChangePasswordRequest,
+    ForgotPasswordRequest,
+    GenericMessage,
+    LoginRequest,
+    ResetPasswordRequest,
+    ResetTokenInfo,
+    TokenResponse,
+    UserInfo,
+)
+from src.services.auth_service import (
+    change_password,
+    forgot_password,
+    get_current_user_info,
+    get_reset_token_info,
+    login,
+    reset_password,
+)
 
 router = APIRouter()
 
@@ -30,3 +46,18 @@ def do_change_password(
     db: Session = Depends(get_db),
 ) -> None:
     change_password(db, payload["user_id"], body.current_password, body.new_password)
+
+
+@router.post("/forgot-password", response_model=GenericMessage)
+def do_forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)) -> GenericMessage:
+    return forgot_password(db, body.email)
+
+
+@router.get("/reset-password/{token}", response_model=ResetTokenInfo)
+def get_reset_info(token: str, db: Session = Depends(get_db)) -> ResetTokenInfo:
+    return get_reset_token_info(db, token)
+
+
+@router.post("/reset-password", status_code=204)
+def do_reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)) -> None:
+    reset_password(db, body.token, body.new_password)

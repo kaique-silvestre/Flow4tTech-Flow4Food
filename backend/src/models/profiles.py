@@ -20,6 +20,7 @@ class Profile(Base):
     name: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(sa.String(300), nullable=True)
     is_system: Mapped[bool] = mapped_column(nullable=False, server_default="false")
+    is_active: Mapped[bool] = mapped_column(nullable=False, server_default="true")
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("NOW()"))
     updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("NOW()"))
 
