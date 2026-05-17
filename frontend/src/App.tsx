@@ -29,6 +29,7 @@ import { RelatoriosIndexPage } from "@/features/relatorios/RelatoriosIndexPage";
 import { ConfiguracoesPage } from "@/features/configuracoes/ConfiguracoesPage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { CardapioPage } from "@/features/cardapio/CardapioPage";
+import { ContasPagarPage } from "@/features/contas_pagar/ContasPagarPage";
 import { queryClient } from "@/lib/queryClient";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
@@ -48,6 +49,7 @@ export function App() {
               <Route path="/comandas/:id/fechar" element={<FechamentoPage />} />
               <Route path="/compras" element={<ComprasPage />} />
               <Route path="/compras/nova" element={<NovaCompraPage />} />
+              <Route path="/contas-pagar" element={<ContasPagarPage />} />
               <Route path="/estoque" element={<EstoquePage />} />
               <Route path="/estoque/movimentos" element={<MovimentosPage />} />
               <Route path="/cadastros/categorias" element={<CategoriasPage />} />

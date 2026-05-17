@@ -11,7 +11,12 @@ class Base(DeclarativeBase):
 
 
 _settings = get_settings()
-engine = create_engine(_settings.DATABASE_URL, pool_pre_ping=True, future=True)
+engine = create_engine(
+    _settings.DATABASE_URL,
+    pool_pre_ping=True,
+    future=True,
+    connect_args={"options": "-c timezone=UTC"},
+)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
 
