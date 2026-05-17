@@ -17,13 +17,13 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: (data: LoginFormValues) =>
-      api.post<TokenResponse>("/api/auth/login", data).then((r) => r.data),
+      api.post<TokenResponse>("/api/auth/login", { identifier: data.identifier, password: data.password }).then((r) => r.data),
     onSuccess: (data) => {
       setToken(data.access_token);
       navigate("/", { replace: true });
     },
     onError: () => {
-      toast.error("Senha incorreta. Verifique e tente novamente.");
+      toast.error("Email/usuário ou senha inválidos");
     },
   });
 }

@@ -14,3 +14,5 @@ from src.models.metodos_pagamento import MetodoPagamento  # noqa: F401
 from src.models.movimentos_estoque import MovimentoEstoque  # noqa: F401
 from src.models.pagamentos import Pagamento  # noqa: F401
 from src.models.produtos import Produto  # noqa: F401
+from src.models.profiles import Profile, ProfilePermission  # noqa: F401
+from src.models.system_users import PasswordReset, SystemUser  # noqa: F401

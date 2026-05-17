@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useComandasAbertasCount } from "@/features/comandas/useComandas";
 import { useInsumoCriticos } from "@/features/estoque/useEstoque";
+import { usePermissions } from "@/hooks/usePermission";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -33,6 +34,7 @@ interface NavItem {
   label: string;
   to: string | null;
   icon?: LucideIcon;
+  screen?: string;
   children?: SubNavItem[];
 }
 
@@ -45,15 +47,15 @@ const CADASTROS_CHILDREN: SubNavItem[] = [
 ];
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", to: "/", icon: LayoutDashboard },
-  { label: "Comandas", to: "/comandas", icon: ClipboardList },
-  { label: "Cardápio", to: "/cardapio", icon: UtensilsCrossed },
-  { label: "Compras", to: "/compras", icon: ShoppingCart },
-  { label: "Estoque", to: "/estoque", icon: Package },
-  { label: "Movimentos", to: "/estoque/movimentos", icon: History },
-  { label: "Relatórios", to: "/relatorios", icon: BarChart3 },
-  { label: "Cadastros", to: null, icon: BookOpen, children: CADASTROS_CHILDREN },
-  { label: "Configurações", to: "/configuracoes", icon: Settings },
+  { label: "Dashboard", to: "/", icon: LayoutDashboard, screen: "dashboard" },
+  { label: "Comandas", to: "/comandas", icon: ClipboardList, screen: "comandas" },
+  { label: "Cardápio", to: "/cardapio", icon: UtensilsCrossed, screen: "comandas" },
+  { label: "Compras", to: "/compras", icon: ShoppingCart, screen: "compras" },
+  { label: "Estoque", to: "/estoque", icon: Package, screen: "estoque" },
+  { label: "Movimentos", to: "/estoque/movimentos", icon: History, screen: "estoque" },
+  { label: "Relatórios", to: "/relatorios", icon: BarChart3, screen: "relatorios" },
+  { label: "Cadastros", to: null, icon: BookOpen, screen: "cadastros", children: CADASTROS_CHILDREN },
+  { label: "Configurações", to: "/configuracoes", icon: Settings, screen: "configuracoes" },
 ];
 
 interface SidebarProps {
@@ -67,6 +69,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { data: countAbertas = 0 } = useComandasAbertasCount();
   const { data: criticos = [] } = useInsumoCriticos();
   const countCriticos = criticos.length;
+  const permissions = usePermissions();
+
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => !item.screen || permissions.includes(item.screen)
+  );
 
   return (
     <aside
@@ -82,7 +89,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <Menu size={18} />
       </button>
       <nav className="flex flex-col gap-1 overflow-hidden p-2">
-        {NAV_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           if (item.children) {
             if (collapsed) {
               return (
