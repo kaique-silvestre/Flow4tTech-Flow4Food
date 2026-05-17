@@ -6,18 +6,44 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { useFornecedores } from "@/features/cadastros/fornecedores/useFornecedores";
 import { formatCurrency } from "@/lib/format";
-import { useCancelarCompra, useCompras, usePatchCompra, type CompraFilters, type CompraResponse } from "./useCompras";
+import {
+  useCancelarCompra,
+  useCompras,
+  useConfirmarRecebimento,
+  usePatchCompra,
+  type CompraFilters,
+  type CompraResponse,
+} from "./useCompras";
 import { ChevronRight, ChevronDown } from "lucide-react";
 
 const STATUS_OPTS = [
-  { value: "ativa", label: "Ativas" },
+  { value: "confirmado", label: "Agendadas" },
+  { value: "recebido", label: "Recebidas" },
   { value: "", label: "Todas" },
-  { value: "cancelada", label: "Canceladas" },
+  { value: "cancelado", label: "Canceladas" },
 ] as const;
+
+const TIPO_LABELS: Record<string, string> = {
+  imediata: "Imediata",
+  agendada: "Agendada",
+  a_prazo: "A prazo",
+};
+
+const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+  confirmado: { label: "Aguardando entrega", cls: "bg-blue-100 text-blue-700" },
+  recebido: { label: "Recebida", cls: "bg-green-100 text-green-700" },
+  pago: { label: "Paga", cls: "bg-gray-100 text-gray-600" },
+  cancelado: { label: "Cancelada", cls: "bg-gray-100 text-gray-400" },
+};
+
+function fmtDate(d: string | null | undefined) {
+  if (!d) return "—";
+  return new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
+}
 
 export function ComprasPage() {
   const navigate = useNavigate();
-  const [filters, setFilters] = useState<CompraFilters>({ status: "ativa" });
+  const [filters, setFilters] = useState<CompraFilters>({ status: "recebido" });
   const [pagina, setPagina] = useState(1);
   const { data: paginado, isLoading } = useCompras({ ...filters, pagina, por_pagina: 8 });
   const compras = paginado?.itens ?? [];
@@ -29,10 +55,12 @@ export function ComprasPage() {
   }
   const { data: fornecedores = [] } = useFornecedores();
   const cancelarMutation = useCancelarCompra();
+  const confirmarMutation = useConfirmarRecebimento();
   const patchMutation = usePatchCompra();
 
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [cancelando, setCancelando] = useState<CompraResponse | null>(null);
+  const [confirmandoEntrega, setConfirmandoEntrega] = useState<CompraResponse | null>(null);
   const [editando, setEditando] = useState<CompraResponse | null>(null);
 
   function toggleExpandir(id: number) {
@@ -46,8 +74,11 @@ export function ComprasPage() {
   const [editFornecedorId, setEditFornecedorId] = useState<string>("");
   const [editDataCompra, setEditDataCompra] = useState<string>("");
   const [editNumeroNota, setEditNumeroNota] = useState<string>("");
+  const [editDataPrevReceb, setEditDataPrevReceb] = useState<string>("");
+  const [editDataPrevPag, setEditDataPrevPag] = useState<string>("");
 
   const totalPeriodo = paginado?.total_periodo ?? 0;
+  const statusSelecionado = filters.status ?? "";
 
   return (
     <div className="p-6 min-h-full flex flex-col">
@@ -64,7 +95,7 @@ export function ComprasPage() {
             type="button"
             onClick={() => { atualizarFiltro({ status: o.value || null }); }}
             className={`rounded px-3 py-1 text-sm border transition-colors ${
-              (filters.status ?? "") === o.value
+              statusSelecionado === o.value
                 ? "bg-gray-800 text-white border-gray-800"
                 : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
             }`}
@@ -119,8 +150,11 @@ export function ComprasPage() {
         <div className="space-y-2">
           {compras.map((compra) => {
             const expandido = expandidos.has(compra.id);
+            const badge = STATUS_BADGE[compra.status];
+            const isCancelado = compra.status === "cancelado";
+            const isConfirmado = compra.status === "confirmado";
             return (
-              <div key={compra.id} className={`rounded border ${compra.status === "cancelada" ? "text-gray-400" : ""}`}>
+              <div key={compra.id} className={`rounded border ${isCancelado ? "opacity-60" : ""}`}>
                 <div className="flex items-center justify-between p-3">
                   <div className="flex items-start gap-2">
                     <button
@@ -132,36 +166,60 @@ export function ComprasPage() {
                       {expandido ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     </button>
                     <div>
-                      <div className="font-medium flex items-center gap-2">
+                      <div className="font-medium flex flex-wrap items-center gap-2">
                         <span className="text-gray-400 font-normal">#{String(compra.id).padStart(4, "0")}</span>
-                        {new Date(compra.data_compra + "T00:00:00").toLocaleDateString("pt-BR")}
+                        {fmtDate(compra.data_compra)}
                         {" · "}
-                        <span className={compra.status === "cancelada" ? "text-gray-400" : "text-gray-600"}>{compra.fornecedor_nome ?? "Sem fornecedor"}</span>
-                        {compra.status === "cancelada" && (
-                          <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-500">Cancelada</span>
+                        <span className="text-gray-600">{compra.fornecedor_nome ?? "Sem fornecedor"}</span>
+                        {badge && (
+                          <span className={`rounded-full px-2 py-0.5 text-xs ${badge.cls}`}>{badge.label}</span>
                         )}
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                          {TIPO_LABELS[compra.tipo_compra] ?? compra.tipo_compra}
+                        </span>
                       </div>
-                      <div className="text-xs text-gray-400">
-                        Nota: {compra.numero_nota ?? "—"} · {compra.itens.length} {compra.itens.length === 1 ? "item" : "itens"}
+                      <div className="text-xs text-gray-400 flex flex-wrap gap-2">
+                        <span>Nota: {compra.numero_nota ?? "—"} · {compra.itens.length} {compra.itens.length === 1 ? "item" : "itens"}</span>
+                        {compra.data_prevista_recebimento && (
+                          <span>Entrega prev.: {fmtDate(compra.data_prevista_recebimento)}</span>
+                        )}
+                        {compra.data_prevista_pagamento && (
+                          <span>Venc. pag.: {fmtDate(compra.data_prevista_pagamento)}</span>
+                        )}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 text-right">
-                    <div className={`font-semibold ${compra.status === "cancelada" ? "line-through" : ""}`}>{formatCurrency(compra.total)}</div>
-                    {compra.status === "ativa" && (
+                    <div className={`font-semibold ${isCancelado ? "line-through" : ""}`}>{formatCurrency(compra.total)}</div>
+                    {isConfirmado && (
                       <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-green-600 text-green-700 hover:bg-green-50"
+                          onClick={() => setConfirmandoEntrega(compra)}
+                        >
+                          Confirmar Entrega
+                        </Button>
                         <Button size="sm" variant="outline" onClick={() => {
                           setEditando(compra);
                           setEditFornecedorId(compra.fornecedor_id ? String(compra.fornecedor_id) : "");
                           setEditDataCompra(compra.data_compra);
                           setEditNumeroNota(compra.numero_nota ?? "");
+                          setEditDataPrevReceb(compra.data_prevista_recebimento ?? "");
+                          setEditDataPrevPag(compra.data_prevista_pagamento ?? "");
                         }}>
                           Editar
                         </Button>
                         <Button size="sm" variant="destructive" onClick={() => setCancelando(compra)}>
-                          Cancelar Nota
+                          Cancelar
                         </Button>
                       </>
+                    )}
+                    {compra.status === "recebido" && (
+                      <Button size="sm" variant="destructive" onClick={() => setCancelando(compra)}>
+                        Cancelar Nota
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -224,9 +282,21 @@ export function ComprasPage() {
       )}
 
       <ConfirmDialog
+        open={!!confirmandoEntrega}
+        title="Confirmar recebimento?"
+        description={`Confirma que a compra #${String(confirmandoEntrega?.id ?? 0).padStart(4, "0")} foi entregue? O estoque será atualizado agora.`}
+        confirmLabel="Confirmar Entrega"
+        onConfirm={() => {
+          if (confirmandoEntrega)
+            confirmarMutation.mutate(confirmandoEntrega.id, { onSuccess: () => setConfirmandoEntrega(null) });
+        }}
+        onCancel={() => setConfirmandoEntrega(null)}
+      />
+
+      <ConfirmDialog
         open={!!cancelando}
         title="Cancelar nota fiscal?"
-        description={`A nota #${String(cancelando?.id ?? 0).padStart(4, "0")} será cancelada e o estoque será revertido.`}
+        description={`A nota #${String(cancelando?.id ?? 0).padStart(4, "0")} será cancelada${cancelando?.status === "recebido" ? " e o estoque será revertido" : ""}.`}
         confirmLabel="Cancelar Nota"
         onConfirm={() => {
           if (cancelando) cancelarMutation.mutate(cancelando.id, { onSuccess: () => setCancelando(null) });
@@ -255,20 +325,24 @@ export function ComprasPage() {
             </div>
             <div>
               <label className="mb-1 block text-sm text-gray-600">Data da Compra</label>
-              <Input
-                type="date"
-                value={editDataCompra}
-                onChange={(e) => setEditDataCompra(e.target.value)}
-              />
+              <Input type="date" value={editDataCompra} onChange={(e) => setEditDataCompra(e.target.value)} />
             </div>
             <div>
               <label className="mb-1 block text-sm text-gray-600">Número da Nota</label>
-              <Input
-                value={editNumeroNota}
-                onChange={(e) => setEditNumeroNota(e.target.value)}
-                placeholder="Opcional"
-              />
+              <Input value={editNumeroNota} onChange={(e) => setEditNumeroNota(e.target.value)} placeholder="Opcional" />
             </div>
+            {editando?.tipo_compra === "agendada" && (
+              <div>
+                <label className="mb-1 block text-sm text-gray-600">Data prevista de recebimento</label>
+                <Input type="date" value={editDataPrevReceb} onChange={(e) => setEditDataPrevReceb(e.target.value)} />
+              </div>
+            )}
+            {editando?.tipo_compra !== "imediata" && (
+              <div>
+                <label className="mb-1 block text-sm text-gray-600">Vencimento do pagamento</label>
+                <Input type="date" value={editDataPrevPag} onChange={(e) => setEditDataPrevPag(e.target.value)} />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditando(null)}>Cancelar</Button>
@@ -282,6 +356,8 @@ export function ComprasPage() {
                       fornecedor_id: editFornecedorId ? Number(editFornecedorId) : null,
                       data_compra: editDataCompra,
                       numero_nota: editNumeroNota || null,
+                      data_prevista_recebimento: editDataPrevReceb || null,
+                      data_prevista_pagamento: editDataPrevPag || null,
                     },
                   },
                   { onSuccess: () => setEditando(null) },
