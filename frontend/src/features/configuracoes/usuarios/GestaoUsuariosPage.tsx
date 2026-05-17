@@ -17,6 +17,7 @@ export function GestaoUsuariosPage() {
   const [tab, setTab] = useState<Tab>("usuarios");
   const [search, setSearch] = useState("");
   const [filterProfile, setFilterProfile] = useState<number | undefined>();
+  const [searchProfiles, setSearchProfiles] = useState("");
   const [showInactiveUsers, setShowInactiveUsers] = useState(false);
   const [showInactiveProfiles, setShowInactiveProfiles] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
@@ -32,7 +33,12 @@ export function GestaoUsuariosPage() {
   const deleteProfile = useDeleteProfile();
 
   const users = showInactiveUsers ? allUsers : allUsers.filter((u) => u.is_active);
-  const profiles = showInactiveProfiles ? allProfiles : allProfiles.filter((p) => p.is_active);
+  const profiles = allProfiles
+    .filter((p) => showInactiveProfiles || p.is_active)
+    .filter((p) =>
+      !searchProfiles ||
+      p.name.toLowerCase().includes(searchProfiles.toLowerCase())
+    );
 
   function openEditUser(user: UserResponse) {
     setEditingUser(user);
@@ -146,7 +152,12 @@ export function GestaoUsuariosPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => toggleActive.mutate(user.id)}
+                                onClick={() => {
+                                  const action = user.is_active ? "desativar" : "ativar";
+                                  if (confirm(`Deseja ${action} o usuário "${user.name}"?`)) {
+                                    toggleActive.mutate(user.id);
+                                  }
+                                }}
                               >
                                 {user.is_active ? "Desativar" : "Ativar"}
                               </Button>
@@ -165,7 +176,13 @@ export function GestaoUsuariosPage() {
 
       {tab === "perfis" && (
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Input
+              placeholder="Buscar por nome..."
+              value={searchProfiles}
+              onChange={(e) => setSearchProfiles(e.target.value)}
+              className="max-w-xs"
+            />
             <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -216,7 +233,12 @@ export function GestaoUsuariosPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => toggleProfileActive.mutate(profile.id)}
+                            onClick={() => {
+                              const action = profile.is_active ? "desativar" : "ativar";
+                              if (confirm(`Deseja ${action} o perfil "${profile.name}"?`)) {
+                                toggleProfileActive.mutate(profile.id);
+                              }
+                            }}
                           >
                             {profile.is_active ? "Desativar" : "Ativar"}
                           </Button>
