@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast as sonner } from "sonner";
 import { api } from "@/lib/api";
@@ -105,7 +106,7 @@ export function useResetPassword() {
       api.post<{ temp_password: string }>(`/api/users/${id}/reset-password`).then((r) => r.data),
     onSuccess: (data) => {
       sonner.custom(
-        (id) => SenhaProvisoriaToast({ toastId: id, password: data.temp_password }),
+        (id) => createElement(SenhaProvisoriaToast, { toastId: id, password: data.temp_password }),
         { duration: Infinity }
       );
     },
