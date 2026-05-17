@@ -16,7 +16,9 @@ from src.api.routes import insumos as insumos_routes
 from src.api.routes import itens as itens_routes
 from src.api.routes import metodos_pagamento as metodos_pagamento_routes
 from src.api.routes import produtos as produtos_routes
+from src.api.routes import profiles as profiles_routes
 from src.api.routes import relatorios as relatorios_routes
+from src.api.routes import users as users_routes
 from src.core.config import get_settings
 from src.core.errors import register_exception_handlers
 from src.core.logging import configure_logging, get_logger
@@ -48,6 +50,8 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
+    app.include_router(users_routes.router, prefix="/api/users", tags=["users"])
+    app.include_router(profiles_routes.router, prefix="/api/profiles", tags=["profiles"])
     app.include_router(backup_routes.router, prefix="/api/backup", tags=["backup"])
     app.include_router(categorias_routes.router, prefix="/api/categorias", tags=["categorias"])
     app.include_router(config_routes.router, prefix="/api/config", tags=["config"])

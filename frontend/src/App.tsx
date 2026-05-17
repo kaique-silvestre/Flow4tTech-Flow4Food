@@ -27,6 +27,7 @@ import { PerdasCortesiasPage } from "@/features/relatorios/PerdasCortesiasPage";
 import { VendasPorGarcomPage } from "@/features/relatorios/VendasPorGarcomPage";
 import { RelatoriosIndexPage } from "@/features/relatorios/RelatoriosIndexPage";
 import { ConfiguracoesPage } from "@/features/configuracoes/ConfiguracoesPage";
+import { GestaoUsuariosPage } from "@/features/configuracoes/usuarios/GestaoUsuariosPage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { CardapioPage } from "@/features/cardapio/CardapioPage";
 import { queryClient } from "@/lib/queryClient";
@@ -65,6 +66,7 @@ export function App() {
               <Route path="/relatorios/vendas-por-garcom" element={<VendasPorGarcomPage />} />
               <Route path="/cardapio" element={<CardapioPage />} />
               <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+              <Route path="/configuracoes/usuarios" element={<GestaoUsuariosPage />} />
               <Route path="*" element={<PlaceholderPage />} />
             </Route>
           </Route>

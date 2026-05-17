@@ -56,6 +56,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Relatórios", to: "/relatorios", icon: BarChart3, screen: "relatorios" },
   { label: "Cadastros", to: null, icon: BookOpen, screen: "cadastros", children: CADASTROS_CHILDREN },
   { label: "Configurações", to: "/configuracoes", icon: Settings, screen: "configuracoes" },
+  { label: "Usuários", to: "/configuracoes/usuarios", icon: Users, screen: "gestao_usuarios" },
 ];
 
 interface SidebarProps {
