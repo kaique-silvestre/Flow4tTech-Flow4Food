@@ -13,17 +13,16 @@ export function SenhaProvisoriaToast({ toastId, password }: Props) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) {
-          clearInterval(interval);
-          toast.dismiss(toastId);
-          return 0;
-        }
-        return s - 1;
-      });
+      setSecondsLeft((s) => (s <= 1 ? 0 : s - 1));
     }, 1000);
     return () => clearInterval(interval);
   }, [toastId]);
+
+  useEffect(() => {
+    if (secondsLeft === 0) {
+      toast.dismiss(toastId);
+    }
+  }, [secondsLeft, toastId]);
 
   function handleCopy() {
     navigator.clipboard.writeText(password).then(() => {

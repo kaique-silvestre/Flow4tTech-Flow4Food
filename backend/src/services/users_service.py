@@ -131,7 +131,8 @@ def reset_password(db: Session, user_id: int) -> str:
     user = get_user_by_id(db, user_id)
     if not user or user.tenant_id != TENANT_ID:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=404)
-    alphabet = string.ascii_letters + string.digits
+    # Remove ambiguous chars: 0/O, l/1/I, etc.
+    alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789"
     temp = "".join(secrets.choice(alphabet) for _ in range(10))
     user.password_hash = hash_password(temp)
     user.updated_at = datetime.now(timezone.utc)
