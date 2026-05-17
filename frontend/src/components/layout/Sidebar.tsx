@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useComandasAbertasCount } from "@/features/comandas/useComandas";
 import { useInsumoCriticos } from "@/features/estoque/useEstoque";
+import { useContasPagarResumo } from "@/features/contas_pagar/useContasPagar";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -20,6 +21,7 @@ import {
   ChevronDown,
   ChevronRight,
   FlaskConical,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -48,9 +50,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard },
   { label: "Comandas", to: "/comandas", icon: ClipboardList },
   { label: "Cardápio", to: "/cardapio", icon: UtensilsCrossed },
-  { label: "Compras", to: "/compras", icon: ShoppingCart },
   { label: "Estoque", to: "/estoque", icon: Package },
   { label: "Movimentos", to: "/estoque/movimentos", icon: History },
+  { label: "Compras", to: "/compras", icon: ShoppingCart },
+  { label: "Contas a Pagar", to: "/contas-pagar", icon: Wallet },
   { label: "Relatórios", to: "/relatorios", icon: BarChart3 },
   { label: "Cadastros", to: null, icon: BookOpen, children: CADASTROS_CHILDREN },
   { label: "Configurações", to: "/configuracoes", icon: Settings },
@@ -59,23 +62,29 @@ const NAV_ITEMS: NavItem[] = [
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  mobileOpen: boolean;
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
   const [cadastrosOpen, setCadastrosOpen] = useState(true);
   const [cadastrosHovered, setCadastrosHovered] = useState(false);
   const { data: countAbertas = 0 } = useComandasAbertasCount();
   const { data: criticos = [] } = useInsumoCriticos();
   const countCriticos = criticos.length;
+  const { data: contasResumo } = useContasPagarResumo();
+  const countContasUrgentes = (contasResumo?.vencido ?? 0) + (contasResumo?.pendente ?? 0);
 
   return (
     <aside
-      className={`relative flex flex-col border-r bg-white transition-all duration-200 ${
-        collapsed ? "w-14" : "w-52"
-      }`}
+      className={`
+        fixed inset-y-0 left-0 z-30 flex w-52 flex-col border-r bg-white shadow-xl transition-all duration-200
+        ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
+        lg:static lg:z-auto lg:shadow-none lg:translate-x-0
+        ${collapsed ? "lg:w-14" : "lg:w-52"}
+      `}
     >
       <button
-        className="flex h-10 items-center justify-center border-b text-gray-400 hover:text-gray-700 shrink-0"
+        className="hidden h-10 items-center justify-center border-b text-gray-400 hover:text-gray-700 shrink-0 lg:flex"
         onClick={onToggle}
         title={collapsed ? "Expandir menu" : "Colapsar menu"}
       >
@@ -204,6 +213,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               )}
               {collapsed && item.to === "/estoque" && countCriticos > 0 && (
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
+              )}
+              {!collapsed && item.to === "/contas-pagar" && countContasUrgentes > 0 && (
+                <span className="ml-auto rounded-full bg-orange-500 px-2 py-0.5 text-xs text-white">
+                  {countContasUrgentes}
+                </span>
+              )}
+              {collapsed && item.to === "/contas-pagar" && countContasUrgentes > 0 && (
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-orange-500" />
               )}
             </NavLink>
           );
