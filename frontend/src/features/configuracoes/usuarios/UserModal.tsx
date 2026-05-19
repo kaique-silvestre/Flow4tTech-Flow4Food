@@ -14,6 +14,13 @@ import { Label } from "@/components/ui/label";
 import { useCreateUser, useUpdateUser, useResetPassword, type UserResponse } from "./useUsers";
 import { useProfiles } from "./useProfiles";
 
+const ALPHABET = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function generatePassword(len = 10): string {
+  return Array.from({ length: len }, () =>
+    ALPHABET[Math.floor(Math.random() * ALPHABET.length)]
+  ).join("");
+}
+
 const createSchema = z.object({
   name: z.string().min(1, "Obrigatório"),
   username: z.string().min(1, "Obrigatório"),
@@ -44,6 +51,7 @@ export function UserModal({ open, onClose, user }: Props) {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateForm>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -119,7 +127,7 @@ export function UserModal({ open, onClose, user }: Props) {
               className="w-full rounded border px-3 py-2 text-sm"
             >
               <option value={0}>Selecione...</option>
-              {profiles.map((p) => (
+              {profiles.filter((p) => p.is_active).map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
@@ -128,7 +136,24 @@ export function UserModal({ open, onClose, user }: Props) {
           {!isEdit && (
             <div className="space-y-1">
               <Label>Senha provisória</Label>
-              <Input type="password" {...register("password")} />
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  className="font-mono"
+                  {...register("password")}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const pwd = generatePassword();
+                    setValue("password", pwd, { shouldValidate: true });
+                  }}
+                >
+                  Gerar
+                </Button>
+              </div>
               {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
             </div>
           )}

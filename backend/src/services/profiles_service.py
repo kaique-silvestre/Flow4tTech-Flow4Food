@@ -82,8 +82,10 @@ def toggle_profile_active(db: Session, profile_id: int) -> ProfileResponse:
     profile = get_profile_by_id(db, profile_id)
     if not profile or profile.tenant_id != TENANT_ID:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Perfil não encontrado", http_status=404)
-    if profile.is_system:
-        raise AppError(code=ErrorCode.CONFLICT, message="Perfis de sistema não podem ser desativados", http_status=409)
+    if profile.name == "Admin":
+        raise AppError(code=ErrorCode.CONFLICT, message="O perfil Admin não pode ser desativado", http_status=409)
+    if profile.users:
+        raise AppError(code=ErrorCode.CONFLICT, message="Perfil possui usuários vinculados e não pode ser desativado", http_status=409)
     profile.is_active = not profile.is_active
     profile.updated_at = datetime.now(timezone.utc)
     db.commit()

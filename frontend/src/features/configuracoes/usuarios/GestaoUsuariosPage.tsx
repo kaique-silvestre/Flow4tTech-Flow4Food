@@ -1,15 +1,24 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuthStore } from "@/stores/authStore";
 import {
   useUsers,
   useToggleUserActive,
   type UserResponse,
 } from "./useUsers";
-import { useProfiles, useDeleteProfile, useToggleProfileActive, type ProfileResponse } from "./useProfiles";
+import { useProfiles, useToggleProfileActive, type ProfileResponse } from "./useProfiles";
 import { UserModal } from "./UserModal";
 import { ProfileModal } from "./ProfileModal";
+
+type ConfirmState = {
+  open: boolean;
+  title: string;
+  description?: string;
+  confirmLabel?: string;
+  action: () => void;
+};
 
 type Tab = "usuarios" | "perfis";
 
@@ -24,13 +33,17 @@ export function GestaoUsuariosPage() {
   const [editingUser, setEditingUser] = useState<UserResponse | undefined>();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState<ProfileResponse | undefined>();
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    open: false,
+    title: "",
+    action: () => {},
+  });
 
   const currentUser = useAuthStore((s) => s.user);
   const { data: allUsers = [], isLoading: loadingUsers } = useUsers(search || undefined, filterProfile);
   const { data: allProfiles = [] } = useProfiles();
   const toggleActive = useToggleUserActive();
   const toggleProfileActive = useToggleProfileActive();
-  const deleteProfile = useDeleteProfile();
 
   const users = showInactiveUsers ? allUsers : allUsers.filter((u) => u.is_active);
   const profiles = allProfiles
@@ -152,11 +165,20 @@ export function GestaoUsuariosPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                className={user.is_active ? "text-red-600 hover:text-red-700 hover:bg-red-50" : ""}
                                 onClick={() => {
-                                  const action = user.is_active ? "desativar" : "ativar";
-                                  if (confirm(`Deseja ${action} o usuário "${user.name}"?`)) {
-                                    toggleActive.mutate(user.id);
-                                  }
+                                  const isDeactivating = user.is_active;
+                                  setConfirmState({
+                                    open: true,
+                                    title: isDeactivating
+                                      ? `Desativar "${user.name}"?`
+                                      : `Ativar "${user.name}"?`,
+                                    description: isDeactivating
+                                      ? "O usuário perderá acesso ao sistema. É possível reativar depois."
+                                      : "O usuário voltará a ter acesso ao sistema.",
+                                    confirmLabel: isDeactivating ? "Desativar" : "Ativar",
+                                    action: () => toggleActive.mutate(user.id),
+                                  });
                                 }}
                               >
                                 {user.is_active ? "Desativar" : "Ativar"}
@@ -229,34 +251,35 @@ export function GestaoUsuariosPage() {
                         >
                           {profile.name === "Admin" ? "Ver" : "Editar"}
                         </Button>
-                        {!profile.is_system && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const action = profile.is_active ? "desativar" : "ativar";
-                              if (confirm(`Deseja ${action} o perfil "${profile.name}"?`)) {
-                                toggleProfileActive.mutate(profile.id);
-                              }
-                            }}
-                          >
-                            {profile.is_active ? "Desativar" : "Ativar"}
-                          </Button>
-                        )}
-                        {!profile.is_system && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700"
-                            onClick={() => {
-                              if (confirm(`Excluir perfil "${profile.name}"?`)) {
-                                deleteProfile.mutate(profile.id);
-                              }
-                            }}
-                          >
-                            Excluir
-                          </Button>
-                        )}
+                        {(() => {
+                          const isAdmin = profile.name === "Admin";
+                          const hasUsers = profile.user_count > 0;
+                          const canToggle = !isAdmin && !hasUsers;
+                          const isDeactivating = profile.is_active;
+                          return (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={!canToggle}
+                              className={canToggle && isDeactivating ? "text-red-600 hover:text-red-700 hover:bg-red-50" : ""}
+                              onClick={canToggle ? () => {
+                                setConfirmState({
+                                  open: true,
+                                  title: isDeactivating
+                                    ? `Desativar perfil "${profile.name}"?`
+                                    : `Ativar perfil "${profile.name}"?`,
+                                  description: isDeactivating
+                                    ? "O perfil ficará indisponível para novos usuários."
+                                    : "O perfil voltará a estar disponível para novos usuários.",
+                                  confirmLabel: isDeactivating ? "Desativar" : "Ativar",
+                                  action: () => toggleProfileActive.mutate(profile.id),
+                                });
+                              } : undefined}
+                            >
+                              {isDeactivating ? "Desativar" : "Ativar"}
+                            </Button>
+                          );
+                        })()}
                       </div>
                     </td>
                   </tr>
@@ -276,6 +299,17 @@ export function GestaoUsuariosPage() {
         open={profileModalOpen}
         onClose={() => { setProfileModalOpen(false); setEditingProfile(undefined); }}
         profile={editingProfile}
+      />
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        description={confirmState.description}
+        confirmLabel={confirmState.confirmLabel}
+        onConfirm={() => {
+          confirmState.action();
+          setConfirmState((s) => ({ ...s, open: false }));
+        }}
+        onCancel={() => setConfirmState((s) => ({ ...s, open: false }))}
       />
     </div>
   );
