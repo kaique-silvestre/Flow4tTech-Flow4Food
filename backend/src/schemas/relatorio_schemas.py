@@ -112,3 +112,34 @@ class VendasPorGarcomResponse(BaseModel):
     data_inicio: datetime.date
     data_fim: datetime.date
     garcons: list[VendasGarcomItem]
+
+
+class ProdutoMaisVendidoItem(BaseModel):
+    produto_id: int
+    produto_nome: str
+    categoria_nome: Optional[str]
+    quantidade_total: Decimal
+    receita_total: Decimal
+    percentual_receita: Decimal
+
+
+class ProdutosMaisVendidosResponse(BaseModel):
+    data_inicio: datetime.date
+    data_fim: datetime.date
+    receita_total_periodo: Decimal
+    itens: list[ProdutoMaisVendidoItem]
+
+
+class HorarioPicoItem(BaseModel):
+    hora: int
+    total_comandas: int
+    receita_total: Decimal
+
+
+class PicoVendasHorarioResponse(BaseModel):
+    data_inicio: datetime.date
+    data_fim: datetime.date
+    horarios: list[HorarioPicoItem]
+    hora_pico: Optional[int]
+    total_comandas_periodo: int
+    receita_total_periodo: Decimal

@@ -255,6 +255,80 @@ def comissoes_por_garcom_periodo(
     return {r.garcom_id: r.total or Decimal("0") for r in rows}
 
 
+def produtos_mais_vendidos(
+    db: Session, start_utc: datetime.datetime, end_utc: datetime.datetime
+) -> list[dict]:
+    from src.models.categorias import Categoria
+
+    rows = db.execute(
+        select(
+            Produto.id,
+            Produto.nome,
+            Categoria.nome.label("categoria_nome"),
+            func.sum(ItemComanda.quantidade).label("quantidade_total"),
+            func.sum(ItemComanda.quantidade * ItemComanda.preco_unitario).label("receita_total"),
+        )
+        .select_from(ItemComanda)
+        .join(Comanda, ItemComanda.comanda_id == Comanda.id)
+        .join(Produto, ItemComanda.produto_id == Produto.id)
+        .outerjoin(Categoria, Produto.categoria_id == Categoria.id)
+        .where(
+            Comanda.status == StatusComanda.FECHADA.value,
+            Comanda.data_fechamento >= start_utc,
+            Comanda.data_fechamento <= end_utc,
+            ItemComanda.cancelado.is_(False),
+            ItemComanda.cortesia.is_(False),
+        )
+        .group_by(Produto.id, Produto.nome, Categoria.nome)
+        .order_by(func.sum(ItemComanda.quantidade * ItemComanda.preco_unitario).desc())
+    ).all()
+    return [
+        {
+            "produto_id": r.id,
+            "produto_nome": r.nome,
+            "categoria_nome": r.categoria_nome,
+            "quantidade_total": r.quantidade_total or Decimal("0"),
+            "receita_total": r.receita_total or Decimal("0"),
+        }
+        for r in rows
+    ]
+
+
+def vendas_por_hora(
+    db: Session, start_utc: datetime.datetime, end_utc: datetime.datetime
+) -> list[dict]:
+    hora_local = Comanda.data_fechamento.op("AT TIME ZONE")("UTC").op("AT TIME ZONE")("America/Sao_Paulo")
+    hora_expr = func.extract("hour", hora_local)
+
+    rows = db.execute(
+        select(
+            hora_expr.label("hora"),
+            func.count(Comanda.id).label("total_comandas"),
+            func.sum(Comanda.total).label("receita_total"),
+        )
+        .where(
+            Comanda.status == StatusComanda.FECHADA.value,
+            Comanda.data_fechamento >= start_utc,
+            Comanda.data_fechamento <= end_utc,
+        )
+        .group_by(hora_expr)
+        .order_by(hora_expr)
+    ).all()
+
+    by_hour = {
+        int(r.hora): {"total_comandas": r.total_comandas, "receita_total": r.receita_total or Decimal("0")}
+        for r in rows
+    }
+    return [
+        {
+            "hora": h,
+            "total_comandas": by_hour.get(h, {}).get("total_comandas", 0),
+            "receita_total": by_hour.get(h, {}).get("receita_total", Decimal("0")),
+        }
+        for h in range(24)
+    ]
+
+
 def todos_produtos_ativos(db: Session) -> list[Produto]:
     return list(
         db.execute(select(Produto).where(Produto.ativo.is_(True)).order_by(Produto.nome))

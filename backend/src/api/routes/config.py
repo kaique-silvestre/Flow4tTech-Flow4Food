@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
+from src.api.dependencies import get_current_user, get_db, require_permission
 from src.schemas.config_schemas import (
     AlterarSenhaRequest,
     EstabelecimentoResponse,
@@ -9,7 +9,7 @@ from src.schemas.config_schemas import (
 )
 from src.services import config_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("configuracoes"))])
 
 
 @router.get("/estabelecimento", response_model=EstabelecimentoResponse)

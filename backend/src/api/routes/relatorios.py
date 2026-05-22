@@ -4,19 +4,21 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
+from src.api.dependencies import get_current_user, get_db, require_permission
 from src.schemas.relatorio_schemas import (
     CMVPorProdutoResponse,
     DREResponse,
     FechamentoCaixaResponse,
     HistoricoResponse,
     PerdasCortesiasResponse,
+    PicoVendasHorarioResponse,
+    ProdutosMaisVendidosResponse,
     VendasDoDiaResponse,
     VendasPorGarcomResponse,
 )
 from src.services import relatorio_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("relatorios"))])
 
 
 @router.get("/vendas-do-dia", response_model=VendasDoDiaResponse)
@@ -84,3 +86,23 @@ def vendas_por_garcom(
     _user: dict = Depends(get_current_user),
 ) -> VendasPorGarcomResponse:
     return relatorio_service.vendas_por_garcom(db, data_inicio, data_fim)
+
+
+@router.get("/produtos-mais-vendidos", response_model=ProdutosMaisVendidosResponse)
+def produtos_mais_vendidos(
+    data_inicio: datetime.date = Query(...),
+    data_fim: datetime.date = Query(...),
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> ProdutosMaisVendidosResponse:
+    return relatorio_service.produtos_mais_vendidos(db, data_inicio, data_fim)
+
+
+@router.get("/pico-vendas-horario", response_model=PicoVendasHorarioResponse)
+def pico_vendas_horario(
+    data_inicio: datetime.date = Query(...),
+    data_fim: datetime.date = Query(...),
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> PicoVendasHorarioResponse:
+    return relatorio_service.pico_vendas_horario(db, data_inicio, data_fim)

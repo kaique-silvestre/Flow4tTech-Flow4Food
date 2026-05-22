@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
+from src.api.dependencies import get_current_user, get_db, require_permission
 from src.schemas.compras import (
     CompraCreateRequest,
     CompraPatchRequest,
@@ -12,7 +12,7 @@ from src.schemas.compras import (
 )
 from src.services import compras_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("compras"))])
 
 
 @router.post("", response_model=CompraResponse, status_code=status.HTTP_201_CREATED)
