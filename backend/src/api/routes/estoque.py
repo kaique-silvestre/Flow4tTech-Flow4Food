@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
+from src.api.dependencies import get_current_user, get_db, require_permission
 from src.schemas.estoque import (
     BaixaSemVendaRequest,
     InsumoCriticoResponse,
@@ -12,7 +12,7 @@ from src.schemas.estoque import (
 )
 from src.services import estoque_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("estoque"))])
 
 
 @router.get("/criticos", response_model=list[InsumoCriticoResponse])

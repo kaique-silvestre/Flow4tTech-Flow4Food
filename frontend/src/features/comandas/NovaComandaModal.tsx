@@ -136,16 +136,7 @@ export function NovaComandaModal({ open, onClose }: Props) {
 
           {/* Garçom */}
           <div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="garcom_id">Garçom</Label>
-              <button
-                type="button"
-                className="text-xs text-blue-600 hover:underline"
-                onClick={() => setGarcomModalOpen(true)}
-              >
-                + Novo garçom
-              </button>
-            </div>
+            <Label htmlFor="garcom_id">Garçom</Label>
             <select
               id="garcom_id"
               className="mt-1 w-full rounded border px-3 py-2 text-sm"
@@ -158,6 +149,13 @@ export function NovaComandaModal({ open, onClose }: Props) {
                 </option>
               ))}
             </select>
+            <button
+              type="button"
+              className="text-xs text-blue-600 hover:underline mt-0.5"
+              onClick={() => setGarcomModalOpen(true)}
+            >
+              [ + Cadastrar novo garçom ]
+            </button>
             {errors.garcom_id && (
               <p className="mt-1 text-xs text-red-500">{errors.garcom_id.message}</p>
             )}

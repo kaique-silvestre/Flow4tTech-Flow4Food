@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RequireAuth } from "@/components/auth/RequireAuth";
+import { RequirePermission } from "@/components/auth/RequirePermission";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { EsqueciSenhaPage } from "@/features/auth/EsqueciSenhaPage";
 import { RedefinirSenhaPage } from "@/features/auth/RedefinirSenhaPage";
@@ -27,6 +28,8 @@ import { DrePage } from "@/features/relatorios/DrePage";
 import { CmvPorProdutoPage } from "@/features/relatorios/CmvPorProdutoPage";
 import { PerdasCortesiasPage } from "@/features/relatorios/PerdasCortesiasPage";
 import { VendasPorGarcomPage } from "@/features/relatorios/VendasPorGarcomPage";
+import { ProdutosMaisVendidosPage } from "@/features/relatorios/ProdutosMaisVendidosPage";
+import { PicoVendasHorarioPage } from "@/features/relatorios/PicoVendasHorarioPage";
 import { RelatoriosIndexPage } from "@/features/relatorios/RelatoriosIndexPage";
 import { ConfiguracoesPage } from "@/features/configuracoes/ConfiguracoesPage";
 import { GestaoUsuariosPage } from "@/features/configuracoes/usuarios/GestaoUsuariosPage";
@@ -47,30 +50,48 @@ export function App() {
           <Route element={<RequireAuth />}>
             <Route path="/comprovante/:id" element={<ComprovantePage />} />
             <Route element={<AppLayout />}>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/comandas" element={<ComandasPage />} />
-              <Route path="/comandas/:id" element={<ComandaAbertaPage />} />
-              <Route path="/comandas/:id/fechar" element={<FechamentoPage />} />
-              <Route path="/compras" element={<ComprasPage />} />
-              <Route path="/compras/nova" element={<NovaCompraPage />} />
-              <Route path="/estoque" element={<EstoquePage />} />
-              <Route path="/estoque/movimentos" element={<MovimentosPage />} />
-              <Route path="/cadastros/categorias" element={<CategoriasPage />} />
-              <Route path="/cadastros/fornecedores" element={<FornecedoresPage />} />
-              <Route path="/cadastros/garcons" element={<GarconsPage />} />
-              <Route path="/cadastros/metodos-pagamento" element={<MetodosPagamentoPage />} />
-              <Route path="/cadastros/insumos" element={<InsumosPage />} />
-              <Route path="/relatorios" element={<RelatoriosIndexPage />} />
-              <Route path="/relatorios/vendas-do-dia" element={<VendasDoDiaPage />} />
-              <Route path="/relatorios/historico" element={<HistoricoComandasPage />} />
-              <Route path="/relatorios/fechamento-caixa" element={<FechamentoCaixaPage />} />
-              <Route path="/relatorios/dre" element={<DrePage />} />
-              <Route path="/relatorios/cmv" element={<CmvPorProdutoPage />} />
-              <Route path="/relatorios/perdas-cortesias" element={<PerdasCortesiasPage />} />
-              <Route path="/relatorios/vendas-por-garcom" element={<VendasPorGarcomPage />} />
-              <Route path="/cardapio" element={<CardapioPage />} />
-              <Route path="/configuracoes/gerais" element={<ConfiguracoesPage />} />
-              <Route path="/configuracoes/usuarios" element={<GestaoUsuariosPage />} />
+              <Route element={<RequirePermission screen="dashboard" />}>
+                <Route path="/" element={<DashboardPage />} />
+              </Route>
+              <Route element={<RequirePermission screen="comandas" />}>
+                <Route path="/comandas" element={<ComandasPage />} />
+                <Route path="/comandas/:id" element={<ComandaAbertaPage />} />
+                <Route path="/comandas/:id/fechar" element={<FechamentoPage />} />
+                <Route path="/cardapio" element={<CardapioPage />} />
+              </Route>
+              <Route element={<RequirePermission screen="compras" />}>
+                <Route path="/compras" element={<ComprasPage />} />
+                <Route path="/compras/nova" element={<NovaCompraPage />} />
+              </Route>
+              <Route element={<RequirePermission screen="estoque" />}>
+                <Route path="/estoque" element={<EstoquePage />} />
+                <Route path="/estoque/movimentos" element={<MovimentosPage />} />
+              </Route>
+              <Route element={<RequirePermission screen="cadastros" />}>
+                <Route path="/cadastros/categorias" element={<CategoriasPage />} />
+                <Route path="/cadastros/fornecedores" element={<FornecedoresPage />} />
+                <Route path="/cadastros/garcons" element={<GarconsPage />} />
+                <Route path="/cadastros/metodos-pagamento" element={<MetodosPagamentoPage />} />
+                <Route path="/cadastros/insumos" element={<InsumosPage />} />
+              </Route>
+              <Route element={<RequirePermission screen="relatorios" />}>
+                <Route path="/relatorios" element={<RelatoriosIndexPage />} />
+                <Route path="/relatorios/vendas-do-dia" element={<VendasDoDiaPage />} />
+                <Route path="/relatorios/historico" element={<HistoricoComandasPage />} />
+                <Route path="/relatorios/fechamento-caixa" element={<FechamentoCaixaPage />} />
+                <Route path="/relatorios/dre" element={<DrePage />} />
+                <Route path="/relatorios/cmv" element={<CmvPorProdutoPage />} />
+                <Route path="/relatorios/perdas-cortesias" element={<PerdasCortesiasPage />} />
+                <Route path="/relatorios/vendas-por-garcom" element={<VendasPorGarcomPage />} />
+                <Route path="/relatorios/produtos-mais-vendidos" element={<ProdutosMaisVendidosPage />} />
+                <Route path="/relatorios/pico-vendas-horario" element={<PicoVendasHorarioPage />} />
+              </Route>
+              <Route element={<RequirePermission screen="configuracoes" />}>
+                <Route path="/configuracoes/gerais" element={<ConfiguracoesPage />} />
+              </Route>
+              <Route element={<RequirePermission screen="gestao_usuarios" />}>
+                <Route path="/configuracoes/usuarios" element={<GestaoUsuariosPage />} />
+              </Route>
               <Route path="*" element={<PlaceholderPage />} />
             </Route>
           </Route>

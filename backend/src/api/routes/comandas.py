@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
+from src.api.dependencies import get_current_user, get_db, require_permission
 from src.repositories import comandas_repository as _cr
 from src.schemas.comandas import (
     CancelarItemRequest,
@@ -18,7 +18,7 @@ from src.schemas.fechamento import AplicarDescontoRequest, FecharComandaRequest
 from src.services import comandas_service, comprovante_service
 from src.services.comandas_service import _build_response
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("comandas"))])
 
 
 @router.post("", response_model=ComandaResponse, status_code=201)

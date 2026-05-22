@@ -40,11 +40,11 @@ interface NavItem {
 }
 
 const CADASTROS_CHILDREN: SubNavItem[] = [
-  { label: "Categorias", to: "/cadastros/categorias", icon: Tag },
-  { label: "Insumos", to: "/cadastros/insumos", icon: FlaskConical },
-  { label: "Fornecedores", to: "/cadastros/fornecedores", icon: Truck },
-  { label: "Garçons", to: "/cadastros/garcons", icon: Users },
-  { label: "Métodos Pgto.", to: "/cadastros/metodos-pagamento", icon: CreditCard },
+  { label: "Categorias", to: "/cadastros/categorias", icon: Tag, screen: "cadastros" },
+  { label: "Insumos", to: "/cadastros/insumos", icon: FlaskConical, screen: "cadastros" },
+  { label: "Fornecedores", to: "/cadastros/fornecedores", icon: Truck, screen: "cadastros" },
+  { label: "Garçons", to: "/cadastros/garcons", icon: Users, screen: "cadastros" },
+  { label: "Métodos Pgto.", to: "/cadastros/metodos-pagamento", icon: CreditCard, screen: "cadastros" },
 ];
 
 const CONFIGURACOES_CHILDREN: SubNavItem[] = [
@@ -86,8 +86,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   }
 
   const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.screen && !permissions.includes(item.screen)) return false;
     if (item.children) return visibleChildren(item.children).length > 0;
-    return !item.screen || permissions.includes(item.screen);
+    return true;
   });
 
   return (

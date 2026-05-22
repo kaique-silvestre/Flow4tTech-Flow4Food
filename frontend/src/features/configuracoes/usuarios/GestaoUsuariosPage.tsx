@@ -247,6 +247,7 @@ export function GestaoUsuariosPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="min-w-[4.5rem]"
                           onClick={() => openEditProfile(profile)}
                         >
                           {profile.name === "Admin" ? "Ver" : "Editar"}
