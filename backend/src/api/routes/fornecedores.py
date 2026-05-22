@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
+from src.api.dependencies import get_current_user, get_db, require_permission
 from src.schemas.fornecedores import (
     FornecedorCreateRequest,
     FornecedorResponse,
@@ -10,7 +10,7 @@ from src.schemas.fornecedores import (
 )
 from src.services import fornecedores_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("compras"))])
 
 
 @router.get("", response_model=list[FornecedorResponse])

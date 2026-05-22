@@ -5,14 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
+from src.api.dependencies import get_current_user, get_db, require_permission
 from src.models.comandas import Comanda
 from src.models.comissoes_garcom import ComissaoGarcom
 from src.schemas.comissoes import ComissaoResponse, ComissaoUpdateRequest, GarcomStatsResponse
 from src.schemas.garcons import GarcomCreateRequest, GarcomResponse, GarcomUpdateRequest
 from src.services import garcons_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("cadastros"))])
 
 
 @router.get("", response_model=list[GarcomResponse])

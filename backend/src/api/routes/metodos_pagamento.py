@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
+from src.api.dependencies import get_current_user, get_db, require_permission
 from src.schemas.metodos_pagamento import (
     MetodoPagamentoCreateRequest,
     MetodoPagamentoResponse,
@@ -10,7 +10,7 @@ from src.schemas.metodos_pagamento import (
 )
 from src.services import metodos_pagamento_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("configuracoes"))])
 
 
 @router.get("", response_model=list[MetodoPagamentoResponse])

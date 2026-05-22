@@ -3,11 +3,11 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
+from src.api.dependencies import get_current_user, get_db, require_permission
 from src.schemas.insumos import InsumoCreateRequest, InsumoResponse, InsumoUpdateRequest
 from src.services import insumos_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("estoque"))])
 
 
 @router.get("", response_model=list[InsumoResponse])
