@@ -9,6 +9,7 @@ from src.repositories import insumos_repository, produtos_repository
 from src.schemas.produtos import (
     FichaTecnicaItemResponse,
     ProdutoCreateRequest,
+    ProdutoPageResponse,
     ProdutoResponse,
     ProdutoUpdateRequest,
 )
@@ -56,9 +57,18 @@ def list_produtos(
     categoria_id: Optional[int] = None,
     busca: Optional[str] = None,
     ativo: Optional[bool] = None,
-) -> list[ProdutoResponse]:
-    items = produtos_repository.list_ativos(db, categoria_id, busca, ativo=ativo)
-    return [_build_response(db, p) for p in items]
+    pagina: int = 1,
+    por_pagina: int = 500,
+) -> ProdutoPageResponse:
+    items, total = produtos_repository.list_ativos(db, categoria_id, busca, ativo=ativo, pagina=pagina, por_pagina=por_pagina)
+    import math
+    return ProdutoPageResponse(
+        itens=[_build_response(db, p) for p in items],
+        total=total,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        total_paginas=math.ceil(total / por_pagina) if total > 0 else 1,
+    )
 
 
 def get_produto(db: Session, produto_id: int) -> ProdutoResponse:

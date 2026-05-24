@@ -9,7 +9,7 @@ from src.schemas.estoque import (
     InsumoCriticoResponse,
     MovimentoListResponse,
     MovimentoProdutoListResponse,
-    SaldoItemResponse,
+    SaldoPageResponse,
 )
 from src.services import estoque_service
 
@@ -24,14 +24,16 @@ def get_criticos(
     return estoque_service.get_insumos_criticos(db)  # type: ignore[return-value]
 
 
-@router.get("/saldo", response_model=list[SaldoItemResponse])
+@router.get("/saldo", response_model=SaldoPageResponse)
 def get_saldo(
     categoria_id: Optional[int] = Query(None),
     busca: Optional[str] = Query(None),
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(500, ge=1, le=500),
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
-) -> list[SaldoItemResponse]:
-    return estoque_service.get_saldo_list(db, categoria_id, busca)  # type: ignore[return-value]
+) -> SaldoPageResponse:
+    return estoque_service.get_saldo_list(db, categoria_id, busca, pagina, por_pagina)  # type: ignore[return-value]
 
 
 @router.post("/baixa-sem-venda", status_code=status.HTTP_201_CREATED)

@@ -43,3 +43,11 @@ class ProdutoResponse(BaseModel):
     ativo: bool
     ficha_tecnica: Optional[list[FichaTecnicaItemResponse]] = None
     producao_possivel: Optional[int] = None
+
+
+class ProdutoPageResponse(BaseModel):
+    itens: list[ProdutoResponse]
+    total: int
+    pagina: int
+    por_pagina: int
+    total_paginas: int

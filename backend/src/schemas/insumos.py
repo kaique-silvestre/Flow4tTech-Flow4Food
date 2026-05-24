@@ -39,3 +39,11 @@ class InsumoResponse(BaseModel):
     @property
     def estoque_disponivel(self) -> Decimal:
         return self.estoque_atual - self.estoque_reservado
+
+
+class InsumoPageResponse(BaseModel):
+    itens: list[InsumoResponse]
+    total: int
+    pagina: int
+    por_pagina: int
+    total_paginas: int

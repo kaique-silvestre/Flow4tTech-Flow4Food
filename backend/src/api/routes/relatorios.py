@@ -15,6 +15,7 @@ from src.schemas.relatorio_schemas import (
     ProdutosMaisVendidosResponse,
     VendasDoDiaResponse,
     VendasPorGarcomResponse,
+    VendasPorProdutoResponse,
 )
 from src.services import relatorio_service
 
@@ -106,3 +107,13 @@ def pico_vendas_horario(
     _user: dict = Depends(get_current_user),
 ) -> PicoVendasHorarioResponse:
     return relatorio_service.pico_vendas_horario(db, data_inicio, data_fim)
+
+
+@router.get("/vendas-por-produto", response_model=VendasPorProdutoResponse)
+def vendas_por_produto(
+    data_inicio: datetime.date = Query(...),
+    data_fim: datetime.date = Query(...),
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> VendasPorProdutoResponse:
+    return relatorio_service.vendas_por_produto(db, data_inicio, data_fim)

@@ -1,14 +1,28 @@
+import math
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
 from src.models.fornecedores import Fornecedor
 from src.repositories import fornecedores_repository
-from src.schemas.fornecedores import FornecedorCreateRequest, FornecedorUpdateRequest
+from src.schemas.fornecedores import FornecedorCreateRequest, FornecedorPageResponse, FornecedorResponse, FornecedorUpdateRequest
 
 
-def list_fornecedores(db: Session) -> list[Fornecedor]:
-    return fornecedores_repository.list_all(db)
+def list_fornecedores(
+    db: Session,
+    busca: Optional[str] = None,
+    pagina: int = 1,
+    por_pagina: int = 500,
+) -> FornecedorPageResponse:
+    items, total = fornecedores_repository.list_all(db, busca=busca, pagina=pagina, por_pagina=por_pagina)
+    return FornecedorPageResponse(
+        itens=[FornecedorResponse.model_validate(i) for i in items],
+        total=total,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        total_paginas=math.ceil(total / por_pagina) if total > 0 else 1,
+    )
 
 
 def get_fornecedor(db: Session, fornecedor_id: int) -> Fornecedor:

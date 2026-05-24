@@ -39,7 +39,8 @@ export function ContasPagarPage() {
   const contas = paginado?.itens ?? [];
   const totalPaginas = paginado?.total_paginas ?? 1;
 
-  const { data: fornecedores = [] } = useFornecedores();
+  const { data: fornecedoresData } = useFornecedores();
+  const fornecedores = fornecedoresData?.itens ?? [];
   const pagarMutation = usePagarConta();
 
   const [pagando, setPagando] = useState<ContaPagarResponse | null>(null);

@@ -39,27 +39,39 @@ export interface InsumoUpdateRequest {
   nivel_critico: number | null;
 }
 
+export interface InsumoPageResponse {
+  itens: InsumoResponse[];
+  total: number;
+  pagina: number;
+  por_pagina: number;
+  total_paginas: number;
+}
+
 const QK = "insumos";
 
-export function useInsumos(busca?: string) {
-  return useQuery<InsumoResponse[]>({
-    queryKey: [QK, busca],
-    queryFn: () =>
-      api
-        .get<InsumoResponse[]>("/api/insumos", { params: busca ? { busca } : {} })
-        .then((r) => r.data),
+export function useInsumos(busca?: string, options?: { pagina?: number; por_pagina?: number }) {
+  return useQuery<InsumoPageResponse>({
+    queryKey: [QK, busca, options?.pagina, options?.por_pagina],
+    queryFn: () => {
+      const params: Record<string, unknown> = {};
+      if (busca) params.busca = busca;
+      if (options?.pagina) params.pagina = options.pagina;
+      if (options?.por_pagina) params.por_pagina = options.por_pagina;
+      return api.get<InsumoPageResponse>("/api/insumos", { params }).then((r) => r.data);
+    },
   });
 }
 
-export function useAllInsumos(busca?: string) {
-  return useQuery<InsumoResponse[]>({
-    queryKey: [QK, "all", busca],
-    queryFn: () =>
-      api
-        .get<InsumoResponse[]>("/api/insumos", {
-          params: { incluir_inativos: true, ...(busca ? { busca } : {}) },
-        })
-        .then((r) => r.data),
+export function useAllInsumos(busca?: string, options?: { pagina?: number; por_pagina?: number }) {
+  return useQuery<InsumoPageResponse>({
+    queryKey: [QK, "all", busca, options?.pagina, options?.por_pagina],
+    queryFn: () => {
+      const params: Record<string, unknown> = { incluir_inativos: true };
+      if (busca) params.busca = busca;
+      if (options?.pagina) params.pagina = options.pagina;
+      if (options?.por_pagina) params.por_pagina = options.por_pagina;
+      return api.get<InsumoPageResponse>("/api/insumos", { params }).then((r) => r.data);
+    },
   });
 }
 
@@ -95,8 +107,8 @@ export function useToggleInsumoAtivo() {
     mutationFn: (id: number) =>
       api.patch<InsumoResponse>(`/api/insumos/${id}/toggle-ativo`).then((r) => r.data),
     onSuccess: (data) => {
-      qc.setQueriesData<InsumoResponse[]>({ queryKey: [QK] }, (old) =>
-        old?.map((i) => (i.id === data.id ? data : i)),
+      qc.setQueriesData<InsumoPageResponse>({ queryKey: [QK] }, (old) =>
+        old ? { ...old, itens: old.itens.map((i) => (i.id === data.id ? data : i)) } : old,
       );
       qc.invalidateQueries({ queryKey: [QK] });
       qc.invalidateQueries({ queryKey: ["estoque"] });

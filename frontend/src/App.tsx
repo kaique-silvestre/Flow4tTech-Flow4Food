@@ -21,6 +21,7 @@ import { ComandasPage } from "@/features/comandas/ComandasPage";
 import { ComandaAbertaPage } from "@/features/comandas/ComandaAbertaPage";
 import FechamentoPage from "@/features/comandas/FechamentoPage";
 import { ComprovantePage } from "@/features/comandas/ComprovantePage";
+import { PreContaPage } from "@/features/comandas/PreContaPage";
 import { VendasDoDiaPage } from "@/features/relatorios/VendasDoDiaPage";
 import { HistoricoComandasPage } from "@/features/relatorios/HistoricoComandasPage";
 import { FechamentoCaixaPage } from "@/features/relatorios/FechamentoCaixaPage";
@@ -30,6 +31,7 @@ import { PerdasCortesiasPage } from "@/features/relatorios/PerdasCortesiasPage";
 import { VendasPorGarcomPage } from "@/features/relatorios/VendasPorGarcomPage";
 import { ProdutosMaisVendidosPage } from "@/features/relatorios/ProdutosMaisVendidosPage";
 import { PicoVendasHorarioPage } from "@/features/relatorios/PicoVendasHorarioPage";
+import { VendasPorProdutoPage } from "@/features/relatorios/VendasPorProdutoPage";
 import { RelatoriosIndexPage } from "@/features/relatorios/RelatoriosIndexPage";
 import { ConfiguracoesPage } from "@/features/configuracoes/ConfiguracoesPage";
 import { GestaoUsuariosPage } from "@/features/configuracoes/usuarios/GestaoUsuariosPage";
@@ -50,6 +52,7 @@ export function App() {
           <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
           <Route element={<RequireAuth />}>
             <Route path="/comprovante/:id" element={<ComprovantePage />} />
+            <Route path="/comandas/:id/pre-conta" element={<PreContaPage />} />
             <Route element={<AppLayout />}>
               <Route element={<RequirePermission screen="dashboard" />}>
                 <Route path="/" element={<DashboardPage />} />
@@ -87,6 +90,7 @@ export function App() {
                 <Route path="/relatorios/vendas-por-garcom" element={<VendasPorGarcomPage />} />
                 <Route path="/relatorios/produtos-mais-vendidos" element={<ProdutosMaisVendidosPage />} />
                 <Route path="/relatorios/pico-vendas-horario" element={<PicoVendasHorarioPage />} />
+                <Route path="/relatorios/vendas-por-produto" element={<VendasPorProdutoPage />} />
               </Route>
               <Route element={<RequirePermission screen="configuracoes" />}>
                 <Route path="/configuracoes/gerais" element={<ConfiguracoesPage />} />

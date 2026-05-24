@@ -53,7 +53,8 @@ export function ComprasPage() {
     setFilters((f) => ({ ...f, ...update }));
     setPagina(1);
   }
-  const { data: fornecedores = [] } = useFornecedores();
+  const { data: fornecedoresData } = useFornecedores();
+  const fornecedores = fornecedoresData?.itens ?? [];
   const cancelarMutation = useCancelarCompra();
   const confirmarMutation = useConfirmarRecebimento();
   const patchMutation = usePatchCompra();

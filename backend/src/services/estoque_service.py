@@ -21,6 +21,7 @@ from src.schemas.estoque import (
     MovimentoProdutoResponse,
     MovimentoResponse,
     SaldoItemResponse,
+    SaldoPageResponse,
 )
 
 
@@ -57,8 +58,11 @@ def get_saldo_list(
     db: Session,
     categoria_id: Optional[int] = None,
     busca: Optional[str] = None,
-) -> list[SaldoItemResponse]:
-    insumos = estoque_repository.list_saldo(db, categoria_id, busca)
+    pagina: int = 1,
+    por_pagina: int = 500,
+) -> SaldoPageResponse:
+    import math
+    insumos, total = estoque_repository.list_saldo(db, categoria_id, busca, pagina=pagina, por_pagina=por_pagina)
     result = []
     for insumo in insumos:
         result.append(
@@ -75,7 +79,13 @@ def get_saldo_list(
                 nivel_critico=insumo.nivel_critico,
             )
         )
-    return result
+    return SaldoPageResponse(
+        itens=result,
+        total=total,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        total_paginas=math.ceil(total / por_pagina) if total > 0 else 1,
+    )
 
 
 def get_insumos_criticos(db: Session) -> list[InsumoCriticoResponse]:

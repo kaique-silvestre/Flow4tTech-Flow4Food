@@ -23,8 +23,10 @@ export function NovaCompraPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const createCompra = useCreateCompra();
-  const { data: fornecedores = [] } = useFornecedores();
-  const { data: itensSimples = [] } = useInsumos();
+  const { data: fornecedoresData } = useFornecedores();
+  const fornecedores = fornecedoresData?.itens ?? [];
+  const { data: insumosData } = useInsumos();
+  const itensSimples = insumosData?.itens ?? [];
 
   const [novoFornOpen, setNovoFornOpen] = useState(false);
   const [insumoModalIndex, setInsumoModalIndex] = useState<number | null>(null);

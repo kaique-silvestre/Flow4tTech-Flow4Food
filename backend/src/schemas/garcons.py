@@ -16,3 +16,11 @@ class GarcomResponse(BaseModel):
     id: int
     nome: str
     ativo: bool
+
+
+class GarcomPageResponse(BaseModel):
+    itens: list[GarcomResponse]
+    total: int
+    pagina: int
+    por_pagina: int
+    total_paginas: int

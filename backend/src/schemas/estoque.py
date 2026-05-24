@@ -88,3 +88,11 @@ class MovimentoProdutoListResponse(BaseModel):
     total: int
     pagina: int
     por_pagina: int
+
+
+class SaldoPageResponse(BaseModel):
+    itens: list[SaldoItemResponse]
+    total: int
+    pagina: int
+    por_pagina: int
+    total_paginas: int

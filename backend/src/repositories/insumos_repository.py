@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.models.insumos import Insumo
@@ -11,25 +11,38 @@ def list_ativos(
     db: Session,
     categoria_id: Optional[int] = None,
     busca: Optional[str] = None,
-) -> list[Insumo]:
+    pagina: int = 1,
+    por_pagina: int = 500,
+) -> tuple[list[Insumo], int]:
     stmt = select(Insumo).where(Insumo.ativo == True)  # noqa: E712
+    count_stmt = select(func.count()).select_from(Insumo).where(Insumo.ativo == True)  # noqa: E712
     if categoria_id is not None:
         stmt = stmt.where(Insumo.categoria_id == categoria_id)
+        count_stmt = count_stmt.where(Insumo.categoria_id == categoria_id)
     if busca:
         stmt = stmt.where(Insumo.nome.ilike(f"%{busca}%"))
+        count_stmt = count_stmt.where(Insumo.nome.ilike(f"%{busca}%"))
     stmt = stmt.order_by(Insumo.nome)
-    return list(db.execute(stmt).scalars().all())
+    total = db.execute(count_stmt).scalar_one()
+    offset = (pagina - 1) * por_pagina
+    return list(db.execute(stmt.offset(offset).limit(por_pagina)).scalars().all()), total
 
 
 def list_all(
     db: Session,
     busca: Optional[str] = None,
-) -> list[Insumo]:
+    pagina: int = 1,
+    por_pagina: int = 500,
+) -> tuple[list[Insumo], int]:
     stmt = select(Insumo)
+    count_stmt = select(func.count()).select_from(Insumo)
     if busca:
         stmt = stmt.where(Insumo.nome.ilike(f"%{busca}%"))
+        count_stmt = count_stmt.where(Insumo.nome.ilike(f"%{busca}%"))
     stmt = stmt.order_by(Insumo.nome)
-    return list(db.execute(stmt).scalars().all())
+    total = db.execute(count_stmt).scalar_one()
+    offset = (pagina - 1) * por_pagina
+    return list(db.execute(stmt.offset(offset).limit(por_pagina)).scalars().all()), total
 
 
 def get_by_id(db: Session, insumo_id: int) -> Optional[Insumo]:

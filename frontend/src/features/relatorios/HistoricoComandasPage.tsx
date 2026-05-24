@@ -21,7 +21,8 @@ export function HistoricoComandasPage() {
   const [busca, setBusca] = useState("");
   const [debouncedBusca] = useDebounce(busca, 350);
 
-  const { data: garcons = [] } = useGarcons();
+  const { data: garconsData } = useGarcons();
+  const garcons = garconsData?.itens ?? [];
   const { data, isLoading } = useHistoricoComandas({
     data_inicio: dataInicio,
     data_fim: dataFim,

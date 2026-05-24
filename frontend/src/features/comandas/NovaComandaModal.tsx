@@ -23,7 +23,8 @@ interface Props {
 }
 
 export function NovaComandaModal({ open, onClose }: Props) {
-  const { data: garcons = [] } = useGarcons();
+  const { data: garconsData } = useGarcons();
+  const garcons = garconsData?.itens ?? [];
   const garçonsAtivos = garcons.filter((g) => g.ativo);
   const abrirComanda = useAbrirComanda();
 

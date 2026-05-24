@@ -38,9 +38,19 @@ export interface MovimentoListResponse {
   por_pagina: number;
 }
 
+export interface SaldoPageResponse {
+  itens: SaldoItemResponse[];
+  total: number;
+  pagina: number;
+  por_pagina: number;
+  total_paginas: number;
+}
+
 export interface SaldoFilters {
   categoria_id?: number | null;
   busca?: string | null;
+  pagina?: number;
+  por_pagina?: number;
 }
 
 export interface MovimentoFilters {
@@ -104,10 +114,12 @@ export function useSaldoEstoque(filters: SaldoFilters = {}) {
   const params: Record<string, string> = {};
   if (filters.categoria_id != null) params.categoria_id = String(filters.categoria_id);
   if (filters.busca) params.busca = filters.busca;
+  if (filters.pagina) params.pagina = String(filters.pagina);
+  if (filters.por_pagina) params.por_pagina = String(filters.por_pagina);
 
-  return useQuery<SaldoItemResponse[]>({
+  return useQuery<SaldoPageResponse>({
     queryKey: [QK, "saldo", filters],
-    queryFn: () => api.get<SaldoItemResponse[]>("/api/estoque/saldo", { params }).then((r) => r.data),
+    queryFn: () => api.get<SaldoPageResponse>("/api/estoque/saldo", { params }).then((r) => r.data),
   });
 }
 

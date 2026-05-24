@@ -3,9 +3,10 @@ from decimal import Decimal
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
+from src.models.categorias import Categoria
 from src.models.comandas import Comanda, StatusComanda
 from src.models.comissoes_garcom import ComissaoGarcom
 from src.models.ficha_tecnica import FichaTecnica
@@ -358,6 +359,58 @@ def vendas_por_garcom_periodo(
         {
             "garcom_id": r.garcom_id,
             "qtd_comandas": r.qtd,
+            "faturamento": r.faturamento or Decimal("0"),
+        }
+        for r in rows
+    ]
+
+
+def vendas_por_produto_periodo(
+    db: Session, start_utc: datetime.datetime, end_utc: datetime.datetime
+) -> list[dict]:
+    rows = db.execute(
+        select(
+            ItemComanda.produto_id,
+            Produto.nome.label("produto_nome"),
+            Categoria.nome.label("categoria_nome"),
+            func.sum(
+                case((~ItemComanda.cortesia, ItemComanda.quantidade), else_=Decimal("0"))
+            ).label("qtd_vendida"),
+            func.sum(
+                case((ItemComanda.cortesia.is_(True), ItemComanda.quantidade), else_=Decimal("0"))
+            ).label("qtd_cortesias"),
+            func.sum(
+                case(
+                    (~ItemComanda.cortesia, ItemComanda.quantidade * ItemComanda.preco_unitario),
+                    else_=Decimal("0"),
+                )
+            ).label("faturamento"),
+        )
+        .join(Produto, Produto.id == ItemComanda.produto_id)
+        .outerjoin(Categoria, Categoria.id == Produto.categoria_id)
+        .join(Comanda, Comanda.id == ItemComanda.comanda_id)
+        .where(
+            ItemComanda.cancelado.is_(False),
+            Comanda.status == StatusComanda.FECHADA.value,
+            Comanda.data_fechamento >= start_utc,
+            Comanda.data_fechamento <= end_utc,
+        )
+        .group_by(ItemComanda.produto_id, Produto.nome, Categoria.nome)
+        .order_by(func.sum(
+            case(
+                (~ItemComanda.cortesia, ItemComanda.quantidade * ItemComanda.preco_unitario),
+                else_=Decimal("0"),
+            )
+        ).desc())
+    ).all()
+
+    return [
+        {
+            "produto_id": r.produto_id,
+            "produto_nome": r.produto_nome,
+            "categoria_nome": r.categoria_nome,
+            "qtd_vendida": r.qtd_vendida or Decimal("0"),
+            "qtd_cortesias": r.qtd_cortesias or Decimal("0"),
             "faturamento": r.faturamento or Decimal("0"),
         }
         for r in rows

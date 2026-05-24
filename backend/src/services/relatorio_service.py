@@ -23,6 +23,8 @@ from src.schemas.relatorio_schemas import (
     VendasDoDiaResponse,
     VendasGarcomItem,
     VendasPorGarcomResponse,
+    VendasPorProdutoItem,
+    VendasPorProdutoResponse,
 )
 
 
@@ -314,4 +316,35 @@ def vendas_por_garcom(
         data_inicio=data_inicio,
         data_fim=data_fim,
         garcons=garcons,
+    )
+
+
+def vendas_por_produto(
+    db: Session, data_inicio: datetime.date, data_fim: datetime.date
+) -> VendasPorProdutoResponse:
+    start, _ = rr._day_utc_range(data_inicio)
+    _, end = rr._day_utc_range(data_fim)
+    rows = rr.vendas_por_produto_periodo(db, start, end)
+    itens = []
+    for r in rows:
+        qtd = r["qtd_vendida"]
+        fat = r["faturamento"]
+        ticket = (fat / qtd).quantize(Decimal("0.01")) if qtd > 0 else Decimal("0")
+        itens.append(
+            VendasPorProdutoItem(
+                produto_id=r["produto_id"],
+                produto_nome=r["produto_nome"],
+                categoria_nome=r["categoria_nome"],
+                qtd_vendida=qtd,
+                qtd_cortesias=r["qtd_cortesias"],
+                faturamento=fat,
+                ticket_medio=ticket,
+            )
+        )
+    total = sum(i.faturamento for i in itens) or Decimal("0")
+    return VendasPorProdutoResponse(
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        total_faturamento=total,
+        itens=itens,
     )

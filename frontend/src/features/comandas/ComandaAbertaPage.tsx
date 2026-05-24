@@ -20,7 +20,8 @@ export function ComandaAbertaPage() {
   const lancarItem = useLancarItem(comanda_id);
   const editarItem = useEditarItem(comanda_id);
   const patchComanda = usePatchComanda(comanda_id);
-  const { data: garcons = [] } = useGarcons();
+  const { data: garconsData } = useGarcons();
+  const garcons = garconsData?.itens ?? [];
 
   const [editingField, setEditingField] = useState<"identificacao" | "garcom" | null>(null);
   const [editIdentificacao, setEditIdentificacao] = useState("");
@@ -54,7 +55,8 @@ export function ComandaAbertaPage() {
   }
 
   const [busca, setBusca] = useState("");
-  const { data: todosProdutos = [] } = useProdutos(undefined, { ativo: true });
+  const { data: produtosPage } = useProdutos(undefined, { ativo: true });
+  const todosProdutos = produtosPage?.itens ?? [];
   const { data: categoriasTree = [] } = useCategorias();
   const categoriaFlat = useMemo(() => flattenCategorias(categoriasTree), [categoriasTree]);
   const categoriaMap = useMemo(() =>
@@ -156,6 +158,10 @@ export function ComandaAbertaPage() {
     setEditQtd(String(ic.quantidade));
     setEditPessoa(ic.pessoa_associada ?? "");
     setEditObs(ic.observacao ?? "");
+  }
+
+  function handleImprimir() {
+    navigate(`/comandas/${id}/pre-conta`);
   }
 
   function saveEdit(ic: ItemComandaResponse) {
@@ -511,122 +517,137 @@ export function ComandaAbertaPage() {
 
       {/* Split layout: col on mobile, row on desktop */}
       <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
-        {/* Left panel — cardápio + form (full width mobile, w-80 desktop) */}
-        <div className={`flex-1 flex-col overflow-y-auto lg:overflow-hidden border-b bg-gray-50 lg:w-80 lg:flex-none lg:border-b-0 lg:border-r ${mobileTab === "cardapio" ? "flex" : "hidden lg:flex"}`}>
-          <div className="p-4 pb-2">
-            <h3 className="mb-2 font-medium">Adicionar Item</h3>
-            <Input
-              placeholder="Buscar produto..."
-              value={busca}
-              onChange={(e) => { setBusca(e.target.value); setItemSelecionado(null); }}
-            />
-          </div>
-
-          <div className="px-4 pb-2 lg:flex-1 lg:overflow-y-auto">
-            {itensPorCategoria.length === 0 && (
-              <p className="mt-2 text-xs text-gray-400">Nenhum produto encontrado</p>
-            )}
-            {itensPorCategoria.map(({ label, produtos }) => (
-              <div key={label} className="mb-3">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</p>
-                <div className="grid grid-cols-2 gap-1">
-                  {produtos.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => setItemSelecionado(itemSelecionado === item.id ? null : item.id)}
-                      className={`min-h-[44px] rounded border p-2 text-left text-xs transition-colors ${
-                        itemSelecionado === item.id
-                          ? "border-blue-400 bg-blue-50"
-                          : "border-gray-200 bg-white hover:bg-gray-100"
-                      }`}
-                    >
-                      <div className="font-medium leading-tight">{item.nome}</div>
-                      <div className="mt-0.5 text-gray-400">
-                        {item.preco_venda != null ? formatCurrency(item.preco_venda) : "—"}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t bg-gray-50 p-4 pt-3 space-y-3">
-            {itemSelecionadoObj && (
-              <div className="rounded border bg-blue-50 px-3 py-2 text-sm">
-                <span className="font-medium">{itemSelecionadoObj.nome}</span>
-                {itemSelecionadoObj.preco_venda != null && (
-                  <span className="ml-2 text-gray-500">{formatCurrency(itemSelecionadoObj.preco_venda)}</span>
-                )}
-              </div>
-            )}
-
-            <div>
-              <Label htmlFor="qtd">Quantidade</Label>
+        {/* Left panel — catálogo persistente + form fixo embaixo */}
+        <div className={`flex-col overflow-hidden border-b bg-gray-50 lg:w-80 lg:flex-none lg:border-b-0 lg:border-r ${mobileTab === "cardapio" ? "flex" : "hidden lg:flex"}`}>
+          {/* Metade superior: busca + catálogo */}
+          <div className="flex flex-1 flex-col overflow-hidden border-b">
+            <div className="p-3 bg-white shrink-0">
               <Input
-                id="qtd"
-                type="number"
-                min="0.001"
-                step="0.001"
-                value={quantidade}
-                onChange={(e) => setQuantidade(e.target.value)}
-                className="mt-1"
+                placeholder="Buscar produto..."
+                value={busca}
+                onChange={(e) => {
+                  setBusca(e.target.value);
+                  setItemSelecionado(null);
+                }}
+                onKeyDown={(e) => { if (e.key === "Escape") setBusca(""); }}
               />
             </div>
+          <div className="flex-1 overflow-y-auto p-3">
+            {itensPorCategoria.length === 0 ? (
+              <p className="text-xs text-gray-400 py-2">Nenhum produto encontrado</p>
+            ) : (
+              itensPorCategoria.map(({ label, produtos }) => (
+                <div key={label} className="mb-3">
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {produtos.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setItemSelecionado(item.id === itemSelecionado ? null : item.id)}
+                        className={`min-h-[52px] rounded-lg border p-2 text-left text-xs transition-colors ${
+                          itemSelecionado === item.id
+                            ? "border-blue-400 bg-blue-50 ring-1 ring-blue-300"
+                            : "border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300"
+                        }`}
+                      >
+                        <div className="font-medium leading-tight text-gray-800">{item.nome}</div>
+                        <div className="mt-0.5 text-gray-400">
+                          {item.preco_venda != null ? formatCurrency(item.preco_venda) : "—"}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
 
-            {comanda.pessoas.length > 0 ? (
-              <div>
-                <Label>Pessoa</Label>
-                <select
-                  className="mt-1 w-full rounded border px-3 py-2 text-sm"
-                  value={pessoaAssociada}
-                  onChange={(e) => setPessoaAssociada(e.target.value)}
-                >
-                  <option value="">— nenhuma —</option>
-                  {comanda.pessoas.map((p, i) => (
-                    <option key={i} value={p}>{p}</option>
-                  ))}
-                </select>
+          </div>{/* fecha metade superior */}
+
+          {/* Metade inferior: form */}
+          <div className="flex flex-1 flex-col overflow-y-auto bg-white p-3 space-y-2.5">
+            {itemSelecionadoObj ? (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm flex items-center justify-between">
+                <span className="font-medium text-blue-800">{itemSelecionadoObj.nome}</span>
+                {itemSelecionadoObj.preco_venda != null && (
+                  <span className="text-blue-600 text-xs">{formatCurrency(itemSelecionadoObj.preco_venda)}</span>
+                )}
               </div>
             ) : (
-              <div>
-                <Label htmlFor="pessoa">Pessoa (opcional)</Label>
-                <Input
-                  id="pessoa"
-                  value={pessoaAssociada}
-                  onChange={(e) => setPessoaAssociada(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
+              <p className="text-xs text-gray-400 text-center py-1">Selecione um produto acima</p>
             )}
 
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Label htmlFor="qtd" className="text-xs">Qtd</Label>
+                <Input
+                  id="qtd"
+                  type="number"
+                  min="0.001"
+                  step="0.001"
+                  value={quantidade}
+                  onChange={(e) => setQuantidade(e.target.value)}
+                  className="mt-0.5"
+                />
+              </div>
+              {comanda.pessoas.length > 0 ? (
+                <div className="flex-1">
+                  <Label className="text-xs">Pessoa</Label>
+                  <select
+                    className="mt-0.5 w-full rounded border px-2 py-2 text-sm"
+                    value={pessoaAssociada}
+                    onChange={(e) => setPessoaAssociada(e.target.value)}
+                  >
+                    <option value="">— nenhuma —</option>
+                    {comanda.pessoas.map((p, i) => (
+                      <option key={i} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="flex-1">
+                  <Label htmlFor="pessoa" className="text-xs">Pessoa</Label>
+                  <Input
+                    id="pessoa"
+                    value={pessoaAssociada}
+                    onChange={(e) => setPessoaAssociada(e.target.value)}
+                    className="mt-0.5"
+                    placeholder="Opcional"
+                  />
+                </div>
+              )}
+            </div>
+
             <div>
-              <Label htmlFor="obs">Observação (opcional)</Label>
+              <Label htmlFor="obs" className="text-xs">Observação</Label>
               <Input
                 id="obs"
                 value={observacao}
                 onChange={(e) => setObservacao(e.target.value)}
-                className="mt-1"
+                className="mt-0.5"
+                placeholder="Opcional"
               />
             </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="cortesia"
-                checked={cortesia}
-                onChange={(e) => setCortesia(e.target.checked)}
-              />
-              <Label htmlFor="cortesia">Cortesia (preço zero)</Label>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="cortesia"
+                  checked={cortesia}
+                  onChange={(e) => setCortesia(e.target.checked)}
+                />
+                <Label htmlFor="cortesia" className="text-xs">Cortesia</Label>
+              </div>
+              <Button
+                onClick={handleLancar}
+                disabled={!itemSelecionado || lancarItem.isPending}
+                size="sm"
+              >
+                {lancarItem.isPending ? "Lançando..." : "+ Adicionar"}
+              </Button>
             </div>
-
-            <Button
-              className="w-full"
-              onClick={handleLancar}
-              disabled={!itemSelecionado || lancarItem.isPending}
-            >
-              {lancarItem.isPending ? "Lançando..." : "+ Adicionar Item"}
-            </Button>
           </div>
         </div>
 
@@ -648,6 +669,9 @@ export function ComandaAbertaPage() {
                 title={itensAtivos.length === 0 ? "Adicione ao menos um item antes de fechar" : undefined}
               >
                 Fechar Conta
+              </Button>
+              <Button variant="outline" onClick={handleImprimir}>
+                Imprimir Conta
               </Button>
               <Button variant="destructive" onClick={() => setConfirmCancelar(true)}>
                 Cancelar Comanda
@@ -677,6 +701,9 @@ export function ComandaAbertaPage() {
               disabled={itensAtivos.length === 0}
             >
               Fechar Conta
+            </Button>
+            <Button variant="outline" onClick={handleImprimir}>
+              Imprimir
             </Button>
             <Button variant="destructive" onClick={() => setConfirmCancelar(true)}>
               Cancelar

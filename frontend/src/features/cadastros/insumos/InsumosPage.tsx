@@ -13,7 +13,8 @@ type Filtro = "ativos" | "inativos" | "todos";
 const POR_PAGINA = 12;
 
 export function InsumosPage() {
-  const { data: insumos = [], isLoading } = useAllInsumos();
+  const { data, isLoading } = useAllInsumos();
+  const insumos = data?.itens ?? [];
   const toggleAtivo = useToggleInsumoAtivo();
 
   const [modalOpen, setModalOpen] = useState(false);

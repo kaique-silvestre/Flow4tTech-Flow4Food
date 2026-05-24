@@ -13,7 +13,8 @@ export function EstoquePage() {
   const [filters, setFilters] = useState<SaldoFilters>({});
   const [debouncedBusca] = useDebounce(filters.busca, 350);
   const queryFilters: SaldoFilters = { ...filters, busca: filters.busca === "" || filters.busca == null ? filters.busca : debouncedBusca };
-  const { data: itens = [], isLoading } = useSaldoEstoque(queryFilters);
+  const { data: saldoData, isLoading } = useSaldoEstoque(queryFilters);
+  const itens = saldoData?.itens ?? [];
   const { data: categorias = [] } = useCategorias();
   const [baixaOpen, setBaixaOpen] = useState(false);
   const [pagina, setPagina] = useState(1);

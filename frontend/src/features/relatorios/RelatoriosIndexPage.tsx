@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { BarChart3, History, DollarSign, TrendingDown, Users, FileText, BarChart2, Trophy, Clock } from "lucide-react";
+import { BarChart3, History, DollarSign, TrendingDown, Users, FileText, BarChart2, Trophy, Clock, ShoppingBag } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface RelatorioCard {
@@ -63,6 +63,12 @@ const RELATORIOS: RelatorioCard[] = [
     descricao: "Distribuição de fechamentos por hora do dia — identifique horários de pico.",
     rota: "/relatorios/pico-vendas-horario",
     icon: Clock,
+  },
+  {
+    titulo: "Vendas por Produto",
+    descricao: "Ranking de produtos por faturamento, quantidade vendida e ticket médio.",
+    rota: "/relatorios/vendas-por-produto",
+    icon: ShoppingBag,
   },
 ];
 

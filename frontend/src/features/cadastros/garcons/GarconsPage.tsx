@@ -8,7 +8,8 @@ import { useGarcons, useToggleGarcomAtivo, type Garcom } from "./useGarcons";
 const POR_PAGINA = 8;
 
 export function GarconsPage() {
-  const { data: garcons = [], isLoading } = useGarcons();
+  const { data, isLoading } = useGarcons();
+  const garcons = data?.itens ?? [];
   const toggle = useToggleGarcomAtivo();
 
   const [modalOpen, setModalOpen] = useState(false);

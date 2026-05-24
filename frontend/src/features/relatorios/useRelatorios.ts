@@ -247,3 +247,31 @@ export function usePicoVendasHorario(params: { data_inicio: string; data_fim: st
     enabled: !!params.data_inicio && !!params.data_fim,
   });
 }
+
+export interface VendasPorProdutoItem {
+  produto_id: number;
+  produto_nome: string;
+  categoria_nome: string | null;
+  qtd_vendida: number;
+  qtd_cortesias: number;
+  faturamento: number;
+  ticket_medio: number;
+}
+
+export interface VendasPorProdutoResponse {
+  data_inicio: string;
+  data_fim: string;
+  total_faturamento: number;
+  itens: VendasPorProdutoItem[];
+}
+
+export function useVendasPorProduto(params: { data_inicio: string; data_fim: string }) {
+  return useQuery<VendasPorProdutoResponse>({
+    queryKey: ["relatorios", "vendas-por-produto", params],
+    queryFn: () =>
+      api
+        .get<VendasPorProdutoResponse>("/api/relatorios/vendas-por-produto", { params })
+        .then((r) => r.data),
+    enabled: !!params.data_inicio && !!params.data_fim,
+  });
+}

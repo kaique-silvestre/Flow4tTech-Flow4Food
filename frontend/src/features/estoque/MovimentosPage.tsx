@@ -48,7 +48,8 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 function InsumoMovimentos() {
   const [filters, setFilters] = useState<MovimentoFilters>({ pagina: 1, por_pagina: 15 });
   const { data: result, isLoading } = useMovimentos(filters);
-  const { data: itens = [] } = useSaldoEstoque();
+  const { data: saldoData } = useSaldoEstoque();
+  const itens = saldoData?.itens ?? [];
 
   const totalPaginas = result ? Math.ceil(result.total / (filters.por_pagina ?? 15)) : 1;
 
@@ -170,7 +171,8 @@ function InsumoMovimentos() {
 function ProdutoMovimentos() {
   const [filters, setFilters] = useState<MovimentoProdutoFilters>({ pagina: 1, por_pagina: 15 });
   const { data: result, isLoading } = useMovimentosProdutos(filters);
-  const { data: produtos = [] } = useProdutos(undefined, { ativo: undefined });
+  const { data: produtosData } = useProdutos(undefined, { ativo: undefined });
+  const produtos = produtosData?.itens ?? [];
 
   const totalPaginas = result ? Math.ceil(result.total / (filters.por_pagina ?? 15)) : 1;
 

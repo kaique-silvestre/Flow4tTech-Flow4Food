@@ -33,7 +33,7 @@ interface Props {
 function calcCmv(
   ficha: ProdutoFormValues["ficha_tecnica"],
   preco: string | undefined,
-  insumos: ReturnType<typeof useInsumos>["data"],
+  insumos: InsumoResponse[] | undefined,
   selectedUnits: string[]
 ) {
   if (!ficha?.length || !insumos) return null;
@@ -66,7 +66,8 @@ export function ProdutoModal({ open, onClose, editing }: Props) {
   const update = useUpdateProduto();
   const { data: categoriasTree = [] } = useCategorias();
   const categorias = flattenCategorias(categoriasTree);
-  const { data: insumos = [] } = useInsumos();
+  const { data: insumosData } = useInsumos();
+  const insumos = insumosData?.itens ?? [];
 
   const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
   const [novoInsumoIdx, setNovoInsumoIdx] = useState<number | null>(null);

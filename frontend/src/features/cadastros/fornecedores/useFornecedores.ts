@@ -11,12 +11,26 @@ export interface Fornecedor {
   ativo: boolean;
 }
 
+export interface FornecedorPageResponse {
+  itens: Fornecedor[];
+  total: number;
+  pagina: number;
+  por_pagina: number;
+  total_paginas: number;
+}
+
 const QK = "fornecedores";
 
-export function useFornecedores() {
-  return useQuery<Fornecedor[]>({
-    queryKey: [QK],
-    queryFn: () => api.get<Fornecedor[]>("/api/fornecedores").then((r) => r.data),
+export function useFornecedores(options?: { busca?: string; pagina?: number; por_pagina?: number }) {
+  return useQuery<FornecedorPageResponse>({
+    queryKey: [QK, options?.busca, options?.pagina, options?.por_pagina],
+    queryFn: () => {
+      const params: Record<string, unknown> = {};
+      if (options?.busca) params.busca = options.busca;
+      if (options?.pagina) params.pagina = options.pagina;
+      if (options?.por_pagina) params.por_pagina = options.por_pagina;
+      return api.get<FornecedorPageResponse>("/api/fornecedores", { params }).then((r) => r.data);
+    },
   });
 }
 

@@ -67,7 +67,8 @@ function CmvBadge({ preco, custo }: { preco: number | null; custo: number | null
 }
 
 export function CardapioPage() {
-  const { data: produtos = [], isLoading } = useProdutos();
+  const { data: produtosData, isLoading } = useProdutos();
+  const produtos = produtosData?.itens ?? [];
   const { data: categorias = [] } = useCategorias();
   const desativar = useDesativarProduto();
   const reativar = useReativarProduto();
@@ -80,6 +81,7 @@ export function CardapioPage() {
   const [catFiltro, setCatFiltro] = useState<number | null>(null);
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [pagina, setPagina] = useState(1);
+  const [ordenacao, setOrdenacao] = useState<"az" | "original">("az");
 
   function toggleExpand(id: number) {
     setExpandidos((prev) => {
@@ -102,6 +104,10 @@ export function CardapioPage() {
     }
     return true;
   });
+
+  const produtosOrdenados = ordenacao === "az"
+    ? [...produtosFiltrados].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+    : produtosFiltrados;
 
   function openCreate() {
     setEditing(null);
@@ -160,6 +166,17 @@ export function CardapioPage() {
           onChange={(e) => { setBusca(e.target.value); setPagina(1); }}
           className="w-full sm:w-52 text-sm"
         />
+        <button
+          onClick={() => setOrdenacao((o) => o === "az" ? "original" : "az")}
+          className={`flex items-center gap-1 rounded border px-2 py-1.5 text-sm transition-colors ${
+            ordenacao === "az"
+              ? "border-gray-900 bg-gray-900 text-white"
+              : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+          }`}
+          title="Ordenar A→Z"
+        >
+          A→Z
+        </button>
       </div>
 
       {isLoading ? (
@@ -168,7 +185,7 @@ export function CardapioPage() {
             <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />
           ))}
         </div>
-      ) : produtosFiltrados.length === 0 ? (
+      ) : produtosOrdenados.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum produto encontrado.</p>
       ) : (
         <div className="flex-1 flex flex-col overflow-x-auto">
@@ -187,7 +204,7 @@ export function CardapioPage() {
             </tr>
           </thead>
           <tbody>
-            {paginar(produtosFiltrados, pagina, POR_PAGINA).map((p) => {
+            {paginar(produtosOrdenados, pagina, POR_PAGINA).map((p) => {
               const custo = calcCusto(p);
               const lucro =
                 p.preco_venda !== null && custo !== null ? p.preco_venda - custo : null;
@@ -314,8 +331,8 @@ export function CardapioPage() {
         <div className="flex-1" />
         <Pagination
           pagina={pagina}
-          totalPaginas={Math.ceil(produtosFiltrados.length / POR_PAGINA)}
-          total={produtosFiltrados.length}
+          totalPaginas={Math.ceil(produtosOrdenados.length / POR_PAGINA)}
+          total={produtosOrdenados.length}
           label="produtos"
           onPageChange={setPagina}
         />
