@@ -12,13 +12,19 @@ from src.schemas.relatorio_schemas import (
     DREResponse,
     FechamentoCaixaResponse,
     HistoricoResponse,
+    HorarioPicoItem,
     ItemSemCusto,
     PagamentoResumo,
     PerdasCortesiasResponse,
     PerdasGrupo,
+    PicoVendasHorarioResponse,
+    ProdutoMaisVendidoItem,
+    ProdutosMaisVendidosResponse,
     VendasDoDiaResponse,
     VendasGarcomItem,
     VendasPorGarcomResponse,
+    VendasPorProdutoItem,
+    VendasPorProdutoResponse,
 )
 
 
@@ -223,6 +229,65 @@ def perdas_cortesias(
     )
 
 
+def produtos_mais_vendidos(
+    db: Session, data_inicio: datetime.date, data_fim: datetime.date
+) -> ProdutosMaisVendidosResponse:
+    start, _ = rr._day_utc_range(data_inicio)
+    _, end = rr._day_utc_range(data_fim)
+    rows = rr.produtos_mais_vendidos(db, start, end)
+
+    receita_total = sum((r["receita_total"] for r in rows), Decimal("0"))
+    itens = []
+    for r in rows:
+        pct = (
+            (r["receita_total"] / receita_total * Decimal("100")).quantize(Decimal("0.1"))
+            if receita_total > 0
+            else Decimal("0")
+        )
+        itens.append(
+            ProdutoMaisVendidoItem(
+                produto_id=r["produto_id"],
+                produto_nome=r["produto_nome"],
+                categoria_nome=r["categoria_nome"],
+                quantidade_total=r["quantidade_total"],
+                receita_total=r["receita_total"],
+                percentual_receita=pct,
+            )
+        )
+    return ProdutosMaisVendidosResponse(
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        receita_total_periodo=receita_total,
+        itens=itens,
+    )
+
+
+def pico_vendas_horario(
+    db: Session, data_inicio: datetime.date, data_fim: datetime.date
+) -> PicoVendasHorarioResponse:
+    start, _ = rr._day_utc_range(data_inicio)
+    _, end = rr._day_utc_range(data_fim)
+    horarios_raw = rr.vendas_por_hora(db, start, end)
+
+    horarios = [HorarioPicoItem(**h) for h in horarios_raw]
+    total_comandas = sum(h.total_comandas for h in horarios)
+    receita_total = sum((h.receita_total for h in horarios), Decimal("0"))
+
+    hora_pico: Optional[int] = None
+    ativos = [h for h in horarios if h.total_comandas > 0]
+    if ativos:
+        hora_pico = max(ativos, key=lambda h: h.total_comandas).hora
+
+    return PicoVendasHorarioResponse(
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        horarios=horarios,
+        hora_pico=hora_pico,
+        total_comandas_periodo=total_comandas,
+        receita_total_periodo=receita_total,
+    )
+
+
 def vendas_por_garcom(
     db: Session, data_inicio: datetime.date, data_fim: datetime.date
 ) -> VendasPorGarcomResponse:
@@ -251,4 +316,35 @@ def vendas_por_garcom(
         data_inicio=data_inicio,
         data_fim=data_fim,
         garcons=garcons,
+    )
+
+
+def vendas_por_produto(
+    db: Session, data_inicio: datetime.date, data_fim: datetime.date
+) -> VendasPorProdutoResponse:
+    start, _ = rr._day_utc_range(data_inicio)
+    _, end = rr._day_utc_range(data_fim)
+    rows = rr.vendas_por_produto_periodo(db, start, end)
+    itens = []
+    for r in rows:
+        qtd = r["qtd_vendida"]
+        fat = r["faturamento"]
+        ticket = (fat / qtd).quantize(Decimal("0.01")) if qtd > 0 else Decimal("0")
+        itens.append(
+            VendasPorProdutoItem(
+                produto_id=r["produto_id"],
+                produto_nome=r["produto_nome"],
+                categoria_nome=r["categoria_nome"],
+                qtd_vendida=qtd,
+                qtd_cortesias=r["qtd_cortesias"],
+                faturamento=fat,
+                ticket_medio=ticket,
+            )
+        )
+    total = sum(i.faturamento for i in itens) or Decimal("0")
+    return VendasPorProdutoResponse(
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        total_faturamento=total,
+        itens=itens,
     )

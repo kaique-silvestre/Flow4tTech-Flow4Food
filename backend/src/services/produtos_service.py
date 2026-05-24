@@ -9,16 +9,20 @@ from src.repositories import insumos_repository, produtos_repository
 from src.schemas.produtos import (
     FichaTecnicaItemResponse,
     ProdutoCreateRequest,
+    ProdutoPageResponse,
     ProdutoResponse,
     ProdutoUpdateRequest,
 )
 
 
 def _build_response(db: Session, produto) -> ProdutoResponse:
+    from decimal import Decimal as D
     componentes = produtos_repository.get_ficha(db, produto.id)
     ficha_resp = None
+    producao_possivel: Optional[int] = None
     if componentes:
         ficha_resp = []
+        minimos: list[int] = []
         for comp in componentes:
             insumo = db.execute(select(Insumo).where(Insumo.id == comp.insumo_id)).scalar_one_or_none()
             ficha_resp.append(FichaTecnicaItemResponse(
@@ -28,6 +32,15 @@ def _build_response(db: Session, produto) -> ProdutoResponse:
                 unidade_base=insumo.unidade_base if insumo else "un",
                 custo_medio_insumo=insumo.custo_medio if insumo else None,
             ))
+            if insumo is None or comp.quantidade <= 0:
+                minimos.append(0)
+            else:
+                disponivel = insumo.estoque_atual - insumo.estoque_reservado
+                if disponivel <= D("0"):
+                    minimos.append(0)
+                else:
+                    minimos.append(int(disponivel // comp.quantidade))
+        producao_possivel = min(minimos) if minimos else 0
     return ProdutoResponse(
         id=produto.id,
         nome=produto.nome,
@@ -35,6 +48,7 @@ def _build_response(db: Session, produto) -> ProdutoResponse:
         preco_venda=produto.preco_venda,
         ativo=produto.ativo,
         ficha_tecnica=ficha_resp,
+        producao_possivel=producao_possivel,
     )
 
 
@@ -43,9 +57,18 @@ def list_produtos(
     categoria_id: Optional[int] = None,
     busca: Optional[str] = None,
     ativo: Optional[bool] = None,
-) -> list[ProdutoResponse]:
-    items = produtos_repository.list_ativos(db, categoria_id, busca, ativo=ativo)
-    return [_build_response(db, p) for p in items]
+    pagina: int = 1,
+    por_pagina: int = 500,
+) -> ProdutoPageResponse:
+    items, total = produtos_repository.list_ativos(db, categoria_id, busca, ativo=ativo, pagina=pagina, por_pagina=por_pagina)
+    import math
+    return ProdutoPageResponse(
+        itens=[_build_response(db, p) for p in items],
+        total=total,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        total_paginas=math.ceil(total / por_pagina) if total > 0 else 1,
+    )
 
 
 def get_produto(db: Session, produto_id: int) -> ProdutoResponse:

@@ -14,13 +14,20 @@ def create_compra(
     data_compra: datetime.date,
     numero_nota: Optional[str],
     total: Decimal,
+    status: str = "recebido",
+    tipo_compra: str = "imediata",
+    data_prevista_recebimento: Optional[datetime.date] = None,
+    data_prevista_pagamento: Optional[datetime.date] = None,
 ) -> Compra:
     compra = Compra(
         fornecedor_id=fornecedor_id,
         data_compra=data_compra,
         numero_nota=numero_nota,
         total=total,
-        status="ativa",
+        status=status,
+        tipo_compra=tipo_compra,
+        data_prevista_recebimento=data_prevista_recebimento,
+        data_prevista_pagamento=data_prevista_pagamento,
     )
     db.add(compra)
     db.flush()
@@ -52,33 +59,49 @@ def list_compras(
     data_fim: Optional[datetime.date] = None,
     fornecedor_id: Optional[int] = None,
     status: Optional[str] = None,
+    tipo_compra: Optional[str] = None,
     pagina: int = 1,
     por_pagina: int = 10,
 ) -> tuple[list[Compra], int, Decimal]:
     stmt = select(Compra).order_by(Compra.data_compra.desc(), Compra.created_at.desc())
     count_stmt = select(func.count()).select_from(Compra)
     sum_stmt = select(func.sum(Compra.total)).select_from(Compra)
+
+    filters = []
     if data_inicio is not None:
-        stmt = stmt.where(Compra.data_compra >= data_inicio)
-        count_stmt = count_stmt.where(Compra.data_compra >= data_inicio)
-        sum_stmt = sum_stmt.where(Compra.data_compra >= data_inicio)
+        filters.append(Compra.data_compra >= data_inicio)
     if data_fim is not None:
-        stmt = stmt.where(Compra.data_compra <= data_fim)
-        count_stmt = count_stmt.where(Compra.data_compra <= data_fim)
-        sum_stmt = sum_stmt.where(Compra.data_compra <= data_fim)
+        filters.append(Compra.data_compra <= data_fim)
     if fornecedor_id is not None:
-        stmt = stmt.where(Compra.fornecedor_id == fornecedor_id)
-        count_stmt = count_stmt.where(Compra.fornecedor_id == fornecedor_id)
-        sum_stmt = sum_stmt.where(Compra.fornecedor_id == fornecedor_id)
+        filters.append(Compra.fornecedor_id == fornecedor_id)
     if status is not None:
-        stmt = stmt.where(Compra.status == status)
-        count_stmt = count_stmt.where(Compra.status == status)
-        sum_stmt = sum_stmt.where(Compra.status == status)
+        filters.append(Compra.status == status)
+    if tipo_compra is not None:
+        filters.append(Compra.tipo_compra == tipo_compra)
+
+    for f in filters:
+        stmt = stmt.where(f)
+        count_stmt = count_stmt.where(f)
+        sum_stmt = sum_stmt.where(f)
+
     total = db.execute(count_stmt).scalar_one()
     total_periodo = db.execute(sum_stmt).scalar_one() or Decimal("0")
     offset = (pagina - 1) * por_pagina
     compras = list(db.execute(stmt.offset(offset).limit(por_pagina)).scalars().all())
     return compras, total, total_periodo
+
+
+def list_confirmadas_com_entrega_prevista(
+    db: Session, ate: datetime.date
+) -> list[Compra]:
+    return list(
+        db.execute(
+            select(Compra).where(
+                Compra.status == "confirmado",
+                Compra.data_prevista_recebimento <= ate,
+            )
+        ).scalars().all()
+    )
 
 
 def find_by_numero_nota(db: Session, numero_nota: str) -> Optional[Compra]:

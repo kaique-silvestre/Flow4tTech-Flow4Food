@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
+from src.api.dependencies import get_current_user, get_db, require_permission
 from src.schemas.compras import (
     CompraCreateRequest,
     CompraPatchRequest,
@@ -12,7 +12,7 @@ from src.schemas.compras import (
 )
 from src.services import compras_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("compras"))])
 
 
 @router.post("", response_model=CompraResponse, status_code=status.HTTP_201_CREATED)
@@ -30,12 +30,15 @@ def list_compras(
     data_fim: Optional[str] = Query(None),
     fornecedor_id: Optional[int] = Query(None),
     status: Optional[str] = Query(None),
+    tipo_compra: Optional[str] = Query(None),
     pagina: int = Query(1, ge=1),
     por_pagina: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
 ) -> ComprasPageResponse:
-    return compras_service.list_compras(db, data_inicio, data_fim, fornecedor_id, status, pagina, por_pagina)  # type: ignore[return-value]
+    return compras_service.list_compras(  # type: ignore[return-value]
+        db, data_inicio, data_fim, fornecedor_id, status, tipo_compra, pagina, por_pagina
+    )
 
 
 @router.get("/{compra_id}", response_model=CompraResponse)
@@ -45,6 +48,15 @@ def get_compra(
     _user: dict = Depends(get_current_user),
 ) -> CompraResponse:
     return compras_service.get_compra(db, compra_id)
+
+
+@router.post("/{compra_id}/confirmar-recebimento", response_model=CompraResponse)
+def confirmar_recebimento(
+    compra_id: int,
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> CompraResponse:
+    return compras_service.confirmar_recebimento(db, compra_id)
 
 
 @router.post("/{compra_id}/cancelar", response_model=CompraResponse)

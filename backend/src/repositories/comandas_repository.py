@@ -13,8 +13,16 @@ from src.models.itens_comanda import ItemComanda
 from src.schemas.comandas import ComandaCreateRequest
 
 
+def _next_numero_dia(db: Session) -> int:
+    result = db.execute(
+        text("SELECT MAX(numero_dia) FROM comandas WHERE created_at::date = CURRENT_DATE")
+    ).scalar()
+    return (result or 0) + 1
+
+
 def create_comanda(db: Session, data: ComandaCreateRequest) -> Comanda:
     comanda = Comanda(
+        numero_dia=_next_numero_dia(db),
         identificacao=data.identificacao,
         tipo_identificacao=data.tipo_identificacao,
         garcom_id=data.garcom_id,

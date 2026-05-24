@@ -23,3 +23,11 @@ class FornecedorResponse(BaseModel):
     telefone: Optional[str]
     email: Optional[str]
     ativo: bool = True
+
+
+class FornecedorPageResponse(BaseModel):
+    itens: list[FornecedorResponse]
+    total: int
+    pagina: int
+    por_pagina: int
+    total_paginas: int

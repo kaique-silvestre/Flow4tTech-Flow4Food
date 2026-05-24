@@ -1,26 +1,35 @@
 
 from decimal import Decimal
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
+from src.api.dependencies import get_current_user, get_db, require_permission
 from src.models.comandas import Comanda
 from src.models.comissoes_garcom import ComissaoGarcom
 from src.schemas.comissoes import ComissaoResponse, ComissaoUpdateRequest, GarcomStatsResponse
-from src.schemas.garcons import GarcomCreateRequest, GarcomResponse, GarcomUpdateRequest
+from src.schemas.garcons import (
+    GarcomCreateRequest,
+    GarcomPageResponse,
+    GarcomResponse,
+    GarcomUpdateRequest,
+)
 from src.services import garcons_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("cadastros"))])
 
 
-@router.get("", response_model=list[GarcomResponse])
+@router.get("", response_model=GarcomPageResponse)
 def list_garcons(
+    busca: Optional[str] = Query(None),
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(500, ge=1, le=500),
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
-) -> list[GarcomResponse]:
-    return garcons_service.list_garcons(db)  # type: ignore[return-value]
+) -> GarcomPageResponse:
+    return garcons_service.list_garcons(db, busca=busca, pagina=pagina, por_pagina=por_pagina)  # type: ignore[return-value]
 
 
 @router.post("", response_model=GarcomResponse, status_code=201)

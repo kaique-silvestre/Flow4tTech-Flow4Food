@@ -87,12 +87,12 @@ export default function FechamentoPage() {
   ];
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
+    <div className="p-4 lg:p-6 max-w-3xl mx-auto space-y-6">
+      <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" size="sm" onClick={() => navigate(`/comandas/${id}`)}>
           ← Voltar
         </Button>
-        <h1 className="text-xl font-bold">
+        <h1 className="text-lg font-bold sm:text-xl">
           Fechar Comanda #{comanda.id} — {comanda.identificacao}
         </h1>
       </div>
@@ -270,8 +270,8 @@ export default function FechamentoPage() {
 
             return (
               <div key={field.id} className="space-y-2">
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1">
+                <div className="flex flex-wrap gap-2 items-end">
+                  <div className="flex-1 min-w-[140px]">
                     <Label className="text-xs">Método</Label>
                     <Controller
                       control={control}
@@ -302,7 +302,7 @@ export default function FechamentoPage() {
                       )}
                     />
                   </div>
-                  <div className="w-32">
+                  <div className="w-full sm:w-32">
                     <Label className="text-xs">Valor (R$)</Label>
                     <Input
                       type="number"
@@ -320,8 +320,8 @@ export default function FechamentoPage() {
 
                 {isDinheiro && (
                   <div className="ml-0 pl-3 border-l-2 border-blue-200 space-y-2">
-                    <div className="flex gap-2 items-end">
-                      <div className="flex-1">
+                    <div className="flex flex-wrap gap-2 items-end">
+                      <div className="flex-1 min-w-[140px]">
                         <Label className="text-xs text-gray-600">Valor da nota recebida (opcional)</Label>
                         <Controller
                           control={control}
@@ -339,7 +339,7 @@ export default function FechamentoPage() {
                           )}
                         />
                       </div>
-                      <div className="w-32">
+                      <div className="w-full sm:w-32">
                         <Label className="text-xs text-gray-600">Troco a devolver</Label>
                         <div className={`mt-1 h-9 flex items-center px-3 rounded-md border text-sm font-medium ${troco !== null && troco >= 0 ? "bg-green-50 border-green-200 text-green-700" : "bg-gray-50 border-input text-gray-400"}`}>
                           {troco !== null && troco >= 0 ? formatCurrency(troco) : "—"}
@@ -379,7 +379,7 @@ export default function FechamentoPage() {
           </p>
         )}
 
-        <div className="flex gap-3 justify-end">
+        <div className="flex flex-wrap gap-3 justify-end">
           <Button type="button" variant="outline" onClick={() => navigate(`/comandas/${id}`)}>
             Cancelar
           </Button>

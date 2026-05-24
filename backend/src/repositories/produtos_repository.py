@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.models.ficha_tecnica import FichaTecnica
@@ -14,16 +14,24 @@ def list_ativos(
     categoria_id: Optional[int] = None,
     busca: Optional[str] = None,
     ativo: Optional[bool] = None,
-) -> list[Produto]:
+    pagina: int = 1,
+    por_pagina: int = 500,
+) -> tuple[list[Produto], int]:
     stmt = select(Produto)
+    count_stmt = select(func.count()).select_from(Produto)
     if ativo is not None:
         stmt = stmt.where(Produto.ativo == ativo)
+        count_stmt = count_stmt.where(Produto.ativo == ativo)
     if categoria_id is not None:
         stmt = stmt.where(Produto.categoria_id == categoria_id)
+        count_stmt = count_stmt.where(Produto.categoria_id == categoria_id)
     if busca:
         stmt = stmt.where(Produto.nome.ilike(f"%{busca}%"))
+        count_stmt = count_stmt.where(Produto.nome.ilike(f"%{busca}%"))
     stmt = stmt.order_by(Produto.nome)
-    return list(db.execute(stmt).scalars().all())
+    total = db.execute(count_stmt).scalar_one()
+    offset = (pagina - 1) * por_pagina
+    return list(db.execute(stmt.offset(offset).limit(por_pagina)).scalars().all()), total
 
 
 def get_by_id(db: Session, produto_id: int) -> Optional[Produto]:

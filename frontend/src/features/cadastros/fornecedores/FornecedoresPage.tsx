@@ -9,7 +9,8 @@ type Filtro = "ativos" | "inativos" | "todos";
 const POR_PAGINA = 10;
 
 export function FornecedoresPage() {
-  const { data: fornecedores = [], isLoading } = useFornecedores();
+  const { data, isLoading } = useFornecedores();
+  const fornecedores = data?.itens ?? [];
   const toggleAtivo = useToggleFornecedorAtivo();
 
   const [modalOpen, setModalOpen] = useState(false);

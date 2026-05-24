@@ -57,12 +57,50 @@ export function ComprovantePage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center py-8 px-4">
+    <div className="print-wrapper min-h-screen bg-gray-100 flex flex-col items-center py-8 px-4">
       <style>{`
         @media print {
-          .no-print { display: none !important; }
-          body { background: white !important; }
-          .print-container { box-shadow: none !important; border: none !important; }
+          @page {
+            size: 80mm auto;
+            margin: 0mm;
+          }
+          html {
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          body {
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 80mm !important;
+            min-height: unset !important;
+          }
+          .no-print,
+          [data-sonner-toaster] { display: none !important; }
+          .print-wrapper {
+            display: block !important;
+            width: 80mm !important;
+            min-height: unset !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: white !important;
+          }
+          .print-container {
+            box-shadow: none !important;
+            border: none !important;
+            border-radius: 0 !important;
+            width: 80mm !important;
+            max-width: 80mm !important;
+            padding: 3mm 4mm !important;
+            margin: 0 !important;
+            font-size: 10.5px !important;
+            line-height: 1.35 !important;
+            color: #000 !important;
+          }
+          .print-container * {
+            color: #000 !important;
+          }
         }
       `}</style>
 
@@ -70,13 +108,13 @@ export function ComprovantePage() {
       <div className="no-print flex gap-3 mb-6 w-full max-w-sm">
         <button
           onClick={() => window.print()}
-          className="flex-1 px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 font-medium"
+          className="flex-1 min-h-[44px] px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 font-medium"
         >
           Imprimir
         </button>
         <button
           onClick={() => navigate("/comandas")}
-          className="flex-1 px-4 py-2 border border-gray-400 text-gray-700 rounded hover:bg-gray-50 font-medium"
+          className="flex-1 min-h-[44px] px-4 py-2 border border-gray-400 text-gray-700 rounded hover:bg-gray-50 font-medium"
         >
           Voltar às comandas
         </button>

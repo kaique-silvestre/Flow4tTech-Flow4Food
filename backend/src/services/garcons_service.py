@@ -1,14 +1,33 @@
+import math
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
 from src.models.garcons import Garcom
 from src.repositories import garcons_repository
-from src.schemas.garcons import GarcomCreateRequest, GarcomUpdateRequest
+from src.schemas.garcons import (
+    GarcomCreateRequest,
+    GarcomPageResponse,
+    GarcomResponse,
+    GarcomUpdateRequest,
+)
 
 
-def list_garcons(db: Session) -> list[Garcom]:
-    return garcons_repository.list_all(db)
+def list_garcons(
+    db: Session,
+    busca: Optional[str] = None,
+    pagina: int = 1,
+    por_pagina: int = 500,
+) -> GarcomPageResponse:
+    items, total = garcons_repository.list_all(db, busca=busca, pagina=pagina, por_pagina=por_pagina)
+    return GarcomPageResponse(
+        itens=[GarcomResponse.model_validate(i) for i in items],
+        total=total,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        total_paginas=math.ceil(total / por_pagina) if total > 0 else 1,
+    )
 
 
 def get_garcom(db: Session, garcom_id: int) -> Garcom:

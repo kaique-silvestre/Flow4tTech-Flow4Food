@@ -11,7 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useGarcons } from "@/features/cadastros/garcons/useGarcons";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { useGarcons, type Garcom } from "@/features/cadastros/garcons/useGarcons";
+import { GarcomModal } from "@/features/cadastros/garcons/GarcomModal";
 import { novaComandaSchema, type NovaComandaValues } from "./comandaSchemas";
 import { useAbrirComanda } from "./useComandas";
 
@@ -21,7 +23,8 @@ interface Props {
 }
 
 export function NovaComandaModal({ open, onClose }: Props) {
-  const { data: garcons = [] } = useGarcons();
+  const { data: garconsData } = useGarcons();
+  const garcons = garconsData?.itens ?? [];
   const garçonsAtivos = garcons.filter((g) => g.ativo);
   const abrirComanda = useAbrirComanda();
 
@@ -38,6 +41,13 @@ export function NovaComandaModal({ open, onClose }: Props) {
   });
 
   const [pessoaInput, setPessoaInput] = useState("");
+  const [garcomModalOpen, setGarcomModalOpen] = useState(false);
+  const garcomId = watch("garcom_id");
+  const garcomNome = garçonsAtivos.find((g) => g.id === garcomId)?.nome;
+
+  function handleGarcomCreated(garcom: Garcom) {
+    setValue("garcom_id", garcom.id);
+  }
   const pessoas = watch("pessoas");
   const tipo = watch("tipo_identificacao");
   const identificacao = watch("identificacao");
@@ -77,6 +87,12 @@ export function NovaComandaModal({ open, onClose }: Props) {
   }
 
   return (
+    <>
+    <GarcomModal
+      open={garcomModalOpen}
+      onClose={() => setGarcomModalOpen(false)}
+      onCreated={handleGarcomCreated}
+    />
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -124,19 +140,31 @@ export function NovaComandaModal({ open, onClose }: Props) {
 
           {/* Garçom */}
           <div>
-            <Label htmlFor="garcom_id">Garçom</Label>
-            <select
-              id="garcom_id"
-              className="mt-1 w-full rounded border px-3 py-2 text-sm"
-              {...register("garcom_id", { valueAsNumber: true })}
+            <div className="flex items-center justify-between">
+              <Label htmlFor="garcom_id">Garçom</Label>
+              <button
+                type="button"
+                className="text-xs text-blue-600 hover:underline"
+                onClick={() => setGarcomModalOpen(true)}
+              >
+                + Novo garçom
+              </button>
+            </div>
+            <Select
+              value={garcomId ? String(garcomId) : ""}
+              onValueChange={(v) => setValue("garcom_id", Number(v), { shouldValidate: true })}
             >
-              <option value="">Selecione um garçom</option>
-              {garçonsAtivos.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.nome}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Selecione um garçom" label={garcomNome} />
+              </SelectTrigger>
+              <SelectContent>
+                {garçonsAtivos.map((g) => (
+                  <SelectItem key={g.id} value={String(g.id)}>
+                    {g.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {errors.garcom_id && (
               <p className="mt-1 text-xs text-red-500">{errors.garcom_id.message}</p>
             )}
@@ -191,5 +219,6 @@ export function NovaComandaModal({ open, onClose }: Props) {
         </form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

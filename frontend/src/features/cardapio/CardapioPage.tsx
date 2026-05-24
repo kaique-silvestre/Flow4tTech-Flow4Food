@@ -4,12 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pagination, paginar } from "@/components/ui/pagination";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useCategorias } from "@/features/cadastros/categorias/useCategorias";
+import { useCategorias, flattenCategorias } from "@/features/cadastros/categorias/useCategorias";
 import {
   useProdutos,
   useDesativarProduto,
   useReativarProduto,
-  useDeleteProduto,
   type ProdutoResponse,
 } from "@/features/cadastros/produtos/useProdutos";
 import type { Categoria } from "@/features/cadastros/categorias/useCategorias";
@@ -27,6 +26,25 @@ function buildCategoryPaths(tree: Categoria[], prefix = ""): Record<number, stri
     }
   }
   return result;
+}
+
+function collectIds(id: number, tree: Categoria[]): Set<number> {
+  const ids = new Set<number>([id]);
+  for (const c of tree) {
+    if (c.id === id) {
+      for (const ch of c.children ?? []) {
+        ids.add(ch.id);
+        for (const gch of ch.children ?? []) ids.add(gch.id);
+      }
+    } else {
+      for (const ch of c.children ?? []) {
+        if (ch.id === id) {
+          for (const gch of ch.children ?? []) ids.add(gch.id);
+        }
+      }
+    }
+  }
+  return ids;
 }
 
 const POR_PAGINA = 10;
@@ -49,21 +67,21 @@ function CmvBadge({ preco, custo }: { preco: number | null; custo: number | null
 }
 
 export function CardapioPage() {
-  const { data: produtos = [], isLoading } = useProdutos();
+  const { data: produtosData, isLoading } = useProdutos();
+  const produtos = produtosData?.itens ?? [];
   const { data: categorias = [] } = useCategorias();
   const desativar = useDesativarProduto();
   const reativar = useReativarProduto();
-  const deletar = useDeleteProduto();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ProdutoResponse | null>(null);
   const [confirmDesativar, setConfirmDesativar] = useState<number | null>(null);
-  const [confirmDeletar, setConfirmDeletar] = useState<number | null>(null);
   const [filtro, setFiltro] = useState<FiltroAtivo>("ativos");
   const [busca, setBusca] = useState("");
   const [catFiltro, setCatFiltro] = useState<number | null>(null);
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [pagina, setPagina] = useState(1);
+  const [ordenacao, setOrdenacao] = useState<"az" | "original">("az");
 
   function toggleExpand(id: number) {
     setExpandidos((prev) => {
@@ -80,9 +98,16 @@ export function CardapioPage() {
     if (filtro === "ativos" && !p.ativo) return false;
     if (filtro === "inativos" && p.ativo) return false;
     if (busca && !p.nome.toLowerCase().includes(busca.toLowerCase())) return false;
-    if (catFiltro !== null && p.categoria_id !== catFiltro) return false;
+    if (catFiltro !== null) {
+      const ids = collectIds(catFiltro, categorias);
+      if (!p.categoria_id || !ids.has(p.categoria_id)) return false;
+    }
     return true;
   });
+
+  const produtosOrdenados = ordenacao === "az"
+    ? [...produtosFiltrados].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+    : produtosFiltrados;
 
   function openCreate() {
     setEditing(null);
@@ -101,8 +126,8 @@ export function CardapioPage() {
   ];
 
   return (
-    <div className="p-6 min-h-full flex flex-col">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="p-4 lg:p-6 min-h-full flex flex-col">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Cardápio</h1>
         <Button onClick={openCreate}>Novo Produto</Button>
       </div>
@@ -129,16 +154,29 @@ export function CardapioPage() {
           className="rounded border px-2 py-1.5 text-sm text-gray-700"
         >
           <option value="">Todas as categorias</option>
-          {categorias.map((c) => (
-            <option key={c.id} value={c.id}>{c.nome}</option>
+          {flattenCategorias(categorias).map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.indent ? `  ${c.nome}` : c.nome}
+            </option>
           ))}
         </select>
         <Input
           placeholder="Buscar produto..."
           value={busca}
           onChange={(e) => { setBusca(e.target.value); setPagina(1); }}
-          className="w-52 text-sm"
+          className="w-full sm:w-52 text-sm"
         />
+        <button
+          onClick={() => setOrdenacao((o) => o === "az" ? "original" : "az")}
+          className={`flex items-center gap-1 rounded border px-2 py-1.5 text-sm transition-colors ${
+            ordenacao === "az"
+              ? "border-gray-900 bg-gray-900 text-white"
+              : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+          }`}
+          title="Ordenar A→Z"
+        >
+          A→Z
+        </button>
       </div>
 
       {isLoading ? (
@@ -147,25 +185,26 @@ export function CardapioPage() {
             <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />
           ))}
         </div>
-      ) : produtosFiltrados.length === 0 ? (
+      ) : produtosOrdenados.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum produto encontrado.</p>
       ) : (
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b text-left text-gray-500">
               <th className="py-2 pr-2 w-6" />
               <th className="py-2 pr-4">Nome</th>
-              <th className="py-2 pr-4">Categoria</th>
+              <th className="hidden sm:table-cell py-2 pr-4">Categoria</th>
               <th className="py-2 pr-4 text-right">Preço</th>
-              <th className="py-2 pr-4 text-right">Custo Ficha</th>
-              <th className="py-2 pr-4 text-right">CMV%</th>
-              <th className="py-2 pr-4 text-right">Lucro Bruto</th>
+              <th className="hidden sm:table-cell py-2 pr-4 text-right">Custo Ficha</th>
+              <th className="hidden sm:table-cell py-2 pr-4 text-right">CMV%</th>
+              <th className="hidden sm:table-cell py-2 pr-4 text-right">Lucro Bruto</th>
+              <th className="hidden sm:table-cell py-2 pr-4 text-right">Produção</th>
               <th className="py-2" />
             </tr>
           </thead>
           <tbody>
-            {paginar(produtosFiltrados, pagina, POR_PAGINA).map((p) => {
+            {paginar(produtosOrdenados, pagina, POR_PAGINA).map((p) => {
               const custo = calcCusto(p);
               const lucro =
                 p.preco_venda !== null && custo !== null ? p.preco_venda - custo : null;
@@ -189,26 +228,35 @@ export function CardapioPage() {
                       </button>
                     </td>
                     <td className="py-2 pr-4 font-medium">{p.nome}</td>
-                    <td className="py-2 pr-4 text-gray-500">
+                    <td className="hidden sm:table-cell py-2 pr-4 text-gray-500">
                       {p.categoria_id ? (catPathMap[p.categoria_id] ?? "—") : "—"}
                     </td>
                     <td className="py-2 pr-4 text-right">
                       {p.preco_venda !== null ? `R$ ${Number(p.preco_venda).toFixed(2)}` : "—"}
                     </td>
-                    <td className="py-2 pr-4 text-right">
+                    <td className="hidden sm:table-cell py-2 pr-4 text-right">
                       {custo !== null ? `R$ ${custo.toFixed(2)}` : "—"}
                     </td>
-                    <td className="py-2 pr-4 text-right">
+                    <td className="hidden sm:table-cell py-2 pr-4 text-right">
                       <CmvBadge preco={p.preco_venda} custo={custo} />
                     </td>
-                    <td className="py-2 pr-4 text-right">
+                    <td className="hidden sm:table-cell py-2 pr-4 text-right">
                       {lucro !== null ? (
                         <span className={lucro >= 0 ? "text-green-600" : "text-red-600"}>
                           R$ {lucro.toFixed(2)}
                         </span>
                       ) : "—"}
                     </td>
-                    <td className="py-2 text-right space-x-2">
+                    <td className="hidden sm:table-cell py-2 pr-4 text-right">
+                      {p.producao_possivel === null ? (
+                        <span className="text-gray-400">—</span>
+                      ) : p.producao_possivel === 0 ? (
+                        <span className="font-medium text-red-600">0</span>
+                      ) : (
+                        <span className="text-gray-700">{p.producao_possivel}</span>
+                      )}
+                    </td>
+                    <td className="py-2 text-right space-x-2 whitespace-nowrap">
                       <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
                         Editar
                       </Button>
@@ -231,14 +279,6 @@ export function CardapioPage() {
                           Reativar
                         </Button>
                       )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setConfirmDeletar(p.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        Remover
-                      </Button>
                     </td>
                   </tr>
 
@@ -291,8 +331,8 @@ export function CardapioPage() {
         <div className="flex-1" />
         <Pagination
           pagina={pagina}
-          totalPaginas={Math.ceil(produtosFiltrados.length / POR_PAGINA)}
-          total={produtosFiltrados.length}
+          totalPaginas={Math.ceil(produtosOrdenados.length / POR_PAGINA)}
+          total={produtosOrdenados.length}
           label="produtos"
           onPageChange={setPagina}
         />
@@ -317,17 +357,6 @@ export function CardapioPage() {
         isPending={desativar.isPending}
       />
 
-      <ConfirmDialog
-        open={confirmDeletar !== null}
-        title="Remover produto?"
-        confirmLabel="Remover"
-        onConfirm={() => {
-          deletar.mutate(confirmDeletar!);
-          setConfirmDeletar(null);
-        }}
-        onCancel={() => setConfirmDeletar(null)}
-        isPending={deletar.isPending}
-      />
     </div>
   );
 }

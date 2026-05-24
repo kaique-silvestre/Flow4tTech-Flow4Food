@@ -48,6 +48,8 @@ export function useFecharComanda(comanda_id: number | string) {
       api.post<ComandaResponse>(`/api/comandas/${comanda_id}/fechar`, data).then((r) => r.data),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["comandas"] });
+      qc.invalidateQueries({ queryKey: ["insumos"] });
+      qc.invalidateQueries({ queryKey: ["estoque"] });
       if (data.itens_negativos && data.itens_negativos.length > 0) {
         toast.warning(`Estoque negativo em: ${data.itens_negativos.join(", ")}`, { duration: 6000 });
       }

@@ -1,24 +1,29 @@
+from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
+from src.api.dependencies import get_current_user, get_db, require_permission
 from src.schemas.fornecedores import (
     FornecedorCreateRequest,
+    FornecedorPageResponse,
     FornecedorResponse,
     FornecedorUpdateRequest,
 )
 from src.services import fornecedores_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("compras"))])
 
 
-@router.get("", response_model=list[FornecedorResponse])
+@router.get("", response_model=FornecedorPageResponse)
 def list_fornecedores(
+    busca: Optional[str] = Query(None),
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(500, ge=1, le=500),
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
-) -> list[FornecedorResponse]:
-    return fornecedores_service.list_fornecedores(db)  # type: ignore[return-value]
+) -> FornecedorPageResponse:
+    return fornecedores_service.list_fornecedores(db, busca=busca, pagina=pagina, por_pagina=por_pagina)  # type: ignore[return-value]
 
 
 @router.post("", response_model=FornecedorResponse, status_code=201)

@@ -1,3 +1,4 @@
+import math
 from typing import Optional
 
 from sqlalchemy import select
@@ -7,24 +8,45 @@ from sqlalchemy.orm import Session
 from src.core.errors import AppError, ErrorCode
 from src.models.insumos import Insumo
 from src.repositories import insumos_repository
-from src.schemas.insumos import InsumoCreateRequest, InsumoResponse, InsumoUpdateRequest
+from src.schemas.insumos import (
+    InsumoCreateRequest,
+    InsumoPageResponse,
+    InsumoResponse,
+    InsumoUpdateRequest,
+)
 
 
 def list_insumos(
     db: Session,
     categoria_id: Optional[int] = None,
     busca: Optional[str] = None,
-) -> list[InsumoResponse]:
-    items = insumos_repository.list_ativos(db, categoria_id, busca)
-    return [InsumoResponse.model_validate(i) for i in items]
+    pagina: int = 1,
+    por_pagina: int = 500,
+) -> InsumoPageResponse:
+    items, total = insumos_repository.list_ativos(db, categoria_id, busca, pagina=pagina, por_pagina=por_pagina)
+    return InsumoPageResponse(
+        itens=[InsumoResponse.model_validate(i) for i in items],
+        total=total,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        total_paginas=math.ceil(total / por_pagina) if total > 0 else 1,
+    )
 
 
 def list_all_insumos(
     db: Session,
     busca: Optional[str] = None,
-) -> list[InsumoResponse]:
-    items = insumos_repository.list_all(db, busca)
-    return [InsumoResponse.model_validate(i) for i in items]
+    pagina: int = 1,
+    por_pagina: int = 500,
+) -> InsumoPageResponse:
+    items, total = insumos_repository.list_all(db, busca, pagina=pagina, por_pagina=por_pagina)
+    return InsumoPageResponse(
+        itens=[InsumoResponse.model_validate(i) for i in items],
+        total=total,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        total_paginas=math.ceil(total / por_pagina) if total > 0 else 1,
+    )
 
 
 def get_insumo(db: Session, insumo_id: int) -> InsumoResponse:

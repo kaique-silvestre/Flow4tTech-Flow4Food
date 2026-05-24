@@ -2,7 +2,7 @@ import os
 
 # Provide minimal env BEFORE importing app/settings.
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
-os.environ.setdefault("JWT_SECRET", "test-secret-only-for-tests")
+os.environ.setdefault("JWT_SECRET", "test-secret-only-for-tests-32chars!!")
 os.environ.setdefault("ENV", "test")
 
 import pytest

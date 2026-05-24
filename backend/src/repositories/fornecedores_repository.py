@@ -1,14 +1,26 @@
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.models.fornecedores import Fornecedor
 from src.schemas.fornecedores import FornecedorCreateRequest, FornecedorUpdateRequest
 
 
-def list_all(db: Session) -> list[Fornecedor]:
-    return list(db.execute(select(Fornecedor).order_by(Fornecedor.nome)).scalars().all())
+def list_all(
+    db: Session,
+    busca: Optional[str] = None,
+    pagina: int = 1,
+    por_pagina: int = 500,
+) -> tuple[list[Fornecedor], int]:
+    stmt = select(Fornecedor).order_by(Fornecedor.nome)
+    count_stmt = select(func.count()).select_from(Fornecedor)
+    if busca:
+        stmt = stmt.where(Fornecedor.nome.ilike(f"%{busca}%"))
+        count_stmt = count_stmt.where(Fornecedor.nome.ilike(f"%{busca}%"))
+    total = db.execute(count_stmt).scalar_one()
+    offset = (pagina - 1) * por_pagina
+    return list(db.execute(stmt.offset(offset).limit(por_pagina)).scalars().all()), total
 
 
 def get_by_id(db: Session, fornecedor_id: int) -> Optional[Fornecedor]:

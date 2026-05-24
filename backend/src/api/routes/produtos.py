@@ -3,11 +3,16 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
-from src.schemas.produtos import ProdutoCreateRequest, ProdutoResponse, ProdutoUpdateRequest
+from src.api.dependencies import get_current_user, get_db, require_permission
+from src.schemas.produtos import (
+    ProdutoCreateRequest,
+    ProdutoPageResponse,
+    ProdutoResponse,
+    ProdutoUpdateRequest,
+)
 from src.services import produtos_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("cadastros"))])
 
 
 @router.get("/top", response_model=list[ProdutoResponse])
@@ -20,15 +25,17 @@ def top_produtos(
     return produtos_service.get_top_produtos(db, dias, limit)  # type: ignore[return-value]
 
 
-@router.get("", response_model=list[ProdutoResponse])
+@router.get("", response_model=ProdutoPageResponse)
 def list_produtos(
     categoria_id: Optional[int] = Query(None),
     busca: Optional[str] = Query(None),
     ativo: Optional[bool] = Query(None),
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(500, ge=1, le=500),
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
-) -> list[ProdutoResponse]:
-    return produtos_service.list_produtos(db, categoria_id, busca, ativo)  # type: ignore[return-value]
+) -> ProdutoPageResponse:
+    return produtos_service.list_produtos(db, categoria_id, busca, ativo, pagina, por_pagina)  # type: ignore[return-value]
 
 
 @router.get("/{produto_id}", response_model=ProdutoResponse)

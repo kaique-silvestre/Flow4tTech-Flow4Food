@@ -13,6 +13,7 @@ export interface SaldoItemResponse {
   estoque_reservado: number;
   estoque_disponivel: number;
   custo_medio: number | null;
+  nivel_critico: number | null;
 }
 
 export interface MovimentoResponse {
@@ -37,9 +38,19 @@ export interface MovimentoListResponse {
   por_pagina: number;
 }
 
+export interface SaldoPageResponse {
+  itens: SaldoItemResponse[];
+  total: number;
+  pagina: number;
+  por_pagina: number;
+  total_paginas: number;
+}
+
 export interface SaldoFilters {
   categoria_id?: number | null;
   busca?: string | null;
+  pagina?: number;
+  por_pagina?: number;
 }
 
 export interface MovimentoFilters {
@@ -51,16 +62,64 @@ export interface MovimentoFilters {
   por_pagina?: number;
 }
 
+export interface MovimentoProdutoResponse {
+  id: number;
+  produto_id: number;
+  produto_nome: string;
+  comanda_id: number;
+  comanda_label: string;
+  quantidade: number;
+  preco_unitario: number;
+  subtotal: number;
+  cortesia: boolean;
+  cancelado: boolean;
+  pessoa_associada: string | null;
+  created_at: string;
+}
+
+export interface MovimentoProdutoListResponse {
+  itens: MovimentoProdutoResponse[];
+  total: number;
+  pagina: number;
+  por_pagina: number;
+}
+
+export interface MovimentoProdutoFilters {
+  produto_id?: number | null;
+  data_inicio?: string | null;
+  data_fim?: string | null;
+  pagina?: number;
+  por_pagina?: number;
+}
+
 const QK = "estoque";
+
+export interface InsumoCriticoResponse {
+  id: number;
+  nome: string;
+  unidade_base: string;
+  estoque_disponivel: number;
+  nivel_critico: number;
+}
+
+export function useInsumoCriticos() {
+  return useQuery<InsumoCriticoResponse[]>({
+    queryKey: [QK, "criticos"],
+    queryFn: () => api.get<InsumoCriticoResponse[]>("/api/estoque/criticos").then((r) => r.data),
+    staleTime: 60_000,
+  });
+}
 
 export function useSaldoEstoque(filters: SaldoFilters = {}) {
   const params: Record<string, string> = {};
   if (filters.categoria_id != null) params.categoria_id = String(filters.categoria_id);
   if (filters.busca) params.busca = filters.busca;
+  if (filters.pagina) params.pagina = String(filters.pagina);
+  if (filters.por_pagina) params.por_pagina = String(filters.por_pagina);
 
-  return useQuery<SaldoItemResponse[]>({
+  return useQuery<SaldoPageResponse>({
     queryKey: [QK, "saldo", filters],
-    queryFn: () => api.get<SaldoItemResponse[]>("/api/estoque/saldo", { params }).then((r) => r.data),
+    queryFn: () => api.get<SaldoPageResponse>("/api/estoque/saldo", { params }).then((r) => r.data),
   });
 }
 
@@ -79,6 +138,21 @@ export function useMovimentos(filters: MovimentoFilters = {}) {
   });
 }
 
+export function useMovimentosProdutos(filters: MovimentoProdutoFilters = {}) {
+  const params: Record<string, string> = {};
+  if (filters.produto_id != null) params.produto_id = String(filters.produto_id);
+  if (filters.data_inicio) params.data_inicio = filters.data_inicio;
+  if (filters.data_fim) params.data_fim = filters.data_fim;
+  if (filters.pagina) params.pagina = String(filters.pagina);
+  if (filters.por_pagina) params.por_pagina = String(filters.por_pagina);
+
+  return useQuery<MovimentoProdutoListResponse>({
+    queryKey: [QK, "movimentos-produtos", filters],
+    queryFn: () =>
+      api.get<MovimentoProdutoListResponse>("/api/estoque/movimentos-produtos", { params }).then((r) => r.data),
+  });
+}
+
 export function useBaixaSemVenda() {
   const qc = useQueryClient();
   return useMutation({
@@ -87,6 +161,7 @@ export function useBaixaSemVenda() {
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: [QK] });
       qc.invalidateQueries({ queryKey: ["itens"] });
+      qc.invalidateQueries({ queryKey: ["insumos"] });
       if (result.saldo_negativo) {
         toast.warning("Baixa registrada. Estoque ficou negativo.");
       } else {

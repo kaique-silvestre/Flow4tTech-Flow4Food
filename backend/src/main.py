@@ -1,3 +1,6 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -7,6 +10,7 @@ from src.api.routes import categorias as categorias_routes
 from src.api.routes import comandas as comandas_routes
 from src.api.routes import compras as compras_routes
 from src.api.routes import config as config_routes
+from src.api.routes import contas_pagar as contas_pagar_routes
 from src.api.routes import dashboard as dashboard_routes
 from src.api.routes import estoque as estoque_routes
 from src.api.routes import fornecedores as fornecedores_routes
@@ -16,12 +20,23 @@ from src.api.routes import insumos as insumos_routes
 from src.api.routes import itens as itens_routes
 from src.api.routes import metodos_pagamento as metodos_pagamento_routes
 from src.api.routes import produtos as produtos_routes
+from src.api.routes import profiles as profiles_routes
 from src.api.routes import relatorios as relatorios_routes
+from src.api.routes import users as users_routes
 from src.core.config import get_settings
 from src.core.errors import register_exception_handlers
 from src.core.logging import configure_logging, get_logger
 from src.core.middleware import RequestIdMiddleware
+from src.core.scheduler import start as scheduler_start
+from src.core.scheduler import stop as scheduler_stop
 from src.core.sentry import init_sentry
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    scheduler_start()
+    yield
+    scheduler_stop()
 
 
 def create_app() -> FastAPI:
@@ -33,6 +48,7 @@ def create_app() -> FastAPI:
         title="Matchpoint API",
         version=settings.APP_VERSION,
         docs_url="/docs" if settings.ENV != "prod" else None,
+        lifespan=lifespan,
     )
 
     app.add_middleware(
@@ -48,6 +64,8 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
+    app.include_router(users_routes.router, prefix="/api/users", tags=["users"])
+    app.include_router(profiles_routes.router, prefix="/api/profiles", tags=["profiles"])
     app.include_router(backup_routes.router, prefix="/api/backup", tags=["backup"])
     app.include_router(categorias_routes.router, prefix="/api/categorias", tags=["categorias"])
     app.include_router(config_routes.router, prefix="/api/config", tags=["config"])
@@ -62,6 +80,7 @@ def create_app() -> FastAPI:
     app.include_router(relatorios_routes.router, prefix="/api/relatorios", tags=["relatorios"])
     app.include_router(dashboard_routes.router, prefix="/api/dashboard", tags=["dashboard"])
     app.include_router(comandas_routes.router, prefix="/api/comandas", tags=["comandas"])
+    app.include_router(contas_pagar_routes.router, prefix="/api/contas-pagar", tags=["contas_pagar"])
 
     log = get_logger(__name__)
     log.info("app_started", env=settings.ENV, version=settings.APP_VERSION)

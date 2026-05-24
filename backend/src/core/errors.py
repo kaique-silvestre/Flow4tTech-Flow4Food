@@ -28,6 +28,7 @@ class ErrorCode(str, Enum):
     HAS_CHILDREN = "HAS_CHILDREN"
     NIVEL_MAX_ATINGIDO = "NIVEL_MAX_ATINGIDO"
     CONFLICT = "CONFLICT"
+    FORBIDDEN = "FORBIDDEN"
 
 
 class AppError(Exception):

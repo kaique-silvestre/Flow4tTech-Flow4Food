@@ -27,12 +27,26 @@ export interface GarcomStatsResponse {
   comissoes: ComissaoResponse[];
 }
 
+export interface GarcomPageResponse {
+  itens: Garcom[];
+  total: number;
+  pagina: number;
+  por_pagina: number;
+  total_paginas: number;
+}
+
 const QK = "garcons";
 
-export function useGarcons() {
-  return useQuery<Garcom[]>({
-    queryKey: [QK],
-    queryFn: () => api.get<Garcom[]>("/api/garcons").then((r) => r.data),
+export function useGarcons(options?: { busca?: string; pagina?: number; por_pagina?: number }) {
+  return useQuery<GarcomPageResponse>({
+    queryKey: [QK, options?.busca, options?.pagina, options?.por_pagina],
+    queryFn: () => {
+      const params: Record<string, unknown> = {};
+      if (options?.busca) params.busca = options.busca;
+      if (options?.pagina) params.pagina = options.pagina;
+      if (options?.por_pagina) params.por_pagina = options.por_pagina;
+      return api.get<GarcomPageResponse>("/api/garcons", { params }).then((r) => r.data);
+    },
   });
 }
 

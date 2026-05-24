@@ -47,9 +47,23 @@ export function ComandasPage() {
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60_000);
+    const id = setInterval(() => setNow(Date.now()), 1_000);
     return () => clearInterval(id);
   }, []);
+
+  function parseUtc(iso: string): number {
+    const s = iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z";
+    return new Date(s).getTime();
+  }
+
+  function formatTempo(iso: string): string {
+    const ms = now - parseUtc(iso);
+    const totalMin = Math.floor(ms / 60_000);
+    if (totalMin < 60) return `${totalMin} min`;
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${h}h ${m}min`;
+  }
 
   const queryBusca = busca === "" ? undefined : debouncedBusca || undefined;
   const { data: comandas = [], isLoading } = useComandas(queryBusca);
@@ -67,15 +81,15 @@ export function ComandasPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="p-4 lg:p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Comandas Abertas</h1>
         <div className="flex items-center gap-2">
           <div className="flex rounded border">
             <button
               onClick={() => toggleView("lista")}
               title="Visualização lista"
-              className={`flex items-center gap-1 px-2 py-1.5 text-sm transition-colors ${
+              className={`flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 px-2 text-sm transition-colors ${
                 viewMode === "lista"
                   ? "bg-gray-100 text-gray-900"
                   : "text-gray-500 hover:text-gray-800"
@@ -86,7 +100,7 @@ export function ComandasPage() {
             <button
               onClick={() => toggleView("cards")}
               title="Visualização cards"
-              className={`flex items-center gap-1 px-2 py-1.5 text-sm transition-colors ${
+              className={`flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 px-2 text-sm transition-colors ${
                 viewMode === "cards"
                   ? "bg-gray-100 text-gray-900"
                   : "text-gray-500 hover:text-gray-800"
@@ -104,12 +118,12 @@ export function ComandasPage() {
           placeholder="Buscar por nome ou mesa..."
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          className="max-w-sm"
+          className="w-full sm:max-w-sm"
         />
       </div>
 
       {isLoading ? (
-        <div className={viewMode === "cards" ? "grid grid-cols-2 gap-3 lg:grid-cols-3" : "space-y-2"}>
+        <div className={viewMode === "cards" ? "grid grid-cols-2 gap-3 sm:grid-cols-3" : "space-y-2"}>
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-20 animate-pulse rounded bg-gray-100" />
           ))}
@@ -129,6 +143,11 @@ export function ComandasPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2 font-medium">
+                      {c.numero_dia != null && (
+                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-mono text-gray-500">
+                          #{c.numero_dia}
+                        </span>
+                      )}
                       {c.tipo_identificacao === "mesa" ? "Mesa" : ""} {c.identificacao}
                       {c.status === "reaberta" && (
                         <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">
@@ -138,7 +157,7 @@ export function ComandasPage() {
                     </div>
                     <div className="text-sm text-gray-500">
                       Garçom: {c.garcom_nome} · {ativos.length}{" "}
-                      {ativos.length === 1 ? "item" : "itens"} · {Math.floor((now - new Date(c.created_at).getTime()) / 60_000)} min
+                      {ativos.length === 1 ? "item" : "itens"} · {formatTempo(c.created_at)}
                     </div>
                   </div>
                   <div className="text-right">
@@ -151,7 +170,7 @@ export function ComandasPage() {
           })}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {comandas.map((c) => {
             const ativos = c.itens_ativos.filter((i) => !i.cancelado);
             return (
@@ -161,9 +180,16 @@ export function ComandasPage() {
                 className="flex flex-col gap-2 rounded border bg-white p-4 text-left shadow-sm transition-shadow hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-900">
-                    {c.tipo_identificacao === "mesa" ? "Mesa " : ""}{c.identificacao}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {c.numero_dia != null && (
+                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-mono text-gray-500">
+                        #{c.numero_dia}
+                      </span>
+                    )}
+                    <span className="font-semibold text-gray-900">
+                      {c.tipo_identificacao === "mesa" ? "Mesa " : ""}{c.identificacao}
+                    </span>
+                  </div>
                   {c.status === "reaberta" && (
                     <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700">
                       reaberta
@@ -175,7 +201,7 @@ export function ComandasPage() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-400">
-                    {ativos.length} {ativos.length === 1 ? "item" : "itens"} · {Math.floor((now - new Date(c.created_at).getTime()) / 60_000)} min
+                    {ativos.length} {ativos.length === 1 ? "item" : "itens"} · {formatTempo(c.created_at)}
                   </span>
                   <span className="font-medium text-gray-900">
                     {formatCurrency(Number(c.total_parcial))}
@@ -191,7 +217,7 @@ export function ComandasPage() {
       <div className="mt-8">
         <button
           onClick={() => setShowHistorico((v) => !v)}
-          className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900"
+          className="flex min-h-[44px] items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900"
         >
           <span>{showHistorico ? "▲" : "▼"}</span>
           Histórico do dia
@@ -217,8 +243,13 @@ export function ComandasPage() {
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="font-medium text-gray-700">
-                          #{c.id} — {c.tipo_identificacao === "mesa" ? "Mesa" : ""} {c.identificacao}
+                        <div className="flex items-center gap-2 font-medium text-gray-700">
+                          {c.numero_dia != null && (
+                            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-mono text-gray-500">
+                              #{c.numero_dia}
+                            </span>
+                          )}
+                          {c.tipo_identificacao === "mesa" ? "Mesa" : ""} {c.identificacao}
                         </div>
                         <div className="text-xs text-gray-500">
                           Garçom: {c.garcom_nome} · Fechada em: {fmtData(c.data_fechamento)}

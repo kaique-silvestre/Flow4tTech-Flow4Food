@@ -17,6 +17,15 @@ export interface ProdutoResponse {
   preco_venda: number | null;
   ativo: boolean;
   ficha_tecnica: FichaTecnicaItem[] | null;
+  producao_possivel: number | null;
+}
+
+export interface ProdutoPageResponse {
+  itens: ProdutoResponse[];
+  total: number;
+  pagina: number;
+  por_pagina: number;
+  total_paginas: number;
 }
 
 export interface ProdutoCreateRequest {
@@ -30,14 +39,16 @@ export type ProdutoUpdateRequest = ProdutoCreateRequest;
 
 const QK = "produtos";
 
-export function useProdutos(busca?: string, options?: { ativo?: boolean }) {
-  return useQuery<ProdutoResponse[]>({
-    queryKey: [QK, busca, options?.ativo],
+export function useProdutos(busca?: string, options?: { ativo?: boolean; pagina?: number; por_pagina?: number }) {
+  return useQuery<ProdutoPageResponse>({
+    queryKey: [QK, busca, options?.ativo, options?.pagina, options?.por_pagina],
     queryFn: () => {
       const params: Record<string, unknown> = {};
       if (busca) params.busca = busca;
       if (options?.ativo !== undefined) params.ativo = options.ativo;
-      return api.get<ProdutoResponse[]>("/api/produtos", { params }).then((r) => r.data);
+      if (options?.pagina) params.pagina = options.pagina;
+      if (options?.por_pagina) params.por_pagina = options.por_pagina;
+      return api.get<ProdutoPageResponse>("/api/produtos", { params }).then((r) => r.data);
     },
   });
 }

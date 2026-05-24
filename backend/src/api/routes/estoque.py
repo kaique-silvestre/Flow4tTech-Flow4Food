@@ -3,25 +3,37 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
+from src.api.dependencies import get_current_user, get_db, require_permission
 from src.schemas.estoque import (
     BaixaSemVendaRequest,
+    InsumoCriticoResponse,
     MovimentoListResponse,
-    SaldoItemResponse,
+    MovimentoProdutoListResponse,
+    SaldoPageResponse,
 )
 from src.services import estoque_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("estoque"))])
 
 
-@router.get("/saldo", response_model=list[SaldoItemResponse])
+@router.get("/criticos", response_model=list[InsumoCriticoResponse])
+def get_criticos(
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> list[InsumoCriticoResponse]:
+    return estoque_service.get_insumos_criticos(db)  # type: ignore[return-value]
+
+
+@router.get("/saldo", response_model=SaldoPageResponse)
 def get_saldo(
     categoria_id: Optional[int] = Query(None),
     busca: Optional[str] = Query(None),
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(500, ge=1, le=500),
     db: Session = Depends(get_db),
     _user: dict = Depends(get_current_user),
-) -> list[SaldoItemResponse]:
-    return estoque_service.get_saldo_list(db, categoria_id, busca)  # type: ignore[return-value]
+) -> SaldoPageResponse:
+    return estoque_service.get_saldo_list(db, categoria_id, busca, pagina, por_pagina)  # type: ignore[return-value]
 
 
 @router.post("/baixa-sem-venda", status_code=status.HTTP_201_CREATED)
@@ -45,3 +57,16 @@ def list_movimentos(
     _user: dict = Depends(get_current_user),
 ) -> MovimentoListResponse:
     return estoque_service.get_historico(db, item_id, tipo, data_inicio, data_fim, pagina, por_pagina)
+
+
+@router.get("/movimentos-produtos", response_model=MovimentoProdutoListResponse)
+def list_movimentos_produtos(
+    produto_id: Optional[int] = Query(None),
+    data_inicio: Optional[str] = Query(None),
+    data_fim: Optional[str] = Query(None),
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> MovimentoProdutoListResponse:
+    return estoque_service.get_historico_produtos(db, produto_id, data_inicio, data_fim, pagina, por_pagina)

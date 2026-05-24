@@ -19,6 +19,15 @@ class SaldoItemResponse(BaseModel):
     estoque_reservado: Decimal
     estoque_disponivel: Decimal
     custo_medio: Optional[Decimal]
+    nivel_critico: Optional[Decimal]
+
+
+class InsumoCriticoResponse(BaseModel):
+    id: int
+    nome: str
+    unidade_base: str
+    estoque_disponivel: Decimal
+    nivel_critico: Decimal
 
 
 class BaixaSemVendaRequest(BaseModel):
@@ -57,3 +66,33 @@ class MovimentoListResponse(BaseModel):
     total: int
     pagina: int
     por_pagina: int
+
+
+class MovimentoProdutoResponse(BaseModel):
+    id: int
+    produto_id: int
+    produto_nome: str
+    comanda_id: int
+    comanda_label: str
+    quantidade: Decimal
+    preco_unitario: Decimal
+    subtotal: Decimal
+    cortesia: bool
+    cancelado: bool
+    pessoa_associada: Optional[str]
+    created_at: datetime.datetime
+
+
+class MovimentoProdutoListResponse(BaseModel):
+    itens: list[MovimentoProdutoResponse]
+    total: int
+    pagina: int
+    por_pagina: int
+
+
+class SaldoPageResponse(BaseModel):
+    itens: list[SaldoItemResponse]
+    total: int
+    pagina: int
+    por_pagina: int
+    total_paginas: int

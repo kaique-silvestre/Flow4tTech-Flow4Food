@@ -55,17 +55,20 @@ def list_saldo(
     db: Session,
     categoria_id: Optional[int] = None,
     busca: Optional[str] = None,
-) -> list[Insumo]:
-    stmt = (
-        select(Insumo)
-        .where(Insumo.ativo == True)  # noqa: E712
-        .order_by(Insumo.nome)
-    )
+    pagina: int = 1,
+    por_pagina: int = 500,
+) -> tuple[list[Insumo], int]:
+    stmt = select(Insumo).where(Insumo.ativo == True).order_by(Insumo.nome)  # noqa: E712
+    count_stmt = select(func.count()).select_from(Insumo).where(Insumo.ativo == True)  # noqa: E712
     if categoria_id is not None:
         stmt = stmt.where(Insumo.categoria_id == categoria_id)
+        count_stmt = count_stmt.where(Insumo.categoria_id == categoria_id)
     if busca:
         stmt = stmt.where(Insumo.nome.ilike(f"%{busca}%"))
-    return list(db.execute(stmt).scalars().all())
+        count_stmt = count_stmt.where(Insumo.nome.ilike(f"%{busca}%"))
+    total = db.execute(count_stmt).scalar_one()
+    offset = (pagina - 1) * por_pagina
+    return list(db.execute(stmt.offset(offset).limit(por_pagina)).scalars().all()), total
 
 
 def list_movimentos(

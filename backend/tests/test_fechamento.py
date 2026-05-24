@@ -24,7 +24,7 @@ _TestingSession = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
 
 
 def _fake_user() -> dict:
-    return {"sub": "estabelecimento"}
+    return {"sub": "1", "user_id": 1, "tenant_id": 1, "permissions": ["cadastros", "comandas", "compras", "configuracoes", "dashboard", "estoque", "gestao_usuarios", "relatorios"]}
 
 
 @pytest.fixture(autouse=True)

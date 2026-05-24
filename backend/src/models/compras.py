@@ -16,7 +16,13 @@ class Compra(Base):
     data_compra: Mapped[datetime.date] = mapped_column(sa.Date(), nullable=False)
     numero_nota: Mapped[Optional[str]] = mapped_column(sa.String(50), nullable=True)
     total: Mapped[Decimal] = mapped_column(sa.Numeric(12, 2), nullable=False, default=Decimal("0"))
-    status: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default="ativa")
+    # status: rascunho | confirmado | recebido | pago | cancelado
+    status: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default="recebido")
+    # tipo_compra: imediata | agendada | a_prazo
+    tipo_compra: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default="imediata")
+    data_prevista_recebimento: Mapped[Optional[datetime.date]] = mapped_column(sa.Date(), nullable=True)
+    data_real_recebimento: Mapped[Optional[datetime.date]] = mapped_column(sa.Date(), nullable=True)
+    data_prevista_pagamento: Mapped[Optional[datetime.date]] = mapped_column(sa.Date(), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime(), nullable=False, server_default=sa.func.now()
     )

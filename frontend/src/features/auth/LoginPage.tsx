@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,24 +21,42 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-sm rounded-lg border bg-white p-8 shadow-sm">
-        <h1 className="mb-6 text-center text-2xl font-bold tracking-tight">Matchpoint</h1>
+        <h1 className="mb-6 text-center text-2xl font-bold tracking-tight">Flow4Tech</h1>
         <form onSubmit={handleSubmit((data) => mutate(data))} className="space-y-4">
           <div className="space-y-1">
-            <Label htmlFor="senha">Senha</Label>
+            <Label htmlFor="identifier">Email ou usuário</Label>
             <Input
-              id="senha"
-              type="password"
-              placeholder="Digite a senha do estabelecimento"
-              autoComplete="current-password"
-              {...register("senha")}
+              id="identifier"
+              type="text"
+              placeholder="Digite seu email ou usuário"
+              autoComplete="username"
+              {...register("identifier")}
             />
-            {errors.senha && (
-              <p className="text-sm text-red-500">{errors.senha.message}</p>
+            {errors.identifier && (
+              <p className="text-sm text-red-500">{errors.identifier.message}</p>
+            )}
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="password">Senha</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Digite sua senha"
+              autoComplete="current-password"
+              {...register("password")}
+            />
+            {errors.password && (
+              <p className="text-sm text-red-500">{errors.password.message}</p>
             )}
           </div>
           <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? "Entrando..." : "Entrar"}
+            {isPending ? "Entrando..." : "ENTRAR"}
           </Button>
+          <div className="text-center">
+            <Link to="/esqueci-senha" className="text-sm text-gray-500 hover:underline">
+              Esqueci minha senha
+            </Link>
+          </div>
         </form>
       </div>
     </div>

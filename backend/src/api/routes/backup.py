@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db
+from src.api.dependencies import get_current_user, get_db, require_permission
 from src.core.errors import AppError, ErrorCode
 from src.services import backup_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_permission("configuracoes"))])
 
 
 @router.get("")

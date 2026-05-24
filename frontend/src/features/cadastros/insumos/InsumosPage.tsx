@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Pagination, paginar } from "@/components/ui/pagination";
 import { InsumoEditModal } from "./InsumoEditModal";
 import {
   useAllInsumos,
   useToggleInsumoAtivo,
-  useDeleteInsumo,
   type InsumoResponse,
 } from "@/features/estoque/useInsumos";
 
@@ -15,13 +13,12 @@ type Filtro = "ativos" | "inativos" | "todos";
 const POR_PAGINA = 12;
 
 export function InsumosPage() {
-  const { data: insumos = [], isLoading } = useAllInsumos();
+  const { data, isLoading } = useAllInsumos();
+  const insumos = data?.itens ?? [];
   const toggleAtivo = useToggleInsumoAtivo();
-  const deleteMutation = useDeleteInsumo();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<InsumoResponse | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [filtro, setFiltro] = useState<Filtro>("ativos");
   const [pagina, setPagina] = useState(1);
 
@@ -116,16 +113,6 @@ export function InsumosPage() {
                     >
                       {insumo.ativo ? "Desativar" : "Reativar"}
                     </Button>
-                    {!insumo.ativo && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setConfirmDelete(insumo.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        Remover
-                      </Button>
-                    )}
                   </div>
                 </td>
               </tr>
@@ -147,17 +134,6 @@ export function InsumosPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         editing={editing}
-      />
-      <ConfirmDialog
-        open={confirmDelete !== null}
-        title="Remover insumo?"
-        confirmLabel="Remover"
-        onConfirm={() => {
-          deleteMutation.mutate(confirmDelete!);
-          setConfirmDelete(null);
-        }}
-        onCancel={() => setConfirmDelete(null)}
-        isPending={deleteMutation.isPending}
       />
     </div>
   );

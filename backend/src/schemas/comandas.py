@@ -65,6 +65,7 @@ class ComandaResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    numero_dia: Optional[int] = None
     identificacao: str
     tipo_identificacao: str
     garcom_id: int

@@ -21,7 +21,8 @@ class MetodoPagamento(Base):
     nome: Mapped[str] = mapped_column(nullable=False, unique=True)
     ativo: Mapped[bool] = mapped_column(nullable=False, default=True)
     tipo: Mapped[str] = mapped_column(
-        sa.Enum(TipoPagamento, native_enum=False),
+        sa.String(),
         nullable=False,
         server_default="outro",
     )
+    padrao: Mapped[bool] = mapped_column(nullable=False, default=False)

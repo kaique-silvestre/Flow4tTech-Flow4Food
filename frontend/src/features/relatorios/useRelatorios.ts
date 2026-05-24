@@ -194,3 +194,84 @@ export function useVendasPorGarcom(params: { data_inicio: string; data_fim: stri
     enabled: !!params.data_inicio && !!params.data_fim,
   });
 }
+
+export interface ProdutoMaisVendidoItem {
+  produto_id: number;
+  produto_nome: string;
+  categoria_nome: string | null;
+  quantidade_total: number;
+  receita_total: number;
+  percentual_receita: number;
+}
+
+export interface ProdutosMaisVendidosResponse {
+  data_inicio: string;
+  data_fim: string;
+  receita_total_periodo: number;
+  itens: ProdutoMaisVendidoItem[];
+}
+
+export function useProdutosMaisVendidos(params: { data_inicio: string; data_fim: string }) {
+  return useQuery<ProdutosMaisVendidosResponse>({
+    queryKey: ["relatorios", "produtos-mais-vendidos", params],
+    queryFn: () =>
+      api
+        .get<ProdutosMaisVendidosResponse>("/api/relatorios/produtos-mais-vendidos", { params })
+        .then((r) => r.data),
+    enabled: !!params.data_inicio && !!params.data_fim,
+  });
+}
+
+export interface HorarioPicoItem {
+  hora: number;
+  total_comandas: number;
+  receita_total: number;
+}
+
+export interface PicoVendasHorarioResponse {
+  data_inicio: string;
+  data_fim: string;
+  horarios: HorarioPicoItem[];
+  hora_pico: number | null;
+  total_comandas_periodo: number;
+  receita_total_periodo: number;
+}
+
+export function usePicoVendasHorario(params: { data_inicio: string; data_fim: string }) {
+  return useQuery<PicoVendasHorarioResponse>({
+    queryKey: ["relatorios", "pico-vendas-horario", params],
+    queryFn: () =>
+      api
+        .get<PicoVendasHorarioResponse>("/api/relatorios/pico-vendas-horario", { params })
+        .then((r) => r.data),
+    enabled: !!params.data_inicio && !!params.data_fim,
+  });
+}
+
+export interface VendasPorProdutoItem {
+  produto_id: number;
+  produto_nome: string;
+  categoria_nome: string | null;
+  qtd_vendida: number;
+  qtd_cortesias: number;
+  faturamento: number;
+  ticket_medio: number;
+}
+
+export interface VendasPorProdutoResponse {
+  data_inicio: string;
+  data_fim: string;
+  total_faturamento: number;
+  itens: VendasPorProdutoItem[];
+}
+
+export function useVendasPorProduto(params: { data_inicio: string; data_fim: string }) {
+  return useQuery<VendasPorProdutoResponse>({
+    queryKey: ["relatorios", "vendas-por-produto", params],
+    queryFn: () =>
+      api
+        .get<VendasPorProdutoResponse>("/api/relatorios/vendas-por-produto", { params })
+        .then((r) => r.data),
+    enabled: !!params.data_inicio && !!params.data_fim,
+  });
+}
