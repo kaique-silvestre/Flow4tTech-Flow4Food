@@ -1,7 +1,10 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_current_user, get_db
+from src.repositories import revoked_tokens_repository
 from src.schemas.auth import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
@@ -30,7 +33,15 @@ def do_login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse
 
 
 @router.post("/logout", status_code=204)
-def do_logout() -> None:
+def do_logout(
+    payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    jti = payload.get("jti")
+    exp_ts = payload.get("exp")
+    if jti and exp_ts:
+        expires_at = datetime.fromtimestamp(exp_ts, tz=timezone.utc)
+        revoked_tokens_repository.revoke(db, jti, expires_at)
     return None
 
 
