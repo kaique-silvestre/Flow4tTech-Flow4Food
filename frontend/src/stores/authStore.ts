@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 export interface AuthUser {
   user_id: number;
@@ -30,14 +29,9 @@ interface AuthState {
   clearToken: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      token: null,
-      user: null,
-      setToken: (t) => set({ token: t, user: parseJwtPayload(t) }),
-      clearToken: () => set({ token: null, user: null }),
-    }),
-    { name: "matchpoint_jwt" }
-  )
-);
+export const useAuthStore = create<AuthState>()((set) => ({
+  token: null,
+  user: null,
+  setToken: (t) => set({ token: t, user: parseJwtPayload(t) }),
+  clearToken: () => set({ token: null, user: null }),
+}));

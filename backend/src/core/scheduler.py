@@ -4,7 +4,12 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from src.core.database import SessionLocal
 from src.core.logging import get_logger
-from src.repositories import compras_repository, notificacoes_repository, revoked_tokens_repository
+from src.repositories import (
+    compras_repository,
+    notificacoes_repository,
+    refresh_tokens_repository,
+    revoked_tokens_repository,
+)
 from src.services import contas_pagar_service
 
 log = get_logger(__name__)
@@ -57,10 +62,22 @@ def _limpar_revoked_tokens() -> None:
         db.close()
 
 
+def _limpar_refresh_tokens() -> None:
+    db = SessionLocal()
+    try:
+        deleted = refresh_tokens_repository.delete_expired(db)
+        log.info("scheduler_refresh_tokens_limpos", total=deleted)
+    except Exception as e:
+        log.error("scheduler_refresh_tokens_erro", error=str(e))
+    finally:
+        db.close()
+
+
 def start() -> None:
     _scheduler.add_job(_verificar_entregas_previstas, "cron", hour=8, minute=0, id="entregas_previstas")
     _scheduler.add_job(_atualizar_contas_vencidas, "cron", hour=8, minute=5, id="contas_vencidas")
     _scheduler.add_job(_limpar_revoked_tokens, "interval", hours=1, id="revoked_tokens_cleanup")
+    _scheduler.add_job(_limpar_refresh_tokens, "cron", hour=3, minute=0, id="refresh_tokens_cleanup")
     _scheduler.start()
     log.info("scheduler_started")
 

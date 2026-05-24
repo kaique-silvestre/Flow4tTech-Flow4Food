@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 import smtplib
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -12,6 +14,7 @@ from src.core.config import get_settings
 from src.core.errors import AppError, ErrorCode
 from src.core.logging import get_logger
 from src.models.system_users import PasswordReset
+from src.repositories import refresh_tokens_repository
 from src.repositories.password_reset_repository import (
     create_reset,
     get_reset_by_token,
@@ -62,6 +65,50 @@ def _build_token_response(user) -> TokenResponse:
         "permissions": permissions,
     }
     return TokenResponse(access_token=create_access_token(payload))
+
+
+def _hash_token(raw: str) -> str:
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def create_refresh_token(db: Session, user_id: int) -> str:
+    settings = get_settings()
+    raw = secrets.token_urlsafe(48)
+    token_hash = _hash_token(raw)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRES_DAYS)
+    refresh_tokens_repository.create(db, user_id, token_hash, expires_at)
+    return raw
+
+
+def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str]:
+    token_hash = _hash_token(raw_token)
+    record = refresh_tokens_repository.get_by_hash(db, token_hash)
+    if record is None or record.revoked_at is not None:
+        raise AppError(code=ErrorCode.VALIDATION_ERROR, message="Refresh token inválido", http_status=401)
+    if record.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise AppError(code=ErrorCode.VALIDATION_ERROR, message="Refresh token expirado", http_status=401)
+    refresh_tokens_repository.revoke(db, record.id)
+    user = get_user_by_id(db, record.user_id)
+    if user is None or not user.is_active:
+        raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=401)
+    permissions = [p.screen for p in user.profile.permissions if p.can_access]
+    payload = {
+        "sub": str(user.id),
+        "user_id": user.id,
+        "tenant_id": user.tenant_id,
+        "username": user.username,
+        "name": user.name,
+        "profile_id": user.profile_id,
+        "profile_name": user.profile.name,
+        "permissions": permissions,
+    }
+    new_access = create_access_token(payload)
+    new_refresh = create_refresh_token(db, user.id)
+    return new_access, new_refresh
+
+
+def revoke_all_refresh_tokens(db: Session, user_id: int) -> None:
+    refresh_tokens_repository.revoke_all_for_user(db, user_id)
 
 
 def login(db: Session, identifier: str, password: str) -> TokenResponse:

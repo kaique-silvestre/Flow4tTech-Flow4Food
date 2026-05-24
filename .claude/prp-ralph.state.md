@@ -1,5 +1,5 @@
 ---
-iteration: 2
+iteration: 3
 max_iterations: 10
 plan_path: "docs/issues/issues_jwt_auth_profissionalizacao.md"
 started_at: "2026-05-24T00:00:00Z"
