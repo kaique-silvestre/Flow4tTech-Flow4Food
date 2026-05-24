@@ -5,7 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import bcrypt
-from jose import jwt
+import jwt
 from sqlalchemy.orm import Session
 
 from src.core.config import get_settings
@@ -41,7 +41,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(payload: dict) -> str:
     settings = get_settings()
-    expire = datetime.now(timezone.utc) + timedelta(hours=8)
+    expire = datetime.now(timezone.utc) + timedelta(hours=settings.JWT_EXPIRES_HOURS)
     return jwt.encode({**payload, "exp": expire}, settings.JWT_SECRET, algorithm="HS256")
 
 

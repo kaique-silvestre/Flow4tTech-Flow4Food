@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -18,7 +18,7 @@ class Profile(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     tenant_id: Mapped[int] = mapped_column(nullable=False, server_default="1")
     name: Mapped[str] = mapped_column(sa.String(100), nullable=False)
-    description: Mapped[str | None] = mapped_column(sa.String(300), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(sa.String(300), nullable=True)  # noqa: UP045 — str|None breaks SQLAlchemy on Python 3.9
     is_system: Mapped[bool] = mapped_column(nullable=False, server_default="false")
     is_active: Mapped[bool] = mapped_column(nullable=False, server_default="true")
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("NOW()"))

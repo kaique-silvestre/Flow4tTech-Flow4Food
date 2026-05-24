@@ -96,11 +96,7 @@ def criar_compra(db: Session, data: CompraCreateRequest) -> CompraResponse:
             total += item_req.custo_total
             itens_para_processar.append((insumo, item_req, custo_unitario))
 
-        # Define status inicial por tipo
-        if data.tipo_compra == "agendada":
-            status_inicial = "confirmado"
-        else:
-            status_inicial = "recebido"
+        status_inicial = "confirmado" if data.tipo_compra == "agendada" else "recebido"
 
         compra = compras_repository.create_compra(
             db=db,

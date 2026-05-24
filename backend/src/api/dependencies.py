@@ -1,8 +1,9 @@
 from typing import Annotated, Optional
 
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from jwt.exceptions import InvalidTokenError
 
 from src.core.config import get_settings
 from src.core.database import get_db
@@ -19,19 +20,18 @@ def get_current_user(
     try:
         payload = jwt.decode(credentials.credentials, settings.JWT_SECRET, algorithms=["HS256"])
         return payload
-    except JWTError as exc:
+    except InvalidTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido"
         ) from exc
 
 
 def require_permission(screen: str):
-    """FastAPI dependency factory — verifica se usuário tem permissão para a tela."""
-
     def _check(payload: dict = Depends(get_current_user)) -> dict:
+        if "user_id" not in payload:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token sem user_id")
         permissions: list[str] = payload.get("permissions", [])
-        # tokens legados (sub=estabelecimento) não têm permissions[] — conceder acesso temporário
-        if "user_id" in payload and screen not in permissions:
+        if screen not in permissions:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Sem permissão: {screen}")
         return payload
 

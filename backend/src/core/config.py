@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     )
 
     DATABASE_URL: str = Field(..., description="PostgreSQL connection string")
-    JWT_SECRET: str = Field(..., min_length=8, description="Secret for signing JWT")
+    JWT_SECRET: str = Field(..., min_length=32, description="Secret for signing JWT (min 32 chars for HS256)")
     JWT_EXPIRES_HOURS: int = 12
     TZ: str = "America/Sao_Paulo"
     CORS_ORIGINS: str = "http://localhost:5173,https://flow4-tech-sistema-de-gestao.vercel.app"
