@@ -1,6 +1,5 @@
 
 from decimal import Decimal
-
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,7 +10,12 @@ from src.api.dependencies import get_current_user, get_db, require_permission
 from src.models.comandas import Comanda
 from src.models.comissoes_garcom import ComissaoGarcom
 from src.schemas.comissoes import ComissaoResponse, ComissaoUpdateRequest, GarcomStatsResponse
-from src.schemas.garcons import GarcomCreateRequest, GarcomPageResponse, GarcomResponse, GarcomUpdateRequest
+from src.schemas.garcons import (
+    GarcomCreateRequest,
+    GarcomPageResponse,
+    GarcomResponse,
+    GarcomUpdateRequest,
+)
 from src.services import garcons_service
 
 router = APIRouter(dependencies=[Depends(require_permission("cadastros"))])

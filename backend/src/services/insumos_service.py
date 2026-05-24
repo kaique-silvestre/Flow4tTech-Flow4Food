@@ -1,3 +1,4 @@
+import math
 from typing import Optional
 
 from sqlalchemy import select
@@ -7,9 +8,12 @@ from sqlalchemy.orm import Session
 from src.core.errors import AppError, ErrorCode
 from src.models.insumos import Insumo
 from src.repositories import insumos_repository
-import math
-
-from src.schemas.insumos import InsumoCreateRequest, InsumoPageResponse, InsumoResponse, InsumoUpdateRequest
+from src.schemas.insumos import (
+    InsumoCreateRequest,
+    InsumoPageResponse,
+    InsumoResponse,
+    InsumoUpdateRequest,
+)
 
 
 def list_insumos(

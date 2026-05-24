@@ -3,7 +3,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session, joinedload
 
-from src.models.system_users import PasswordReset, SystemUser
+from src.models.system_users import PasswordReset
 
 
 def get_valid_reset(db: Session, token: str) -> Optional[PasswordReset]:

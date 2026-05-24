@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_current_user, get_db, require_permission
 from src.schemas.contas_pagar_schemas import (
+    ContaPagarResponse,
     ContasPagarPageResponse,
     ContasPagarResumoResponse,
     NotificacaoResponse,
     PagarContaRequest,
-    ContaPagarResponse,
 )
 from src.services import contas_pagar_service
 

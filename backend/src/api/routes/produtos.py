@@ -4,7 +4,12 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_current_user, get_db, require_permission
-from src.schemas.produtos import ProdutoCreateRequest, ProdutoPageResponse, ProdutoResponse, ProdutoUpdateRequest
+from src.schemas.produtos import (
+    ProdutoCreateRequest,
+    ProdutoPageResponse,
+    ProdutoResponse,
+    ProdutoUpdateRequest,
+)
 from src.services import produtos_service
 
 router = APIRouter(dependencies=[Depends(require_permission("cadastros"))])

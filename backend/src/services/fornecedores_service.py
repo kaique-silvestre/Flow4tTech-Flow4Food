@@ -6,7 +6,12 @@ from sqlalchemy.orm import Session
 from src.core.errors import AppError, ErrorCode
 from src.models.fornecedores import Fornecedor
 from src.repositories import fornecedores_repository
-from src.schemas.fornecedores import FornecedorCreateRequest, FornecedorPageResponse, FornecedorResponse, FornecedorUpdateRequest
+from src.schemas.fornecedores import (
+    FornecedorCreateRequest,
+    FornecedorPageResponse,
+    FornecedorResponse,
+    FornecedorUpdateRequest,
+)
 
 
 def list_fornecedores(
