@@ -6,7 +6,7 @@
 
 ---
 
-## Issue 1 — Inverter mesa/nome na nova comanda
+## Issue 1 — Inverter mesa/nome na nova comanda ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -33,7 +33,7 @@ Nenhuma alteração de backend ou schema necessária.
 
 ---
 
-## Issue 2 — Filtrar produtos ativos na busca da comanda
+## Issue 2 — Filtrar produtos ativos na busca da comanda ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -59,7 +59,7 @@ A página de cardápio (gestão) continua funcionando sem alteração — ela n�
 
 ---
 
-## Issue 3 — Toast de erro com duração automática
+## Issue 3 — Toast de erro com duração automática ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -88,7 +88,7 @@ Nenhuma alteração de backend necessária.
 
 ---
 
-## Issue 4 — Hierarquia de categorias no cardápio
+## Issue 4 — Hierarquia de categorias no cardápio ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -114,7 +114,7 @@ Produto sem subcategoria exibe apenas o nome da categoria raiz. Produto sem cate
 
 ---
 
-## Issue 5 — Máscara monetária nos campos de valor
+## Issue 5 — Máscara monetária nos campos de valor ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -146,7 +146,7 @@ Instalar dependência `react-number-format` e aplicar o componente em:
 
 ---
 
-## Issue 6 — Validação inline de categoria no produto
+## Issue 6 — Validação inline de categoria no produto ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -173,7 +173,7 @@ O botão de salvar não deve disparar chamada ao backend quando o campo obrigat�
 
 ---
 
-## Issue 7 — Tipo em método de pagamento
+## Issue 7 — Tipo em método de pagamento ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -199,7 +199,7 @@ Migration additive — não remove nem altera colunas existentes. Métodos exist
 
 ---
 
-## Issue 8 — Troco no pagamento em dinheiro
+## Issue 8 — Troco no pagamento em dinheiro ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Issue 7 (tipo em método de pagamento precisa existir para detecção de "dinheiro")
@@ -236,7 +236,7 @@ Implementar captura de troco end-to-end para pagamentos em dinheiro.
 
 ---
 
-## Issue 9 — Reserva de estoque no ciclo da comanda
+## Issue 9 — Reserva de estoque no ciclo da comanda ✅
 
 **Tipo:** HITL
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -284,7 +284,7 @@ Implementar reserva de estoque durante o ciclo de vida da comanda, com aviso ime
 
 ---
 
-## Issue 10 — Visibilidade de estoque reservado
+## Issue 10 — Visibilidade de estoque reservado ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Issue 9 (coluna `estoque_reservado` precisa existir no banco)
@@ -311,20 +311,20 @@ Expor `estoque_reservado` e `estoque_disponivel` (calculado: `estoque_atual - es
 
 ## Resumo
 
-| # | Título | Tipo | Bloqueado por |
-|---|--------|------|--------------|
-| 1 | Inverter mesa/nome na nova comanda | AFK | — |
-| 2 | Filtrar produtos ativos na busca da comanda | AFK | — |
-| 3 | Toast de erro com duração automática | AFK | — |
-| 4 | Hierarquia de categorias no cardápio | AFK | — |
-| 5 | Máscara monetária nos campos de valor | AFK | — |
-| 6 | Validação inline de categoria no produto | AFK | — |
-| 7 | Tipo em método de pagamento | AFK | — |
-| 8 | Troco no pagamento em dinheiro | AFK | #7 |
-| 9 | Reserva de estoque no ciclo da comanda | HITL | — |
-| 10 | Visibilidade de estoque reservado | AFK | #9 |
+| # | Título | Tipo | Bloqueado por | Status |
+|---|--------|------|--------------|--------|
+| 1 | Inverter mesa/nome na nova comanda | AFK | — | ✅ |
+| 2 | Filtrar produtos ativos na busca da comanda | AFK | — | ✅ |
+| 3 | Toast de erro com duração automática | AFK | — | ✅ |
+| 4 | Hierarquia de categorias no cardápio | AFK | — | ✅ |
+| 5 | Máscara monetária nos campos de valor | AFK | — | ✅ |
+| 6 | Validação inline de categoria no produto | AFK | — | ✅ |
+| 7 | Tipo em método de pagamento | AFK | — | ✅ |
+| 8 | Troco no pagamento em dinheiro | AFK | #7 | ✅ |
+| 9 | Reserva de estoque no ciclo da comanda | HITL | — | ✅ |
+| 10 | Visibilidade de estoque reservado | AFK | #9 | ✅ |
 
-**10 issues no total.** 8 AFK, 1 HITL, 1 AFK bloqueado por HITL.
+**10/10 issues concluídas. v0.4 COMPLETO.**
 
 **Recomendação de execução:**
 - Bloco 1 (paralelo): issues 1–7, 9 (todos independentes entre si)

@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_current_user, get_db
 from src.core.config import get_settings
+from src.core.limiter import limiter
 from src.repositories import revoked_tokens_repository
 from src.schemas.auth import (
     AccessTokenResponse,
@@ -48,7 +49,8 @@ def _set_refresh_cookie(response: Response, raw_token: str) -> None:
 
 
 @router.post("/login", response_model=TokenResponse)
-def do_login(body: LoginRequest, response: Response, db: Session = Depends(get_db)) -> TokenResponse:
+@limiter.limit("5/15minutes")
+def do_login(request: Request, body: LoginRequest, response: Response, db: Session = Depends(get_db)) -> TokenResponse:
     token_response = login(db, body.identifier, body.password)
     user_id = _extract_user_id(token_response.access_token)
     if user_id is not None:

@@ -71,7 +71,7 @@ Fluxo:
 **Critérios de aceitação:**
 - [x] JWT expira em 8 horas
 - [x] Resposta de erro nunca revela se é email ou senha incorretos — mensagem genérica
-- [ ] Rate limiting: máximo 5 tentativas por IP em 15 minutos
+- [x] Rate limiting: máximo 5 tentativas por IP em 15 minutos
 - [x] Senha nunca aparece em logs ou response body
 - [x] `password_hash` nunca retornado em nenhum endpoint
 
@@ -200,7 +200,7 @@ Tela pública `/login` conforme wireframe da seção 7.1.
 
 **Critérios de aceitação:**
 - [x] Campo único `Email ou usuário` + campo `Senha`
-- [ ] Botão `ENTRAR` + link `Esqueci minha senha`
+- [x] Botão `ENTRAR` + link `Esqueci minha senha`
 - [x] Toast vermelho em falha: "Email/usuário ou senha inválidos" (mensagem genérica)
 - [x] Redireciona para `/dashboard` após login bem-sucedido
 - [x] JWT armazenado em `localStorage` (chave `matchpoint_jwt`)
