@@ -1,8 +1,8 @@
 ---
-iteration: 2
+iteration: 4
 max_iterations: 10
 status: COMPLETE
-plan_path: ".claude/PRPs/plans/issue-2-get-db-concorrencia.md"
+plan_path: ".claude/PRPs/plans/issue3-onboarding-tenant.md"
 started_at: "2026-05-28T01:00:00Z"
 ---
 
@@ -96,5 +96,57 @@ started_at: "2026-05-28T01:00:00Z"
 ### Next Steps
 - Issue 3: Onboarding atômico de tenant (bloqueado por Issues 1+2 ✓)
 - Issue 9: Frontend tela de caixa (bloqueado por Issue 7 ✓)
+
+## Iteration 5 - 2026-05-28
+
+### Completed (Issue 3)
+- Migration 0045: tabela assinaturas (status trial/ativa/vencida/cancelada/suspensa, FK tenant_id UNIQUE)
+- Model: Assinatura (id sem BigInteger para SQLite compat)
+- Tenant model: BigInteger removido do id.pk para SQLite compat (PG usa sequence na migration)
+- tenant_repository: create, get_by_id, update, list, get_assinatura_by_tenant, create_assinatura, clone_profiles_from_seed
+- tenant_service: criar_tenant (transação única, rollback automático), get_tenant, update_existing_tenant, get_all_tenants
+- schemas/tenants.py: TenantCreate, TenantUpdate, TenantResponse, AssinaturaInfo
+- api/routes/admin.py: POST/GET/PATCH /api/admin/tenants + require_superadmin (SUPERADMIN_TOKEN env var)
+- config.py: SUPERADMIN_TOKEN field adicionado
+- main.py: admin router registrado em /api/admin
+- 14 testes: 14/14 PASS — auth guard, criação, rollback atômico, GET, PATCH
+- Commit: a534191
+
+### Codebase Patterns (novos)
+- Modelos SQLite-compat: NUNCA usar `sa.BigInteger()` na coluna pk — usar `mapped_column(primary_key=True)` sem tipo
+- `server_default=sa.text("NOW()")` falha no SQLite se inserir sem o campo — passar `created_at=now` explícito nas fixtures/services
+- Superadmin auth: SUPERADMIN_TOKEN env var, `Authorization: Bearer <token>`, monkeypatch DEVE limpar cache `get_settings.cache_clear()`
+- `pydantic[email]` (email-validator) precisa ser instalado separado para usar `EmailStr`
+
+### Validation Status
+- Ruff: PASS
+- Tests: 92 pass (78 anteriores + 14 novos) / 52 fail (pré-existentes) / sem regressões
+
+### Next Steps
+- Issue 4: JWT multi-tenant (bloqueado por Issues 1+3 ✓)
+- Issue 5: Sistema de assinaturas (depende de Issues 3+4)
+
+---
+
+## Iteration 4 - 2026-05-28
+
+### Completed (Issue 9)
+- useCaixa.ts: useSessaoAberta (404→null), useAbrirCaixa, useFecharCaixa, useRegistrarMovimento
+- CaixaPage.tsx: 3 fluxos — AberturaCaixa, TurnoAtivo (mov inline), FechamentoCaixa + ResultadoFechamento
+- Sobra/quebra com cor distinta (verde/vermelho)
+- App.tsx: rota /caixa com RequirePermission screen="caixa"
+- Sidebar.tsx: item Caixa (Banknote icon) com screen="caixa"
+- Commit: b08d277
+
+### Validation Status
+- Type-check: PASS
+- Lint (new files): PASS (2 erros pre-existentes em RedefinirSenhaPage + ComandaAbertaPage)
+- Build: PASS (8.77s)
+
+### Next Steps
+- Issue 3: Onboarding atômico de tenant
+- Issue 4: JWT multi-tenant
+- Issue 5: Sistema de assinaturas
+- Issue 6: SubscriptionGuard frontend
 
 ---
