@@ -136,7 +136,7 @@ Endpoints restritos ao superadmin Flow4Tech: `POST /admin/tenants`, `GET /admin/
 
 ---
 
-## Issue 4 — JWT multi-tenant
+## Issue 4 — JWT multi-tenant ✅
 
 **Type:** AFK
 **Blocked by:** Issue 1, Issue 3
@@ -169,7 +169,7 @@ Remover todos os `TENANT_ID = 1` hardcoded restantes em `auth_service`, `users_s
 
 ---
 
-## Issue 5 — Sistema de assinaturas e billing manual
+## Issue 5 — Sistema de assinaturas e billing manual ✅
 
 **Type:** AFK
 **Blocked by:** Issue 3, Issue 4
@@ -211,7 +211,7 @@ Endpoints admin: `POST /admin/tenants/{id}/payments`, `PATCH /admin/tenants/{id}
 
 ---
 
-## Issue 6 — Frontend: SubscriptionGuard
+## Issue 6 — Frontend: SubscriptionGuard ✅
 
 **Type:** HITL
 **Blocked by:** Issue 4, Issue 5

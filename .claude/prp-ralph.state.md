@@ -1,14 +1,16 @@
 ---
-iteration: 4
+iteration: 8
 max_iterations: 10
 status: COMPLETE
-plan_path: ".claude/PRPs/plans/issue3-onboarding-tenant.md"
-started_at: "2026-05-28T01:00:00Z"
+plan_path: "docs/issues/issues_v1_lancamento_comercial.md"
+started_at: "2026-05-28T00:00:00Z"
 ---
 
 # Ralph Progress Log
 
 ## Codebase Patterns
+- Models com `from __future__ import annotations`: usar `X | None` (ruff UP045 exige)
+- Models SEM `from __future__ import annotations`: usar `Optional[X]` para SQLAlchemy compat
 - Backend usa `Optional[X]` não `X | None` (SQLAlchemy mapper quebra no Python 3.9)
 - Ruff UP035: usar `dict[x]`, `list[x]` nativos, não `Dict`/`List` do typing
 - Migration revision IDs devem ser strings curtas (<=32 chars)
@@ -144,9 +146,56 @@ started_at: "2026-05-28T01:00:00Z"
 - Build: PASS (8.77s)
 
 ### Next Steps
-- Issue 3: Onboarding atômico de tenant
 - Issue 4: JWT multi-tenant
 - Issue 5: Sistema de assinaturas
 - Issue 6: SubscriptionGuard frontend
+
+---
+
+## Iteration 6-8 - 2026-05-28
+
+### Completed (Issues 4, 5, 6)
+
+**Issue 4 — JWT multi-tenant:**
+- config.py: JWT_EXPIRES_HOURS → JWT_EXPIRES_MINUTES = 15
+- auth_service.py: removed _DEFAULT_TENANT_ID, added subscription_status to JWT payload
+- _build_token_response: accepts subscription_status param
+- rotate_refresh_token: re-reads assinatura from DB on refresh
+- login: uses get_user_by_username_global (cross-tenant, no hardcoded tenant_id)
+- users_repository.py: added get_user_by_username_global
+- Tests: 5 new tests, all pass (commit 552ea09)
+
+**Issue 5 — Billing system:**
+- Migration 0046: planos + pagamentos_assinatura tables
+- models/billing.py: Plano, PagamentoAssinatura (Python-level defaults for SQLite compat)
+- repositories/billing_repository.py: CRUD for plans, payments, subscription state, marcar_vencidas (ORM-based for SQLite compat)
+- services/billing_service.py: listar_planos, criar_plano, registrar_pagamento, atualizar_assinatura, marcar_assinaturas_vencidas
+- schemas/billing.py: PlanoCreate, PlanoInfo, PagamentoCreate, PagamentoInfo, AssinaturaUpdate
+- api/routes/admin.py: 5 new endpoints (plans CRUD, payments, subscription PATCH)
+- api/dependencies.py: require_active_subscription → 402 if not {ativa, trial}
+- core/scheduler.py: daily job _marcar_assinaturas_vencidas at 00:30
+- Tests: 8 new tests (commit 11ed3e9)
+
+**Issue 6 — Frontend SubscriptionGuard:**
+- authStore.ts: added subscription_status? to AuthUser interface
+- api.ts: 402 interceptor → Admin to /assinatura-vencida, others to /conta-suspensa
+- AssinaturaVencidaPage.tsx: Admin billing info + Flow4Tech contact
+- ContaSuspensaPage.tsx: simple "Conta suspensa — procure o responsável"
+- App.tsx: routes /assinatura-vencida and /conta-suspensa inside RequireAuth
+- Fixed authStore.ts filename casing (authstore → authStore via 2-step rename)
+- Type-check: PASS, Build: PASS (commit eee1994)
+
+### Validation Status
+- Ruff: PASS (all backend files)
+- Backend tests: 105 pass / 52 pre-existing fail / 3 skip
+- Frontend type-check: PASS
+- Frontend build: PASS (9.46s)
+- Lint: 2 pre-existing errors in RedefinirSenhaPage + ComandaAbertaPage (not new)
+
+### New Codebase Patterns
+- Models with `from __future__ import annotations`: use `X | None` (ruff UP045)
+- SQLite compat: use Python-level `default=lambda: datetime.now(...)` not just `server_default=sa.text("NOW()")`
+- marcar_vencidas: use SQLAlchemy ORM query (not raw SQL with NOW()) for SQLite compat
+- authStore.ts casing: file must be `authStore.ts` (capital S) — Windows filesystem case-insensitive but TypeScript isn't
 
 ---
