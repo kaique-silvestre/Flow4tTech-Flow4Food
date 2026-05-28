@@ -69,7 +69,7 @@ export function RedefinirSenhaPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-sm rounded-lg border bg-white p-8 shadow-sm">
-        <h1 className="mb-2 text-center text-2xl font-bold tracking-tight">Flow4Tech</h1>
+        <h1 className="mb-2 text-center text-2xl font-bold tracking-tight">Flow4Food</h1>
         <p className="mb-1 text-center text-sm text-gray-500">Redefinir senha</p>
         {data?.name && (
           <p className="mb-6 text-center text-sm font-medium text-gray-700">{data.name}</p>
@@ -114,7 +114,7 @@ function InvalidLink({ reason }: { reason: string }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-sm rounded-lg border bg-white p-8 shadow-sm text-center space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight">Flow4Tech</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Flow4Food</h1>
         <p className="text-sm text-red-600">{reason}</p>
         <Link to="/esqueci-senha" className="block text-sm text-blue-600 hover:underline">
           Solicitar novo link →

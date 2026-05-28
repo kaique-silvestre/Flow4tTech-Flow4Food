@@ -10,7 +10,9 @@ from src.models.movimentos_estoque import MovimentoEstoque, TipoMovimento
 
 
 def get_insumo_for_update(db: Session, insumo_id: int) -> Optional[Insumo]:
-    return db.execute(select(Insumo).where(Insumo.id == insumo_id)).scalar_one_or_none()
+    return db.execute(
+        select(Insumo).where(Insumo.id == insumo_id).with_for_update()
+    ).scalar_one_or_none()
 
 
 def update_estoque_e_custo(

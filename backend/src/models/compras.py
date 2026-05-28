@@ -12,6 +12,7 @@ class Compra(Base):
     __tablename__ = "compras"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
     fornecedor_id: Mapped[Optional[int]] = mapped_column(sa.ForeignKey("fornecedores.id"), nullable=True)
     data_compra: Mapped[datetime.date] = mapped_column(sa.Date(), nullable=False)
     numero_nota: Mapped[Optional[str]] = mapped_column(sa.String(50), nullable=True)

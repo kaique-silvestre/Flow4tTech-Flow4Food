@@ -37,6 +37,10 @@ class CancelarItemRequest(BaseModel):
     version: int
 
 
+class CancelarComandaRequest(BaseModel):
+    version: int
+
+
 class PatchComandaRequest(BaseModel):
     identificacao: Optional[str] = Field(None, min_length=1)
     garcom_id: Optional[int] = None

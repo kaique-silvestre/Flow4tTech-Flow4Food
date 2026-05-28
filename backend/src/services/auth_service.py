@@ -21,16 +21,16 @@ from src.repositories.password_reset_repository import (
     get_valid_reset,
     invalidate_user_resets,
 )
+from src.repositories.tenant_repository import get_assinatura_by_tenant
 from src.repositories.users_repository import (
     get_user_by_email,
     get_user_by_id,
-    get_user_by_username,
+    get_user_by_username_global,
 )
 from src.schemas.auth import GenericMessage, ResetTokenInfo, TokenResponse, UserInfo
 
 log = get_logger(__name__)
 
-TENANT_ID = 1
 _INVALID_MSG = "Email/usuário ou senha inválidos"
 
 
@@ -44,7 +44,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(payload: dict) -> str:
     settings = get_settings()
-    expire = datetime.now(timezone.utc) + timedelta(hours=settings.JWT_EXPIRES_HOURS)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRES_MINUTES)
     return jwt.encode(
         {**payload, "jti": str(uuid.uuid4()), "exp": expire},
         settings.JWT_SECRET,
@@ -52,7 +52,7 @@ def create_access_token(payload: dict) -> str:
     )
 
 
-def _build_token_response(user) -> TokenResponse:
+def _build_token_response(user, subscription_status: str) -> TokenResponse:
     permissions = [p.screen for p in user.profile.permissions if p.can_access]
     payload = {
         "sub": str(user.id),
@@ -63,6 +63,7 @@ def _build_token_response(user) -> TokenResponse:
         "profile_id": user.profile_id,
         "profile_name": user.profile.name,
         "permissions": permissions,
+        "subscription_status": subscription_status,
     }
     return TokenResponse(access_token=create_access_token(payload))
 
@@ -91,8 +92,9 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str]:
     user = get_user_by_id(db, record.user_id)
     if user is None or not user.is_active:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=401)
-    permissions = [p.screen for p in user.profile.permissions if p.can_access]
-    payload = {
+    assinatura = get_assinatura_by_tenant(db, user.tenant_id)
+    subscription_status = assinatura.status if assinatura else "trial"
+    new_access = create_access_token({
         "sub": str(user.id),
         "user_id": user.id,
         "tenant_id": user.tenant_id,
@@ -100,9 +102,9 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str]:
         "name": user.name,
         "profile_id": user.profile_id,
         "profile_name": user.profile.name,
-        "permissions": permissions,
-    }
-    new_access = create_access_token(payload)
+        "permissions": [p.screen for p in user.profile.permissions if p.can_access],
+        "subscription_status": subscription_status,
+    })
     new_refresh = create_refresh_token(db, user.id)
     return new_access, new_refresh
 
@@ -115,7 +117,7 @@ def login(db: Session, identifier: str, password: str) -> TokenResponse:
     if "@" in identifier:
         user = get_user_by_email(db, identifier)
     else:
-        user = get_user_by_username(db, TENANT_ID, identifier)
+        user = get_user_by_username_global(db, identifier)
 
     if user is None or not user.is_active:
         raise AppError(code=ErrorCode.SENHA_INCORRETA, message=_INVALID_MSG, http_status=401)
@@ -126,7 +128,9 @@ def login(db: Session, identifier: str, password: str) -> TokenResponse:
     user.last_login = datetime.now(timezone.utc)
     db.commit()
 
-    return _build_token_response(user)
+    assinatura = get_assinatura_by_tenant(db, user.tenant_id)
+    subscription_status = assinatura.status if assinatura else "trial"
+    return _build_token_response(user, subscription_status)
 
 
 def get_current_user_info(payload: dict) -> UserInfo:
@@ -165,9 +169,10 @@ def _send_reset_email(to_email: str, name: str, reset_url: str) -> None:
         msg["To"] = to_email
         body = (
             f"Olá, {name}!\n\n"
-            f"Clique no link abaixo para redefinir sua senha (válido por 1 hora):\n\n"
+            f"Clique no link abaixo para redefinir sua senha no Flow4Food (válido por 1 hora):\n\n"
             f"{reset_url}\n\n"
-            f"Se você não solicitou a redefinição, ignore este email.\n"
+            f"Se você não solicitou a redefinição, ignore este email.\n\n"
+            f"Flow4Food — por Flow4Tech\n"
         )
         msg.attach(MIMEText(body, "plain", "utf-8"))
         with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:

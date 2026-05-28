@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class AplicarDescontoRequest(BaseModel):
+    version: int
     desconto_percentual: Optional[Decimal] = Field(None, ge=0, le=100)
     desconto_valor: Optional[Decimal] = Field(None, ge=0)
 

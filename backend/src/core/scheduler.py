@@ -10,7 +10,7 @@ from src.repositories import (
     refresh_tokens_repository,
     revoked_tokens_repository,
 )
-from src.services import contas_pagar_service
+from src.services import billing_service, contas_pagar_service
 
 log = get_logger(__name__)
 
@@ -73,11 +73,23 @@ def _limpar_refresh_tokens() -> None:
         db.close()
 
 
+def _marcar_assinaturas_vencidas() -> None:
+    db = SessionLocal()
+    try:
+        total = billing_service.marcar_assinaturas_vencidas(db)
+        log.info("scheduler_assinaturas_vencidas", total=total)
+    except Exception as e:
+        log.error("scheduler_assinaturas_vencidas_erro", error=str(e))
+    finally:
+        db.close()
+
+
 def start() -> None:
     _scheduler.add_job(_verificar_entregas_previstas, "cron", hour=8, minute=0, id="entregas_previstas")
     _scheduler.add_job(_atualizar_contas_vencidas, "cron", hour=8, minute=5, id="contas_vencidas")
     _scheduler.add_job(_limpar_revoked_tokens, "interval", hours=1, id="revoked_tokens_cleanup")
     _scheduler.add_job(_limpar_refresh_tokens, "cron", hour=3, minute=0, id="refresh_tokens_cleanup")
+    _scheduler.add_job(_marcar_assinaturas_vencidas, "cron", hour=0, minute=30, id="assinaturas_vencidas")
     _scheduler.start()
     log.info("scheduler_started")
 

@@ -100,12 +100,12 @@ def test_require_permission_with_correct_permission_returns_200(permission_clien
     assert resp.json()["user_id"] == 1
 
 
-def test_create_access_token_uses_jwt_expires_hours(monkeypatch):
+def test_create_access_token_uses_jwt_expires_minutes(monkeypatch):
     import src.services.auth_service as auth_svc
 
     class _FakeSettings:
         JWT_SECRET = _JWT_SECRET
-        JWT_EXPIRES_HOURS = 2
+        JWT_EXPIRES_MINUTES = 30
 
     monkeypatch.setattr(auth_svc, "get_settings", lambda: _FakeSettings())
 
@@ -114,7 +114,7 @@ def test_create_access_token_uses_jwt_expires_hours(monkeypatch):
     payload = jwt.decode(token, _JWT_SECRET, algorithms=["HS256"])
     exp = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
 
-    expected = before + timedelta(hours=2)
+    expected = before + timedelta(minutes=30)
     assert abs((exp - expected).total_seconds()) < 5
 
 

@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = Field(..., description="PostgreSQL connection string")
     JWT_SECRET: str = Field(..., min_length=32, description="Secret for signing JWT (min 32 chars for HS256)")
-    JWT_EXPIRES_HOURS: int = 12
+    JWT_EXPIRES_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRES_DAYS: int = 7
     TZ: str = "America/Sao_Paulo"
     CORS_ORIGINS: str = "http://localhost:5173,https://flow4-tech-sistema-de-gestao.vercel.app"
@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     SMTP_PASS: str = ""
     SMTP_FROM: str = ""
     FRONTEND_URL: str = "http://localhost:5173"
+    SUPERADMIN_TOKEN: str = Field("", description="Static bearer token for /admin/ routes")
 
     @property
     def cors_origins_list(self) -> list[str]:

@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db, require_permission
+from src.api.dependencies import get_current_user, get_tenant_db, require_permission
 from src.schemas.insumos import (
     InsumoCreateRequest,
     InsumoPageResponse,
@@ -22,7 +22,7 @@ def list_insumos(
     incluir_inativos: bool = Query(False),
     pagina: int = Query(1, ge=1),
     por_pagina: int = Query(500, ge=1, le=500),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> InsumoPageResponse:
     if incluir_inativos:
@@ -33,7 +33,7 @@ def list_insumos(
 @router.get("/{insumo_id}", response_model=InsumoResponse)
 def get_insumo(
     insumo_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> InsumoResponse:
     return insumos_service.get_insumo(db, insumo_id)  # type: ignore[return-value]
@@ -42,7 +42,7 @@ def get_insumo(
 @router.post("", response_model=InsumoResponse, status_code=201)
 def create_insumo(
     body: InsumoCreateRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> InsumoResponse:
     return insumos_service.create_insumo(db, body)  # type: ignore[return-value]
@@ -52,7 +52,7 @@ def create_insumo(
 def update_insumo(
     insumo_id: int,
     body: InsumoUpdateRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> InsumoResponse:
     return insumos_service.update_insumo(db, insumo_id, body)  # type: ignore[return-value]
@@ -61,7 +61,7 @@ def update_insumo(
 @router.patch("/{insumo_id}/toggle-ativo", response_model=InsumoResponse)
 def toggle_ativo(
     insumo_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> InsumoResponse:
     return insumos_service.toggle_insumo_ativo(db, insumo_id)  # type: ignore[return-value]
@@ -70,7 +70,7 @@ def toggle_ativo(
 @router.delete("/{insumo_id}", status_code=204)
 def delete_insumo(
     insumo_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> None:
     insumos_service.delete_insumo(db, insumo_id)
