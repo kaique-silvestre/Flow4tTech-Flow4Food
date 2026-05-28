@@ -16,3 +16,4 @@ from src.models.pagamentos import Pagamento  # noqa: F401
 from src.models.produtos import Produto  # noqa: F401
 from src.models.profiles import Profile, ProfilePermission  # noqa: F401
 from src.models.system_users import PasswordReset, SystemUser  # noqa: F401
+from src.models.tenants import Tenant  # noqa: F401

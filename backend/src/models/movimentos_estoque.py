@@ -29,6 +29,7 @@ class MovimentoEstoque(Base):
     __tablename__ = "movimentos_estoque"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
     insumo_id: Mapped[int] = mapped_column(sa.ForeignKey("insumos.id"), nullable=False)
     tipo: Mapped[str] = mapped_column(
         sa.Enum(TipoMovimento, native_enum=False), nullable=False

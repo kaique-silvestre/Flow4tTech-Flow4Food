@@ -3,6 +3,7 @@ import enum
 from decimal import Decimal
 from typing import Optional
 
+import sqlalchemy as sa
 from sqlalchemy import func
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -20,6 +21,7 @@ class ItemComanda(Base):
     __tablename__ = "itens_comanda"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
     comanda_id: Mapped[int] = mapped_column(nullable=False)
     produto_id: Mapped[int] = mapped_column(nullable=False)
     quantidade: Mapped[Decimal] = mapped_column(nullable=False)

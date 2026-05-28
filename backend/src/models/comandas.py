@@ -3,6 +3,7 @@ import enum
 from decimal import Decimal
 from typing import Optional
 
+import sqlalchemy as sa
 from sqlalchemy import func
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -20,6 +21,7 @@ class Comanda(Base):
     __tablename__ = "comandas"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
     numero_dia: Mapped[Optional[int]] = mapped_column(nullable=True)
     identificacao: Mapped[str] = mapped_column(nullable=False)
     tipo_identificacao: Mapped[str] = mapped_column(nullable=False)

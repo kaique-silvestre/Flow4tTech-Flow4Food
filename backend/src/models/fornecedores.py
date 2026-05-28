@@ -10,6 +10,7 @@ class Fornecedor(Base):
     __tablename__ = "fornecedores"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
     nome: Mapped[str] = mapped_column(nullable=False)
     telefone: Mapped[Optional[str]] = mapped_column(nullable=True)
     email: Mapped[Optional[str]] = mapped_column(nullable=True)

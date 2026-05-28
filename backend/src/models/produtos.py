@@ -11,6 +11,7 @@ class Produto(Base):
     __tablename__ = "produtos"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
     nome: Mapped[str] = mapped_column(sa.String(150), nullable=False)
     categoria_id: Mapped[Optional[int]] = mapped_column(sa.ForeignKey("categorias.id"), nullable=True)
     preco_venda: Mapped[Optional[Decimal]] = mapped_column(sa.Numeric(10, 2), nullable=True)
