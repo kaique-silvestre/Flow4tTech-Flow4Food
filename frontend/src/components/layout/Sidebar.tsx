@@ -23,6 +23,7 @@ import {
   ChevronRight,
   FlaskConical,
   Wallet,
+  Banknote,
   type LucideIcon,
 } from "lucide-react";
 
@@ -58,6 +59,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard, screen: "dashboard" },
   { label: "Comandas", to: "/comandas", icon: ClipboardList, screen: "comandas" },
   { label: "Cardápio", to: "/cardapio", icon: UtensilsCrossed, screen: "comandas" },
+  { label: "Caixa", to: "/caixa", icon: Banknote, screen: "caixa" },
   { label: "Compras", to: "/compras", icon: ShoppingCart, screen: "compras" },
   { label: "Contas a Pagar", to: "/contas-pagar", icon: Wallet, screen: "compras" },
   { label: "Estoque", to: "/estoque", icon: Package, screen: "estoque" },
