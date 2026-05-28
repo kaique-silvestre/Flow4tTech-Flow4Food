@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db, require_permission
+from src.api.dependencies import get_current_user, get_tenant_db, require_permission
 from src.schemas.contas_pagar_schemas import (
     ContaPagarResponse,
     ContasPagarPageResponse,
@@ -24,7 +24,7 @@ def list_contas(
     fornecedor_id: Optional[int] = Query(None),
     pagina: int = Query(1, ge=1),
     por_pagina: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> ContasPagarPageResponse:
     return contas_pagar_service.list_contas(
@@ -34,7 +34,7 @@ def list_contas(
 
 @router.get("/resumo", response_model=ContasPagarResumoResponse)
 def resumo(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> ContasPagarResumoResponse:
     return contas_pagar_service.resumo(db)
@@ -44,7 +44,7 @@ def resumo(
 def pagar_conta(
     conta_id: int,
     data: PagarContaRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> ContaPagarResponse:
     return contas_pagar_service.pagar_conta(db, conta_id, data)
@@ -52,7 +52,7 @@ def pagar_conta(
 
 @router.get("/notificacoes", response_model=list[NotificacaoResponse])
 def list_notificacoes(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> list[NotificacaoResponse]:
     return contas_pagar_service.list_notificacoes(db)
@@ -61,7 +61,7 @@ def list_notificacoes(
 @router.post("/notificacoes/{notificacao_id}/marcar-lida")
 def marcar_lida(
     notificacao_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> dict:
     contas_pagar_service.marcar_notificacao_lida(db, notificacao_id)

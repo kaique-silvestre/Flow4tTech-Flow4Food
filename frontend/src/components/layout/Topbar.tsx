@@ -61,7 +61,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         >
           <Menu size={20} />
         </button>
-        <span className="font-semibold">Flow4Tech</span>
+        <span className="font-semibold">Flow4Food</span>
       </div>
 
       <div className="relative" ref={menuRef}>

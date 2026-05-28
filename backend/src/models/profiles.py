@@ -34,6 +34,7 @@ class ProfilePermission(Base):
     __tablename__ = "profile_permissions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
     profile_id: Mapped[int] = mapped_column(sa.ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
     screen: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     can_access: Mapped[bool] = mapped_column(nullable=False, server_default="true")

@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     SMTP_PASS: str = ""
     SMTP_FROM: str = ""
     FRONTEND_URL: str = "http://localhost:5173"
+    SUPERADMIN_TOKEN: str = Field("", description="Static bearer token for /admin/ routes")
 
     @property
     def cors_origins_list(self) -> list[str]:

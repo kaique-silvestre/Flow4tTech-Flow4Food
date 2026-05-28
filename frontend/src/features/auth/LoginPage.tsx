@@ -21,7 +21,8 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-sm rounded-lg border bg-white p-8 shadow-sm">
-        <h1 className="mb-6 text-center text-2xl font-bold tracking-tight">Flow4Tech</h1>
+        <h1 className="mb-1 text-center text-2xl font-bold tracking-tight">Flow4Food</h1>
+        <p className="mb-6 text-center text-sm text-gray-500">por Flow4Tech</p>
         <form onSubmit={handleSubmit((data) => mutate(data))} className="space-y-4">
           <div className="space-y-1">
             <Label htmlFor="identifier">Email ou usuário</Label>

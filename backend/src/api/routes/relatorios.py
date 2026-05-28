@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db, require_permission
+from src.api.dependencies import get_current_user, get_tenant_db, require_permission
 from src.schemas.relatorio_schemas import (
     CMVPorProdutoResponse,
     DREResponse,
@@ -25,7 +25,7 @@ router = APIRouter(dependencies=[Depends(require_permission("relatorios"))])
 @router.get("/vendas-do-dia", response_model=VendasDoDiaResponse)
 def vendas_do_dia(
     data: Optional[datetime.date] = Query(None),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> VendasDoDiaResponse:
     return relatorio_service.vendas_do_dia(db, data)
@@ -37,7 +37,7 @@ def historico_comandas(
     data_fim: datetime.date = Query(...),
     garcom_id: Optional[int] = Query(None),
     busca: Optional[str] = Query(None),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> HistoricoResponse:
     return relatorio_service.historico_comandas(db, data_inicio, data_fim, garcom_id, busca)
@@ -46,7 +46,7 @@ def historico_comandas(
 @router.get("/fechamento-caixa", response_model=FechamentoCaixaResponse)
 def fechamento_caixa(
     data: datetime.date = Query(...),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> FechamentoCaixaResponse:
     return relatorio_service.fechamento_caixa(db, data)
@@ -55,7 +55,7 @@ def fechamento_caixa(
 @router.get("/dre", response_model=DREResponse)
 def dre(
     mes: str = Query(..., description="Formato YYYY-MM"),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> DREResponse:
     return relatorio_service.dre(db, mes)
@@ -63,7 +63,7 @@ def dre(
 
 @router.get("/cmv-por-produto", response_model=CMVPorProdutoResponse)
 def cmv_por_produto(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> CMVPorProdutoResponse:
     return relatorio_service.cmv_por_produto(db)
@@ -73,7 +73,7 @@ def cmv_por_produto(
 def perdas_cortesias(
     data_inicio: datetime.date = Query(...),
     data_fim: datetime.date = Query(...),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> PerdasCortesiasResponse:
     return relatorio_service.perdas_cortesias(db, data_inicio, data_fim)
@@ -83,7 +83,7 @@ def perdas_cortesias(
 def vendas_por_garcom(
     data_inicio: datetime.date = Query(...),
     data_fim: datetime.date = Query(...),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> VendasPorGarcomResponse:
     return relatorio_service.vendas_por_garcom(db, data_inicio, data_fim)
@@ -93,7 +93,7 @@ def vendas_por_garcom(
 def produtos_mais_vendidos(
     data_inicio: datetime.date = Query(...),
     data_fim: datetime.date = Query(...),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> ProdutosMaisVendidosResponse:
     return relatorio_service.produtos_mais_vendidos(db, data_inicio, data_fim)
@@ -103,7 +103,7 @@ def produtos_mais_vendidos(
 def pico_vendas_horario(
     data_inicio: datetime.date = Query(...),
     data_fim: datetime.date = Query(...),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> PicoVendasHorarioResponse:
     return relatorio_service.pico_vendas_horario(db, data_inicio, data_fim)
@@ -113,7 +113,7 @@ def pico_vendas_horario(
 def vendas_por_produto(
     data_inicio: datetime.date = Query(...),
     data_fim: datetime.date = Query(...),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> VendasPorProdutoResponse:
     return relatorio_service.vendas_por_produto(db, data_inicio, data_fim)

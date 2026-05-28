@@ -12,6 +12,7 @@ class Pagamento(Base):
     __tablename__ = "pagamentos"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
     comanda_id: Mapped[int] = mapped_column(sa.ForeignKey("comandas.id"), nullable=False)
     metodo_id: Mapped[int] = mapped_column(sa.ForeignKey("metodos_pagamento.id"), nullable=False)
     valor: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), nullable=False)

@@ -30,7 +30,7 @@ from src.schemas.auth import GenericMessage, ResetTokenInfo, TokenResponse, User
 
 log = get_logger(__name__)
 
-TENANT_ID = 1
+_DEFAULT_TENANT_ID = 1  # TODO(Issue 3): resolve from onboarding/subdomain
 _INVALID_MSG = "Email/usuário ou senha inválidos"
 
 
@@ -115,7 +115,7 @@ def login(db: Session, identifier: str, password: str) -> TokenResponse:
     if "@" in identifier:
         user = get_user_by_email(db, identifier)
     else:
-        user = get_user_by_username(db, TENANT_ID, identifier)
+        user = get_user_by_username(db, _DEFAULT_TENANT_ID, identifier)
 
     if user is None or not user.is_active:
         raise AppError(code=ErrorCode.SENHA_INCORRETA, message=_INVALID_MSG, http_status=401)
@@ -165,9 +165,10 @@ def _send_reset_email(to_email: str, name: str, reset_url: str) -> None:
         msg["To"] = to_email
         body = (
             f"Olá, {name}!\n\n"
-            f"Clique no link abaixo para redefinir sua senha (válido por 1 hora):\n\n"
+            f"Clique no link abaixo para redefinir sua senha no Flow4Food (válido por 1 hora):\n\n"
             f"{reset_url}\n\n"
-            f"Se você não solicitou a redefinição, ignore este email.\n"
+            f"Se você não solicitou a redefinição, ignore este email.\n\n"
+            f"Flow4Food — por Flow4Tech\n"
         )
         msg.attach(MIMEText(body, "plain", "utf-8"))
         with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:

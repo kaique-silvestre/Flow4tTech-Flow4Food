@@ -3,9 +3,10 @@ import json
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import text
+from sqlalchemy import cast, func, select, text
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session
+from sqlalchemy.types import Date
 
 from src.models.comandas import Comanda, StatusComanda
 from src.models.eventos_comanda import EventoComanda, TipoEvento
@@ -14,8 +15,11 @@ from src.schemas.comandas import ComandaCreateRequest
 
 
 def _next_numero_dia(db: Session) -> int:
+    today = datetime.date.today()
     result = db.execute(
-        text("SELECT MAX(numero_dia) FROM comandas WHERE created_at::date = CURRENT_DATE")
+        select(func.max(Comanda.numero_dia)).where(
+            cast(Comanda.created_at, Date) == today
+        )
     ).scalar()
     return (result or 0) + 1
 
