@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db, require_permission
+from src.api.dependencies import get_current_user, get_tenant_db, require_permission
 from src.schemas.compras import (
     CompraCreateRequest,
     CompraPatchRequest,
@@ -18,7 +18,7 @@ router = APIRouter(dependencies=[Depends(require_permission("compras"))])
 @router.post("", response_model=CompraResponse, status_code=status.HTTP_201_CREATED)
 def create_compra(
     data: CompraCreateRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> CompraResponse:
     return compras_service.criar_compra(db, data)
@@ -33,7 +33,7 @@ def list_compras(
     tipo_compra: Optional[str] = Query(None),
     pagina: int = Query(1, ge=1),
     por_pagina: int = Query(10, ge=1, le=100),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> ComprasPageResponse:
     return compras_service.list_compras(  # type: ignore[return-value]
@@ -44,7 +44,7 @@ def list_compras(
 @router.get("/{compra_id}", response_model=CompraResponse)
 def get_compra(
     compra_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> CompraResponse:
     return compras_service.get_compra(db, compra_id)
@@ -53,7 +53,7 @@ def get_compra(
 @router.post("/{compra_id}/confirmar-recebimento", response_model=CompraResponse)
 def confirmar_recebimento(
     compra_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> CompraResponse:
     return compras_service.confirmar_recebimento(db, compra_id)
@@ -62,7 +62,7 @@ def confirmar_recebimento(
 @router.post("/{compra_id}/cancelar", response_model=CompraResponse)
 def cancelar_compra(
     compra_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> CompraResponse:
     return compras_service.cancelar_compra(db, compra_id)
@@ -72,7 +72,7 @@ def cancelar_compra(
 def patch_compra(
     compra_id: int,
     data: CompraPatchRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> CompraResponse:
     return compras_service.patch_compra(db, compra_id, data)

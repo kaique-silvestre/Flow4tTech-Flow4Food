@@ -23,6 +23,7 @@ from src.repositories import (
     pagamentos_repository,
 )
 from src.schemas.comandas import (
+    CancelarComandaRequest,
     CancelarItemRequest,
     ComandaCreateRequest,
     ComandaResponse,
@@ -350,6 +351,10 @@ def aplicar_desconto(db: Session, comanda_id: int, data: AplicarDescontoRequest)
     if comanda.status not in _ABERTA_STATUSES:
         raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
 
+    ok = comandas_repository.increment_version(db, comanda_id, data.version)
+    if not ok:
+        raise AppError(ErrorCode.COMANDA_DESATUALIZADA, "Versão desatualizada", http_status=409)
+
     comandas_repository.atualizar_desconto(db, comanda_id, data.desconto_percentual, data.desconto_valor)
     db.commit()
     db.refresh(comanda)
@@ -457,7 +462,7 @@ def _reservar_estoque(db: Session, produto_id: int, quantidade: Decimal) -> list
         return []
     insuficientes: list[str] = []
     for comp in componentes:
-        insumo = db.execute(select(Insumo).where(Insumo.id == comp.insumo_id)).scalar_one_or_none()
+        insumo = estoque_repository.get_insumo_for_update(db, comp.insumo_id)
         if insumo:
             insumo.estoque_reservado = insumo.estoque_reservado + comp.quantidade * quantidade
             db.flush()
@@ -479,12 +484,16 @@ def _liberar_reserva_estoque(db: Session, produto_id: int, quantidade: Decimal) 
             db.flush()
 
 
-def cancelar_comanda(db: Session, comanda_id: int) -> ComandaResponse:
+def cancelar_comanda(db: Session, comanda_id: int, data: CancelarComandaRequest) -> ComandaResponse:
     comanda = comandas_repository.get_by_id(db, comanda_id)
     if comanda is None:
         raise AppError(ErrorCode.NOT_FOUND, "Comanda não encontrada", http_status=404)
     if comanda.status not in _ABERTA_STATUSES:
         raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
+
+    ok = comandas_repository.increment_version(db, comanda_id, data.version)
+    if not ok:
+        raise AppError(ErrorCode.COMANDA_DESATUALIZADA, "Versão desatualizada", http_status=409)
 
     itens = comandas_repository.get_itens_para_fechar(db, comanda_id)
     for ic in itens:
@@ -505,7 +514,7 @@ def _dar_baixa_estoque(db: Session, produto_id: int, quantidade: Decimal) -> lis
         return []
     negativos: list[str] = []
     for comp in componentes:
-        insumo = db.execute(select(Insumo).where(Insumo.id == comp.insumo_id)).scalar_one_or_none()
+        insumo = estoque_repository.get_insumo_for_update(db, comp.insumo_id)
         if insumo:
             negativos.extend(_baixar_insumo(db, insumo, comp.quantidade * quantidade))
     return negativos

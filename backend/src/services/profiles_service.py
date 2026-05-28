@@ -13,8 +13,6 @@ from src.repositories.profiles_repository import (
 )
 from src.schemas.profiles import ProfileCreate, ProfileResponse, ProfileUpdate
 
-TENANT_ID = 1
-
 
 def _to_response(profile: Profile, user_count: int = 0) -> ProfileResponse:
     return ProfileResponse(
@@ -30,23 +28,23 @@ def _to_response(profile: Profile, user_count: int = 0) -> ProfileResponse:
     )
 
 
-def get_profiles(db: Session) -> list[ProfileResponse]:
-    rows = list_profiles(db, TENANT_ID)
+def get_profiles(db: Session, tenant_id: int) -> list[ProfileResponse]:
+    rows = list_profiles(db, tenant_id)
     return [_to_response(profile, count) for profile, count in rows]
 
 
-def get_profile(db: Session, profile_id: int) -> ProfileResponse:
+def get_profile(db: Session, tenant_id: int, profile_id: int) -> ProfileResponse:
     profile = get_profile_by_id(db, profile_id)
-    if not profile or profile.tenant_id != TENANT_ID:
+    if not profile or profile.tenant_id != tenant_id:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Perfil não encontrado", http_status=404)
-    rows = list_profiles(db, TENANT_ID)
+    rows = list_profiles(db, tenant_id)
     count = next((c for p, c in rows if p.id == profile_id), 0)
     return _to_response(profile, count)
 
 
-def create_new_profile(db: Session, data: ProfileCreate) -> ProfileResponse:
+def create_new_profile(db: Session, tenant_id: int, data: ProfileCreate) -> ProfileResponse:
     profile = Profile(
-        tenant_id=TENANT_ID,
+        tenant_id=tenant_id,
         name=data.name,
         description=data.description,
         is_system=False,
@@ -56,9 +54,11 @@ def create_new_profile(db: Session, data: ProfileCreate) -> ProfileResponse:
     return _to_response(update_profile(db, profile, data.screens))
 
 
-def update_existing_profile(db: Session, profile_id: int, data: ProfileUpdate) -> ProfileResponse:
+def update_existing_profile(
+    db: Session, tenant_id: int, profile_id: int, data: ProfileUpdate
+) -> ProfileResponse:
     profile = get_profile_by_id(db, profile_id)
-    if not profile or profile.tenant_id != TENANT_ID:
+    if not profile or profile.tenant_id != tenant_id:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Perfil não encontrado", http_status=404)
     if profile.name == "Admin":
         raise AppError(code=ErrorCode.CONFLICT, message="Permissões do Admin não podem ser alteradas", http_status=409)
@@ -78,9 +78,9 @@ def update_existing_profile(db: Session, profile_id: int, data: ProfileUpdate) -
     return _to_response(update_profile(db, profile, screens))
 
 
-def toggle_profile_active(db: Session, profile_id: int) -> ProfileResponse:
+def toggle_profile_active(db: Session, tenant_id: int, profile_id: int) -> ProfileResponse:
     profile = get_profile_by_id(db, profile_id)
-    if not profile or profile.tenant_id != TENANT_ID:
+    if not profile or profile.tenant_id != tenant_id:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Perfil não encontrado", http_status=404)
     if profile.name == "Admin":
         raise AppError(code=ErrorCode.CONFLICT, message="O perfil Admin não pode ser desativado", http_status=409)
@@ -90,14 +90,14 @@ def toggle_profile_active(db: Session, profile_id: int) -> ProfileResponse:
     profile.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(profile)
-    rows = list_profiles(db, TENANT_ID)
+    rows = list_profiles(db, tenant_id)
     count = next((c for p, c in rows if p.id == profile_id), 0)
     return _to_response(profile, count)
 
 
-def delete_existing_profile(db: Session, profile_id: int) -> None:
+def delete_existing_profile(db: Session, tenant_id: int, profile_id: int) -> None:
     profile = get_profile_by_id(db, profile_id)
-    if not profile or profile.tenant_id != TENANT_ID:
+    if not profile or profile.tenant_id != tenant_id:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Perfil não encontrado", http_status=404)
     if profile.is_system:
         raise AppError(code=ErrorCode.CONFLICT, message="Perfis de sistema não podem ser excluídos", http_status=409)

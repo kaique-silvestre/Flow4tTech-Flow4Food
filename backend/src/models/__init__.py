@@ -1,4 +1,5 @@
 from src.models.auth import ConfigSeguranca  # noqa: F401
+from src.models.caixa import CaixaMovimento, CaixaSessao  # noqa: F401
 from src.models.categorias import Categoria  # noqa: F401
 from src.models.comandas import Comanda  # noqa: F401
 from src.models.comissoes_garcom import ComissaoGarcom  # noqa: F401

@@ -5,8 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes import auth as auth_routes
-from src.api.routes import caixa as caixa_routes
 from src.api.routes import backup as backup_routes
+from src.api.routes import caixa as caixa_routes
 from src.api.routes import categorias as categorias_routes
 from src.api.routes import comandas as comandas_routes
 from src.api.routes import compras as compras_routes

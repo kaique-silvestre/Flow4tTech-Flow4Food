@@ -1,9 +1,11 @@
+from collections.abc import Generator
 from typing import Annotated, Optional
 
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.exceptions import InvalidTokenError
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from src.core.config import get_settings
@@ -32,6 +34,17 @@ def get_current_user(
     return payload
 
 
+def get_tenant_db(
+    db: Session = Depends(get_db),
+    payload: dict = Depends(get_current_user),
+) -> Generator[Session, None, None]:
+    """Session with app.tenant_id set from JWT (PostgreSQL only)."""
+    tenant_id = payload.get("tenant_id")
+    if tenant_id is not None and get_settings().DATABASE_URL.startswith("postgresql"):
+        db.execute(text("SET LOCAL app.tenant_id = :tid"), {"tid": str(tenant_id)})
+    yield db
+
+
 def require_permission(screen: str):
     def _check(payload: dict = Depends(get_current_user)) -> dict:
         if "user_id" not in payload:
@@ -44,4 +57,4 @@ def require_permission(screen: str):
     return _check
 
 
-__all__ = ["get_db", "get_current_user", "require_permission"]
+__all__ = ["get_db", "get_tenant_db", "get_current_user", "require_permission"]

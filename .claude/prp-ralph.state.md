@@ -2,8 +2,8 @@
 iteration: 1
 max_iterations: 10
 status: IN_PROGRESS
-plan_path: ".claude/PRPs/plans/issue-1-rls-foundation.md"
-started_at: "2026-05-28T00:00:00Z"
+plan_path: ".claude/PRPs/plans/issue-2-get-db-concorrencia.md"
+started_at: "2026-05-28T01:00:00Z"
 ---
 
 # Ralph Progress Log
@@ -19,7 +19,28 @@ started_at: "2026-05-28T00:00:00Z"
 - JWT_SECRET mínimo 32 chars; test: `"test-secret-only-for-tests-32chars!!"`
 - Tests usam SQLite in-memory; RLS é PostgreSQL-only → usar skip guard nos testes
 - `op.get_bind().dialect.name == 'postgresql'` para guards em migration
-- Alembic migration head atual: "0041"
-- `profiles` e `system_users` já têm `tenant_id` com server_default="1" (migration 0034)
-- `profile_permissions` NÃO tem tenant_id ainda
-- Unique index no email do system_users: já permite múltiplos NULLs no PostgreSQL (NULL != NULL)
+- RLS policy: `USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::bigint)`
+- Migration seed dialect split: PostgreSQL usa ON CONFLICT, SQLite usa INSERT OR IGNORE
+- `profiles` e `system_users`: tenant_id já existia (migration 0034), FK adicionada em 0043 apenas no PG
+- Alembic head após Issue 1: "0043"
+
+## Iteration 1 - 2026-05-28
+
+### Completed
+- Migration 0042: tabela `tenants` + seed tenant_id=1 (compat com server_default="1")
+- Migration 0043: tenant_id em 12 tabelas + FK em profiles/system_users + RLS + índices compostos
+- Models: Tenant novo + tenant_id em Comanda, ItemComanda, Insumo, Produto, MovimentoEstoque, Compra, Pagamento, ComissaoGarcom, EventoComanda, Categoria, Fornecedor, ProfilePermission
+- tests/test_rls.py: isolamento e bloqueio sem app.tenant_id (skip no SQLite)
+- Commit: 10b8467
+
+### Validation Status
+- Ruff: PASS
+- Mypy (src/models/): PASS (26 files)
+- Tests: 61 pass / 53 fail (pre-existing) / 2 skipped (RLS, SQLite) — sem regressões
+
+### Next Steps
+- Issue 2: get_db injection + SELECT FOR UPDATE (bloqueado por Issue 1 ✓)
+- Issue 3: Onboarding atômico de tenant (bloqueado por Issues 1+2)
+- Issue 7: Caixa backend (bloqueado por Issue 1 ✓ — pode começar)
+
+---

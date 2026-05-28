@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db, require_permission
+from src.api.dependencies import get_current_user, get_tenant_db, require_permission
 from src.schemas.produtos import (
     ProdutoCreateRequest,
     ProdutoPageResponse,
@@ -19,7 +19,7 @@ router = APIRouter(dependencies=[Depends(require_permission("cadastros"))])
 def top_produtos(
     dias: int = Query(7, ge=1),
     limit: int = Query(6, ge=1, le=50),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> list[ProdutoResponse]:
     return produtos_service.get_top_produtos(db, dias, limit)  # type: ignore[return-value]
@@ -32,7 +32,7 @@ def list_produtos(
     ativo: Optional[bool] = Query(None),
     pagina: int = Query(1, ge=1),
     por_pagina: int = Query(500, ge=1, le=500),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> ProdutoPageResponse:
     return produtos_service.list_produtos(db, categoria_id, busca, ativo, pagina, por_pagina)  # type: ignore[return-value]
@@ -41,7 +41,7 @@ def list_produtos(
 @router.get("/{produto_id}", response_model=ProdutoResponse)
 def get_produto(
     produto_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> ProdutoResponse:
     return produtos_service.get_produto(db, produto_id)  # type: ignore[return-value]
@@ -50,7 +50,7 @@ def get_produto(
 @router.post("", response_model=ProdutoResponse, status_code=201)
 def create_produto(
     body: ProdutoCreateRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> ProdutoResponse:
     return produtos_service.create_produto(db, body)  # type: ignore[return-value]
@@ -60,7 +60,7 @@ def create_produto(
 def update_produto(
     produto_id: int,
     body: ProdutoUpdateRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> ProdutoResponse:
     return produtos_service.update_produto(db, produto_id, body)  # type: ignore[return-value]
@@ -69,7 +69,7 @@ def update_produto(
 @router.patch("/{produto_id}/desativar", response_model=ProdutoResponse)
 def desativar_produto(
     produto_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> ProdutoResponse:
     return produtos_service.desativar_produto(db, produto_id)  # type: ignore[return-value]
@@ -78,7 +78,7 @@ def desativar_produto(
 @router.patch("/{produto_id}/reativar", response_model=ProdutoResponse)
 def reativar_produto(
     produto_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> ProdutoResponse:
     return produtos_service.reativar_produto(db, produto_id)  # type: ignore[return-value]
@@ -87,7 +87,7 @@ def reativar_produto(
 @router.delete("/{produto_id}", status_code=204)
 def delete_produto(
     produto_id: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> None:
     produtos_service.delete_produto(db, produto_id)
