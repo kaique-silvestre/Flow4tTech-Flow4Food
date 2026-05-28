@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes import auth as auth_routes
+from src.api.routes import caixa as caixa_routes
 from src.api.routes import backup as backup_routes
 from src.api.routes import categorias as categorias_routes
 from src.api.routes import comandas as comandas_routes
@@ -45,7 +46,7 @@ def create_app() -> FastAPI:
     init_sentry(settings.SENTRY_DSN_BACKEND, settings.ENV)
 
     app = FastAPI(
-        title="Matchpoint API",
+        title="Flow4Food API",
         version=settings.APP_VERSION,
         docs_url="/docs" if settings.ENV != "prod" else None,
         lifespan=lifespan,
@@ -81,6 +82,7 @@ def create_app() -> FastAPI:
     app.include_router(dashboard_routes.router, prefix="/api/dashboard", tags=["dashboard"])
     app.include_router(comandas_routes.router, prefix="/api/comandas", tags=["comandas"])
     app.include_router(contas_pagar_routes.router, prefix="/api/contas-pagar", tags=["contas_pagar"])
+    app.include_router(caixa_routes.router, prefix="/api/caixa", tags=["caixa"])
 
     log = get_logger(__name__)
     log.info("app_started", env=settings.ENV, version=settings.APP_VERSION)

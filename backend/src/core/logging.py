@@ -37,5 +37,5 @@ def configure_logging(env: str = "dev") -> None:
     )
 
 
-def get_logger(name: str = "matchpoint") -> structlog.stdlib.BoundLogger:
+def get_logger(name: str = "flow4food") -> structlog.stdlib.BoundLogger:
     return structlog.get_logger(name)
