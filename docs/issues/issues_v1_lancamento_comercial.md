@@ -1,7 +1,7 @@
 # Issues — Flow4Food V1: Lançamento Comercial
 
 **Parent PRD:** `ai-context/prds/prd_v1_lancamento_comercial.md`
-**Gerado em:** 2026-05-28
+**Gerado em:** 2026-05-28.
 
 9 fatias verticais (schema → API → frontend → testes). Issues 8 e 9 são independentes e podem começar imediatamente. Após Issue 1 aterrar: Issues 3 e 7 rodam em paralelo.
 
