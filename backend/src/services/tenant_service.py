@@ -14,6 +14,7 @@ from src.repositories.tenant_repository import (
     get_assinatura_by_tenant,
     get_tenant_by_id,
     list_tenants,
+    set_rls_tenant,
     update_tenant,
 )
 from src.repositories.users_repository import get_user_by_email, get_user_by_username
@@ -64,8 +65,11 @@ def criar_tenant(db: Session, data: TenantCreate) -> TenantResponse:
         )
         tenant = create_tenant(db, tenant)
 
-        # 2. Clone profiles from seed tenant (id=1)
+        # 2. Clone profiles from seed tenant (id=1) — sets RLS to tenant_id=1 internally
         cloned_profiles = clone_profiles_from_seed(db, tenant.id)
+
+        # Switch RLS context to new tenant for subsequent SELECTs (refresh, username check)
+        set_rls_tenant(db, tenant.id)
 
         # 3. Find the Admin profile among cloned
         admin_profile = next((p for p in cloned_profiles if p.name == "Admin"), None)

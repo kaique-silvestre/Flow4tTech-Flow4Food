@@ -1,6 +1,8 @@
+import contextlib
 from datetime import datetime, timezone
 from typing import Optional
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from src.models.assinaturas import Assinatura
@@ -40,9 +42,21 @@ def create_assinatura(db: Session, assinatura: Assinatura) -> Assinatura:
     return assinatura
 
 
+def set_rls_tenant(db: Session, tenant_id: int) -> None:
+    """Set app.tenant_id for RLS in the current transaction (PostgreSQL only)."""
+    with contextlib.suppress(Exception):
+        db.execute(text("SET LOCAL app.tenant_id = :tid"), {"tid": str(tenant_id)})
+
+
 def clone_profiles_from_seed(db: Session, new_tenant_id: int) -> list[Profile]:
-    """Clone Admin/Gerente/Caixa profiles from tenant_id=1 to new_tenant_id."""
+    """Clone Admin/Gerente/Caixa profiles from tenant_id=1 to new_tenant_id.
+
+    SET LOCAL app.tenant_id=1 before SELECT so PostgreSQL RLS allows reading seed profiles.
+    """
     now = datetime.now(timezone.utc)
+    with contextlib.suppress(Exception):
+        db.execute(text("SET LOCAL app.tenant_id = '1'"))
+
     seed_profiles = (
         db.query(Profile)
         .filter(Profile.tenant_id == 1, Profile.is_system == True)  # noqa: E712
