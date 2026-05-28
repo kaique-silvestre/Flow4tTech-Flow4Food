@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api.routes import admin as admin_routes
 from src.api.routes import auth as auth_routes
 from src.api.routes import backup as backup_routes
 from src.api.routes import caixa as caixa_routes
@@ -64,6 +65,7 @@ def create_app() -> FastAPI:
     register_exception_handlers(app)
 
     app.include_router(health.router)
+    app.include_router(admin_routes.router, prefix="/api/admin", tags=["admin"])
     app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
     app.include_router(users_routes.router, prefix="/api/users", tags=["users"])
     app.include_router(profiles_routes.router, prefix="/api/profiles", tags=["profiles"])

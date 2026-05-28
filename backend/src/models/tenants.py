@@ -12,7 +12,7 @@ from src.core.database import Base
 class Tenant(Base):
     __tablename__ = "tenants"
 
-    id: Mapped[int] = mapped_column(sa.BigInteger(), primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
     nome_fantasia: Mapped[str] = mapped_column(sa.String(200), nullable=False)
     cnpj: Mapped[Optional[str]] = mapped_column(sa.String(18), nullable=True, unique=True)  # noqa: UP045
     status: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default="ativo")
