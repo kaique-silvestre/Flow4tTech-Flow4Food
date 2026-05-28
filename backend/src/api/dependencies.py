@@ -57,4 +57,11 @@ def require_permission(screen: str):
     return _check
 
 
-__all__ = ["get_db", "get_tenant_db", "get_current_user", "require_permission"]
+def require_active_subscription(payload: dict = Depends(get_current_user)) -> dict:
+    sub_status = payload.get("subscription_status", "trial")
+    if sub_status not in {"ativa", "trial"}:
+        raise HTTPException(status_code=402, detail="Assinatura vencida ou suspensa")
+    return payload
+
+
+__all__ = ["get_db", "get_tenant_db", "get_current_user", "require_permission", "require_active_subscription"]

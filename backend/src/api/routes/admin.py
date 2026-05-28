@@ -6,7 +6,15 @@ from sqlalchemy.orm import Session
 
 from src.core.config import get_settings
 from src.core.database import get_db
-from src.schemas.tenants import TenantCreate, TenantResponse, TenantUpdate
+from src.schemas.billing import (
+    AssinaturaUpdate,
+    PagamentoCreate,
+    PagamentoInfo,
+    PlanoCreate,
+    PlanoInfo,
+)
+from src.schemas.tenants import AssinaturaInfo, TenantCreate, TenantResponse, TenantUpdate
+from src.services import billing_service
 from src.services.tenant_service import (
     criar_tenant,
     get_all_tenants,
@@ -69,3 +77,40 @@ def update_tenant_endpoint(
     _: None = Depends(require_superadmin),
 ) -> TenantResponse:
     return update_existing_tenant(db, tenant_id, body)
+
+
+@router.patch("/tenants/{tenant_id}/subscription", response_model=AssinaturaInfo)
+def update_subscription_endpoint(
+    tenant_id: int,
+    body: AssinaturaUpdate,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_superadmin),
+) -> AssinaturaInfo:
+    return billing_service.atualizar_assinatura(db, tenant_id, body)
+
+
+@router.post("/tenants/{tenant_id}/payments", response_model=PagamentoInfo, status_code=201)
+def register_payment_endpoint(
+    tenant_id: int,
+    body: PagamentoCreate,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_superadmin),
+) -> PagamentoInfo:
+    return billing_service.registrar_pagamento(db, tenant_id, body)
+
+
+@router.get("/plans", response_model=list[PlanoInfo])
+def list_plans_endpoint(
+    db: Session = Depends(get_db),
+    _: None = Depends(require_superadmin),
+) -> list[PlanoInfo]:
+    return billing_service.listar_planos(db)
+
+
+@router.post("/plans", response_model=PlanoInfo, status_code=201)
+def create_plan_endpoint(
+    body: PlanoCreate,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_superadmin),
+) -> PlanoInfo:
+    return billing_service.criar_plano(db, body)
