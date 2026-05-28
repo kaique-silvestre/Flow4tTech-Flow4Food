@@ -71,6 +71,16 @@ api.interceptors.response.use(
       }
     }
 
+    if (error.response?.status === 402) {
+      const user = useAuthStore.getState().user;
+      const isAdmin = user?.profile_name === "Admin";
+      const target = isAdmin ? "/assinatura-vencida" : "/conta-suspensa";
+      if (window.location.pathname !== target) {
+        window.location.assign(target);
+      }
+      return Promise.reject(error);
+    }
+
     if (error.response?.status && error.response.status >= 500) {
       Sentry.captureException(error);
     }

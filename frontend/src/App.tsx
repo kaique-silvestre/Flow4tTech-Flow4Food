@@ -39,6 +39,8 @@ import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { CardapioPage } from "@/features/cardapio/CardapioPage";
 import { ContasPagarPage } from "@/features/contas_pagar/ContasPagarPage";
 import { CaixaPage } from "@/features/caixa/CaixaPage";
+import { AssinaturaVencidaPage } from "@/features/assinatura/AssinaturaVencidaPage";
+import { ContaSuspensaPage } from "@/features/assinatura/ContaSuspensaPage";
 import { queryClient } from "@/lib/queryClient";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
@@ -52,6 +54,8 @@ export function App() {
           <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
           <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
           <Route element={<RequireAuth />}>
+            <Route path="/assinatura-vencida" element={<AssinaturaVencidaPage />} />
+            <Route path="/conta-suspensa" element={<ContaSuspensaPage />} />
             <Route path="/comprovante/:id" element={<ComprovantePage />} />
             <Route path="/comandas/:id/pre-conta" element={<PreContaPage />} />
             <Route element={<AppLayout />}>

@@ -8,6 +8,7 @@ export interface AuthUser {
   profile_id: number;
   profile_name: string;
   permissions: string[];
+  subscription_status?: string;
 }
 
 function parseJwtPayload(token: string): AuthUser | null {
