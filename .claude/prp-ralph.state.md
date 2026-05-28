@@ -76,4 +76,25 @@ started_at: "2026-05-28T01:00:00Z"
 - Issue 7: Caixa backend (bloqueado por Issue 1 ✓)
 - Issue 8: Rebranding (independente)
 
+## Iteration 3 - 2026-05-28
+
+### Completed (Issue 7)
+- Migration 0044: caixa_sessoes + caixa_movimentos com tenant_id, RLS, índice parcial único (uma sessão aberta por tenant, PG-only)
+- Models: CaixaSessao, CaixaMovimento em src/models/caixa.py
+- caixa_repository: get_sessao_aberta, criar_sessao, fechar_sessao, criar_movimento, list_movimentos, sum_movimentos_tipo, sum_pagamentos_dinheiro
+- caixa_service: abrir_caixa (409 se duplicado), fechar_caixa (valor_esperado = abertura + dinheiro + suprimentos - sangrias), registrar_movimento, get_sessao_aberta
+- api/routes/caixa.py: POST /api/caixa/abrir, POST /api/caixa/fechar, POST /api/caixa/movimentos, GET /api/caixa/sessao
+- require_permission("caixa") em todos os endpoints
+- 12 testes: fluxo completo, 409 dupla abertura, 404 sem sessão, 403 sem permissão
+- Commit: 1ec096a
+
+### Validation Status
+- Ruff: PASS
+- Mypy (5 arquivos caixa): PASS
+- Tests: 12/12 caixa PASS; 78 pass / 52 fail (pre-existing) / 3 skipped — sem regressões
+
+### Next Steps
+- Issue 3: Onboarding atômico de tenant (bloqueado por Issues 1+2 ✓)
+- Issue 9: Frontend tela de caixa (bloqueado por Issue 7 ✓)
+
 ---
