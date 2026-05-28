@@ -16,6 +16,12 @@ def get_user_by_username(db: Session, tenant_id: int, username: str) -> Optional
     ).first()
 
 
+def get_user_by_username_global(db: Session, username: str) -> Optional[SystemUser]:
+    return _with_profile(
+        db.query(SystemUser).filter(SystemUser.username == username)
+    ).first()
+
+
 def get_user_by_email(db: Session, email: str) -> Optional[SystemUser]:
     return _with_profile(
         db.query(SystemUser).filter(SystemUser.email == email)
