@@ -33,6 +33,7 @@ class ItemCompra(Base):
     __tablename__ = "itens_compra"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
     compra_id: Mapped[int] = mapped_column(sa.ForeignKey("compras.id"), nullable=False)
     insumo_id: Mapped[int] = mapped_column(sa.ForeignKey("insumos.id"), nullable=False)
     quantidade: Mapped[Decimal] = mapped_column(sa.Numeric(12, 4), nullable=False)
