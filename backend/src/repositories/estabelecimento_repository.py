@@ -1,12 +1,13 @@
 from typing import Optional
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.models.estabelecimento import Estabelecimento
 
 
 def get_estabelecimento(db: Session) -> Optional[Estabelecimento]:
-    return db.get(Estabelecimento, 1)
+    return db.execute(select(Estabelecimento)).scalars().first()
 
 
 def upsert_estabelecimento(
@@ -16,9 +17,9 @@ def upsert_estabelecimento(
     endereco: Optional[str] = None,
     telefone: Optional[str] = None,
 ) -> Estabelecimento:
-    est = db.get(Estabelecimento, 1)
+    est = db.execute(select(Estabelecimento)).scalars().first()
     if est is None:
-        est = Estabelecimento(id=1, nome=nome or "Estabelecimento")
+        est = Estabelecimento(nome=nome or "Estabelecimento")
         db.add(est)
     if nome is not None:
         est.nome = nome
