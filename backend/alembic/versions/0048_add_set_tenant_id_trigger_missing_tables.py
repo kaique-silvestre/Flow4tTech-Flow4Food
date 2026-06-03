@@ -32,6 +32,19 @@ def upgrade() -> None:
     if bind.dialect.name != "postgresql":
         return
 
+    # Create the trigger function if it doesn't already exist (idempotent)
+    bind.execute(sa.text("""
+        CREATE OR REPLACE FUNCTION set_tenant_id()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            IF NEW.tenant_id IS NULL THEN
+                NEW.tenant_id := NULLIF(current_setting('app.tenant_id', true), '')::bigint;
+            END IF;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+    """))
+
     for table in _TABLES:
         bind.execute(sa.text(
             f"CREATE TRIGGER trg_set_tenant_id "
@@ -47,3 +60,5 @@ def downgrade() -> None:
 
     for table in _TABLES:
         bind.execute(sa.text(f"DROP TRIGGER IF EXISTS trg_set_tenant_id ON {table}"))
+
+    bind.execute(sa.text("DROP FUNCTION IF EXISTS set_tenant_id()"))
