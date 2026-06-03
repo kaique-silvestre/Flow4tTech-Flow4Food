@@ -34,7 +34,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://matchpoint:matchpoint@localhost:5432/matchpoint_test
-      JWT_SECRET: ci-test-secret-replace-in-real-environments-only
+      JWT_SECRET: test-secret-only-for-tests-32chars!!
       ENV: test
 
     steps:

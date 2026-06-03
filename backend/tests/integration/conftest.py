@@ -58,8 +58,8 @@ def seed_tenants(db):
 
     # Profile permissions: grant all known screens
     screens = [
-        "cadastros", "vendas", "estoque", "compras",
-        "financeiro", "relatorios", "dashboard", "config",
+        "dashboard", "comandas", "compras", "estoque",
+        "cadastros", "relatorios", "configuracoes", "gestao_usuarios",
     ]
     perm_id = 999900
     for profile_id in (99990, 99991):
