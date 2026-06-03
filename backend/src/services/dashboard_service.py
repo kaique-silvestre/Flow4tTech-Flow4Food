@@ -64,6 +64,8 @@ def dashboard(db: Session) -> DashboardResponse:
 
     entregas = []
     for c in compras_agendadas:
+        if c.data_prevista_recebimento is None:
+            continue
         nome = None
         if c.fornecedor_id:
             f = db.execute(select(Fornecedor).where(Fornecedor.id == c.fornecedor_id)).scalar_one_or_none()
@@ -78,12 +80,12 @@ def dashboard(db: Session) -> DashboardResponse:
         )
 
     return DashboardResponse(
-        faturamento_hoje=faturamento_hoje,
-        ticket_medio_hoje=ticket_medio,
+        faturamento_hoje=float(faturamento_hoje),
+        ticket_medio_hoje=float(ticket_medio),
         cmv_hoje=float(cmv),
         comandas_abertas=len(abertas_lista),
         comandas_fechadas_hoje=qtd_fechadas,
-        lucro_estimado_hoje=lucro_estimado,
+        lucro_estimado_hoje=float(lucro_estimado),
         faturamento_por_hora=faturamento_por_hora,
         top_10_produtos=top_10,
         ultimos_30_dias=ultimos_30,
