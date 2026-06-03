@@ -43,21 +43,30 @@ def upgrade() -> None:
         )
 
     # 2. Populate tenant_id for existing rows
-    bind.execute(sa.text("UPDATE garcons SET tenant_id = 2"))
-    bind.execute(sa.text("UPDATE metodos_pagamento SET tenant_id = 2"))
-    bind.execute(sa.text("UPDATE contas_pagar SET tenant_id = 2"))
-    bind.execute(sa.text("UPDATE notificacoes SET tenant_id = 2"))
-    bind.execute(sa.text("UPDATE estabelecimento SET tenant_id = 2"))
-    bind.execute(sa.text(
-        "UPDATE ficha_tecnica ft SET tenant_id = ("
-        "  SELECT tenant_id FROM produtos WHERE produtos.id = ft.produto_id"
-        ")"
-    ))
-    bind.execute(sa.text(
-        "UPDATE itens_compra ic SET tenant_id = ("
-        "  SELECT tenant_id FROM compras WHERE compras.id = ic.compra_id"
-        ")"
-    ))
+    # Fresh DB (e.g. staging) has no tenants yet — delete orphaned seeds so FK succeeds.
+    # Existing DB (prod) already had tenants — use first tenant id dynamically.
+    row = bind.execute(sa.text("SELECT id FROM tenants ORDER BY id LIMIT 1")).fetchone()
+    if row is None:
+        # No tenants: drop seed rows that have no owner; they'll be recreated at signup
+        for _t in _TABLES:
+            bind.execute(sa.text(f"DELETE FROM {_t} WHERE tenant_id IS NULL"))
+    else:
+        first_tenant_id = row[0]
+        bind.execute(sa.text(f"UPDATE garcons SET tenant_id = {first_tenant_id} WHERE tenant_id IS NULL"))
+        bind.execute(sa.text(f"UPDATE metodos_pagamento SET tenant_id = {first_tenant_id} WHERE tenant_id IS NULL"))
+        bind.execute(sa.text(f"UPDATE contas_pagar SET tenant_id = {first_tenant_id} WHERE tenant_id IS NULL"))
+        bind.execute(sa.text(f"UPDATE notificacoes SET tenant_id = {first_tenant_id} WHERE tenant_id IS NULL"))
+        bind.execute(sa.text(f"UPDATE estabelecimento SET tenant_id = {first_tenant_id} WHERE tenant_id IS NULL"))
+        bind.execute(sa.text(
+            "UPDATE ficha_tecnica ft SET tenant_id = ("
+            "  SELECT tenant_id FROM produtos WHERE produtos.id = ft.produto_id"
+            ") WHERE ft.tenant_id IS NULL"
+        ))
+        bind.execute(sa.text(
+            "UPDATE itens_compra ic SET tenant_id = ("
+            "  SELECT tenant_id FROM compras WHERE compras.id = ic.compra_id"
+            ") WHERE ic.tenant_id IS NULL"
+        ))
 
     # 3. Set NOT NULL and default
     for table in _TABLES:
