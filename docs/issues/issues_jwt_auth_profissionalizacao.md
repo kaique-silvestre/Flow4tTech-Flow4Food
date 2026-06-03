@@ -19,7 +19,7 @@ Issue 1 — Fase 1: Correções críticas (sem infra)
 
 ---
 
-## Issue 1 — Fase 1: Correções críticas de autenticação
+## Issue 1 — Fase 1: Correções críticas de autenticação ✅
 
 **Tipo:** Security
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -38,15 +38,15 @@ Quatro correções independentes no mesmo PR, todas na camada de autenticação:
 
 ### Critérios de aceite
 
-- [ ] Request com token sem campo `user_id` para rota com `require_permission` → resposta 403.
-- [ ] Request com token com `user_id` mas sem a permissão da tela → resposta 403.
-- [ ] Request com token com `user_id` e permissão correta → resposta 200.
-- [ ] Token gerado após deploy tem `exp` calculado com `JWT_EXPIRES_HOURS` do config (não mais 8h fixo).
-- [ ] Inicializar backend com `JWT_SECRET` de menos de 32 chars → erro na startup, aplicação não sobe.
-- [ ] `python-jose` removido de `pyproject.toml`; `pyjwt[crypto]` adicionado.
-- [ ] `jwt.encode` e `jwt.decode` funcionam corretamente com HS256.
-- [ ] Login, `/me` e rotas protegidas funcionam normalmente após a troca de biblioteca.
-- [ ] Nenhuma regressão em rotas de reset de senha ou change-password.
+- [x] Request com token sem campo `user_id` para rota com `require_permission` → resposta 403.
+- [x] Request com token com `user_id` mas sem a permissão da tela → resposta 403.
+- [x] Request com token com `user_id` e permissão correta → resposta 200.
+- [x] Token gerado após deploy tem `exp` calculado com `JWT_EXPIRES_HOURS` do config (não mais 8h fixo).
+- [x] Inicializar backend com `JWT_SECRET` de menos de 32 chars → erro na startup, aplicação não sobe.
+- [x] `python-jose` removido de `pyproject.toml`; `pyjwt[crypto]` adicionado.
+- [x] `jwt.encode` e `jwt.decode` funcionam corretamente com HS256.
+- [x] Login, `/me` e rotas protegidas funcionam normalmente após a troca de biblioteca.
+- [x] Nenhuma regressão em rotas de reset de senha ou change-password.
 
 ### Testes
 
@@ -68,7 +68,7 @@ Nenhum. Mas: **atualizar `JWT_SECRET` no Railway e `.env` local antes de fazer o
 
 ---
 
-## Issue 2 — Fase 2: Logout com blacklist no Postgres
+## Issue 2 — Fase 2: Logout com blacklist no Postgres ✅
 
 **Tipo:** Security
 **Bloqueado por:** Issue 1 (depende do campo `jti` adicionado ao token e da migração pyjwt)
@@ -91,15 +91,15 @@ Hoje o `/logout` não faz nada no servidor — o token continua válido até exp
 
 ### Critérios de aceite
 
-- [ ] Novo campo `jti` (UUID v4 string) presente em todo token emitido após o deploy.
-- [ ] Tabela `revoked_tokens` criada via migration Alembic sem afetar dados existentes.
-- [ ] `POST /auth/logout` com token válido → 204 e token adicionado à blacklist.
-- [ ] Request imediatamente após logout com o mesmo token → 401 "Token revogado".
-- [ ] Token expirado naturalmente não precisa estar na blacklist para ser rejeitado (jwt.decode já lança erro de expiração).
-- [ ] Dois usuários diferentes: logout de um não afeta sessão do outro.
-- [ ] Job de limpeza remove registros com `expires_at` no passado e preserva os válidos.
-- [ ] Tokens emitidos antes do deploy (sem `jti`) continuam funcionando normalmente (campo `jti` ausente = não verificado na blacklist).
-- [ ] Nenhuma regressão em rotas protegidas para usuários que não fizeram logout.
+- [x] Novo campo `jti` (UUID v4 string) presente em todo token emitido após o deploy.
+- [x] Tabela `revoked_tokens` criada via migration Alembic sem afetar dados existentes.
+- [x] `POST /auth/logout` com token válido → 204 e token adicionado à blacklist.
+- [x] Request imediatamente após logout com o mesmo token → 401 "Token revogado".
+- [x] Token expirado naturalmente não precisa estar na blacklist para ser rejeitado (jwt.decode já lança erro de expiração).
+- [x] Dois usuários diferentes: logout de um não afeta sessão do outro.
+- [x] Job de limpeza remove registros com `expires_at` no passado e preserva os válidos.
+- [x] Tokens emitidos antes do deploy (sem `jti`) continuam funcionando normalmente (campo `jti` ausente = não verificado na blacklist).
+- [x] Nenhuma regressão em rotas protegidas para usuários que não fizeram logout.
 
 ### Testes
 
@@ -122,7 +122,7 @@ Issue 1 (pyjwt instalado, `jti` adicionado ao token).
 
 ---
 
-## Issue 3 — Fase 3+4: Refresh token httpOnly + access token em memória
+## Issue 3 — Fase 3+4: Refresh token httpOnly + access token em memória ✅
 
 **Tipo:** Security + Feature
 **Bloqueado por:** Issue 1 (depende da estrutura pyjwt e config)
@@ -163,17 +163,17 @@ Dois problemas resolvidos juntos (devem ser deployados no mesmo PR backend+front
 
 ### Critérios de aceite
 
-- [ ] `POST /login` retorna `{ access_token }` no body E seta cookie `refresh_token` (`httponly`, `secure`, `samesite=none`).
-- [ ] Fechar aba e reabrir → `authStore.token` é `null`, mas `POST /auth/refresh` com cookie ativo reemite access token automaticamente (transparente para o usuário via interceptor).
-- [ ] `POST /auth/refresh` com cookie válido → 200 + novo `access_token` + cookie rotacionado.
-- [ ] `POST /auth/refresh` com cookie expirado → 401 → frontend redireciona `/login`.
-- [ ] `POST /auth/refresh` com cookie revogado (pós-logout) → 401 → frontend redireciona `/login`.
-- [ ] `POST /auth/logout` → access token na blacklist + refresh tokens do usuário revogados + cookie deletado.
-- [ ] 3 requests paralelos que recebem 401 → apenas 1 chamada ao `/refresh` → as 3 requests retentadas.
-- [ ] `localStorage` não contém mais `matchpoint_jwt` após o deploy.
-- [ ] Tabela `refresh_tokens` armazena hash SHA-256, nunca o token bruto.
-- [ ] Job de limpeza remove refresh tokens expirados diariamente.
-- [ ] Deploy backend Fase 3 sem frontend correspondente não é permitido (quebra a sessão de todos).
+- [x] `POST /login` retorna `{ access_token }` no body E seta cookie `refresh_token` (`httponly`, `secure`, `samesite=none`).
+- [x] Fechar aba e reabrir → `authStore.token` é `null`, mas `POST /auth/refresh` com cookie ativo reemite access token automaticamente (transparente para o usuário via interceptor).
+- [x] `POST /auth/refresh` com cookie válido → 200 + novo `access_token` + cookie rotacionado.
+- [x] `POST /auth/refresh` com cookie expirado → 401 → frontend redireciona `/login`.
+- [x] `POST /auth/refresh` com cookie revogado (pós-logout) → 401 → frontend redireciona `/login`.
+- [x] `POST /auth/logout` → access token na blacklist + refresh tokens do usuário revogados + cookie deletado.
+- [x] 3 requests paralelos que recebem 401 → apenas 1 chamada ao `/refresh` → as 3 requests retentadas.
+- [x] `localStorage` não contém mais `matchpoint_jwt` após o deploy.
+- [x] Tabela `refresh_tokens` armazena hash SHA-256, nunca o token bruto.
+- [x] Job de limpeza remove refresh tokens expirados diariamente.
+- [x] Deploy backend Fase 3 sem frontend correspondente não é permitido (quebra a sessão de todos).
 
 ### Testes
 
