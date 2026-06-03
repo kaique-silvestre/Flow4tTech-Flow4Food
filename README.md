@@ -13,7 +13,7 @@ Monorepo do sistema Matchpoint MVP.
 
 - `docs/matchpoint_documentacao.md` — documento mestre (fluxo + arquitetura Deep Models)
 - `docs/prd_matchpoint_mvp.md` — PRD do MVP
-- `docs/issues_matchpoint_mvp.md` — fatias verticais para implementação
+- `docs/issues_matchpoint_mvp.md` — fatias verticais para implementação.
 
 ## Setup rápido
 
