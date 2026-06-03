@@ -67,8 +67,6 @@ jobs:
 
       - name: Run tests
         run: pytest --tb=short -q
-        # Remove this condition when tests are written:
-        continue-on-error: true
 
   # ──────────────────────────────────────────
   # FRONTEND

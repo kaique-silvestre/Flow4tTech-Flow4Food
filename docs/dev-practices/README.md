@@ -10,6 +10,7 @@ Documentação interna de engenharia. Leitura obrigatória antes de contribuir.
 | [ci-cd.md](ci-cd.md) | Pipeline GitHub Actions, o que roda em cada etapa |
 | [onboarding.md](onboarding.md) | Setup do ambiente local do zero |
 | [convencoes.md](convencoes.md) | Commits, branches, naming, code style |
+| [pendencias-manuais.md](pendencias-manuais.md) | Ações que requerem acesso admin (GitHub, Railway, Vercel) |
 
 ## Princípios
 
