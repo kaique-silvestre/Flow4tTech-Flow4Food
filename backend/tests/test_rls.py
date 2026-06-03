@@ -60,7 +60,9 @@ def test_rls_isolation_between_tenants(pg_session):
     _seed_categoria(session, 2, "_rls_test_cat_t2")
     session.commit()
 
-    # Set tenant context to tenant 1
+    # Switch to the non-owner app_user role so RLS actually applies
+    # (the DB owner bypasses RLS), then set tenant context to tenant 1.
+    session.execute(text("SET ROLE app_user"))
     session.execute(text("SET app.tenant_id = '1'"))
     rows = session.execute(
         text("SELECT tenant_id FROM categorias WHERE nome LIKE '_rls_test_cat_%'")
@@ -75,7 +77,8 @@ def test_rls_blocks_without_setting(pg_session):
     """Query without SET app.tenant_id must return 0 rows (RLS blocks all)."""
     session = pg_session
 
-    # Reset setting — use empty string so NULLIF returns NULL
+    # Under app_user role, reset setting — empty string so NULLIF returns NULL
+    session.execute(text("SET ROLE app_user"))
     session.execute(text("SET app.tenant_id = ''"))
     rows = session.execute(
         text("SELECT id FROM categorias WHERE nome LIKE '_rls_test_cat_%'")

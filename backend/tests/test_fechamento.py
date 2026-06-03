@@ -220,8 +220,8 @@ def test_fechar_com_desconto_percentual(c):
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
 
-    _lancar_item(c, cid, item["id"], comanda["version"])
-    resp_desc = c.post(f"/api/comandas/{cid}/desconto", json={"desconto_percentual": "10"})
+    lancado = _lancar_item(c, cid, item["id"], comanda["version"])
+    resp_desc = c.post(f"/api/comandas/{cid}/desconto", json={"version": lancado["version"], "desconto_percentual": "10"})
     assert resp_desc.status_code == 200, resp_desc.text
 
     resp = _fechar(c, cid, metodo["id"], "90.00")
@@ -239,8 +239,8 @@ def test_fechar_com_desconto_valor(c):
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
 
-    _lancar_item(c, cid, item["id"], comanda["version"])
-    resp_desc = c.post(f"/api/comandas/{cid}/desconto", json={"desconto_valor": "8.90"})
+    lancado = _lancar_item(c, cid, item["id"], comanda["version"])
+    resp_desc = c.post(f"/api/comandas/{cid}/desconto", json={"version": lancado["version"], "desconto_valor": "8.90"})
     assert resp_desc.status_code == 200, resp_desc.text
 
     resp = _fechar(c, cid, metodo["id"], "91.10")

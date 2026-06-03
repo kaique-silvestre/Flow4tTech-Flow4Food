@@ -189,7 +189,7 @@ def test_fornecedor_crud(crud_client):
 
     resp = crud_client.get("/api/fornecedores")
     assert resp.status_code == 200
-    assert any(f["nome"] == "Distribuidora ABC" for f in resp.json())
+    assert any(f["nome"] == "Distribuidora ABC" for f in resp.json()["itens"])
 
     resp = crud_client.put(f"/api/fornecedores/{fid}", json={"nome": "Dist. ABC Ltda", "telefone": None, "email": None})
     assert resp.status_code == 200
@@ -227,14 +227,14 @@ def test_garcom_crud(crud_client):
 
     resp = crud_client.get("/api/garcons")
     assert resp.status_code == 200
-    assert any(g["nome"] == "João" for g in resp.json())
+    assert any(g["nome"] == "João" for g in resp.json()["itens"])
 
     resp = crud_client.put(f"/api/garcons/{gid}", json={"nome": "João", "ativo": False})
     assert resp.status_code == 200
     assert resp.json()["ativo"] is False
 
     resp = crud_client.get("/api/garcons")
-    garcom = next(g for g in resp.json() if g["id"] == gid)
+    garcom = next(g for g in resp.json()["itens"] if g["id"] == gid)
     assert garcom["ativo"] is False
 
 
@@ -245,7 +245,7 @@ def test_garcom_inativo_aparece_na_lista(crud_client):
     crud_client.put(f"/api/garcons/{gid}", json={"nome": "Maria", "ativo": False})
 
     resp = crud_client.get("/api/garcons")
-    ids = [g["id"] for g in resp.json()]
+    ids = [g["id"] for g in resp.json()["itens"]]
     assert gid in ids
 
 

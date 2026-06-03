@@ -43,7 +43,7 @@ def test_select_for_update_prevents_lost_update(pg_session_factory):
     result = s.execute(
         text(
             "INSERT INTO insumos (tenant_id, nome, unidade_base, estoque_atual, estoque_reservado, ativo) "
-            "VALUES (1, '_cas_test_insumo', 'un', 10, 0, true) RETURNING id"
+            "VALUES (1, '_cas_test_insumo', 'UNIDADE', 10, 0, true) RETURNING id"
         )
     ).fetchone()
     insumo_id = result[0]
