@@ -101,7 +101,7 @@ export function ComandaAbertaPage() {
   const [mobileTab, setMobileTab] = useState<"cardapio" | "itens">("cardapio");
 
   const reopenComanda = useReopenComanda(comanda_id);
-  const cancelarComanda = useCancelarComanda(comanda_id);
+  const cancelarComanda = useCancelarComanda(comanda_id, comanda?.version ?? 0);
 
   const [now, setNow] = useState(() => Date.now());
   const comandaStatus = comanda?.status;

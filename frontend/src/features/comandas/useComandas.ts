@@ -234,12 +234,12 @@ export function usePatchComanda(comanda_id: number | string) {
   });
 }
 
-export function useCancelarComanda(comanda_id: number | string) {
+export function useCancelarComanda(comanda_id: number | string, version: number) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   return useMutation({
     mutationFn: () =>
-      api.post<ComandaResponse>(`/api/comandas/${comanda_id}/cancelar`).then((r) => r.data),
+      api.post<ComandaResponse>(`/api/comandas/${comanda_id}/cancelar`, { version }).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comandas"] });
       qc.invalidateQueries({ queryKey: ["insumos"] });

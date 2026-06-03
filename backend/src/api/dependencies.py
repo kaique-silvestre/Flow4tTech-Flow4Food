@@ -38,9 +38,10 @@ def get_tenant_db(
     db: Session = Depends(get_db),
     payload: dict = Depends(get_current_user),
 ) -> Generator[Session, None, None]:
-    """Session with app.tenant_id set from JWT (PostgreSQL only)."""
+    """Session scoped to tenant via RLS (PostgreSQL only)."""
     tenant_id = payload.get("tenant_id")
     if tenant_id is not None and get_settings().DATABASE_URL.startswith("postgresql"):
+        db.execute(text("SET LOCAL ROLE app_user"))
         db.execute(text("SET LOCAL app.tenant_id = :tid"), {"tid": str(tenant_id)})
     yield db
 

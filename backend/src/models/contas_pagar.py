@@ -12,6 +12,7 @@ class ContaPagar(Base):
     __tablename__ = "contas_pagar"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
     compra_id: Mapped[Optional[int]] = mapped_column(sa.ForeignKey("compras.id"), nullable=True)
     fornecedor_id: Mapped[Optional[int]] = mapped_column(sa.ForeignKey("fornecedores.id"), nullable=True)
     valor: Mapped[Decimal] = mapped_column(sa.Numeric(12, 2), nullable=False)
@@ -32,6 +33,7 @@ class Notificacao(Base):
     __tablename__ = "notificacoes"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
     tipo: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     referencia_id: Mapped[Optional[int]] = mapped_column(nullable=True)
     mensagem: Mapped[str] = mapped_column(sa.String(500), nullable=False)
