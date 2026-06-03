@@ -57,7 +57,7 @@ jobs:
         run: mypy src/
 
       - name: Check migration heads (must be exactly 1)
-        run: alembic heads | wc -l | grep -q "^1$" || (echo "ERROR: multiple alembic heads detected" && exit 1)
+        run: 'alembic heads | wc -l | grep -q "^1$" || (echo "ERROR: multiple alembic heads detected" && exit 1)'
 
       - name: Run migrations on test DB
         run: alembic upgrade head
