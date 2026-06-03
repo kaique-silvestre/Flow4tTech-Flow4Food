@@ -36,8 +36,8 @@ class Settings(BaseSettings):
     @field_validator("ENV")
     @classmethod
     def validate_env(cls, v: str) -> str:
-        if v not in {"dev", "prod", "test"}:
-            raise ValueError("ENV must be one of: dev, prod, test")
+        if v not in {"dev", "staging", "prod", "test"}:
+            raise ValueError("ENV must be one of: dev, staging, prod, test")
         return v
 
 

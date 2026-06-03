@@ -6,7 +6,7 @@
 
 ---
 
-## Issue 1 — Inverter mesa/nome na nova comanda
+## Issue 1 — Inverter mesa/nome na nova comanda ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -34,7 +34,7 @@ Nenhuma alteração de backend ou schema necessária.
 
 ---
 
-## Issue 2 — Filtrar produtos ativos na busca da comanda
+## Issue 2 — Filtrar produtos ativos na busca da comanda ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -61,7 +61,7 @@ A página de cardápio (gestão) continua funcionando sem alteração — ela n�
 
 ---
 
-## Issue 3 — Toast de erro com duração automática
+## Issue 3 — Toast de erro com duração automática ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -91,7 +91,7 @@ Nenhuma alteração de backend necessária.
 
 ---
 
-## Issue 4 — Hierarquia de categorias no cardápio
+## Issue 4 — Hierarquia de categorias no cardápio ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -118,7 +118,7 @@ Produto sem subcategoria exibe apenas o nome da categoria raiz. Produto sem cate
 
 ---
 
-## Issue 5 — Máscara monetária nos campos de valor
+## Issue 5 — Máscara monetária nos campos de valor ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -151,7 +151,7 @@ Instalar dependência `react-number-format` e aplicar o componente em:
 
 ---
 
-## Issue 6 — Validação inline de categoria no produto
+## Issue 6 — Validação inline de categoria no produto ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -179,7 +179,7 @@ O botão de salvar não deve disparar chamada ao backend quando o campo obrigat�
 
 ---
 
-## Issue 7 — Tipo em método de pagamento
+## Issue 7 — Tipo em método de pagamento ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -206,7 +206,7 @@ Migration additive — não remove nem altera colunas existentes. Métodos exist
 
 ---
 
-## Issue 8 — Troco no pagamento em dinheiro
+## Issue 8 — Troco no pagamento em dinheiro ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Issue 7 (tipo em método de pagamento precisa existir para detecção de "dinheiro")
@@ -244,7 +244,7 @@ Implementar captura de troco end-to-end para pagamentos em dinheiro.
 
 ---
 
-## Issue 9 — Reserva de estoque no ciclo da comanda
+## Issue 9 — Reserva de estoque no ciclo da comanda ✅
 
 **Tipo:** HITL
 **Bloqueado por:** Nenhum — pode iniciar imediatamente
@@ -293,7 +293,7 @@ Implementar reserva de estoque durante o ciclo de vida da comanda, com aviso ime
 
 ---
 
-## Issue 10 — Visibilidade de estoque reservado
+## Issue 10 — Visibilidade de estoque reservado ✅
 
 **Tipo:** AFK
 **Bloqueado por:** Issue 9 (coluna `estoque_reservado` precisa existir no banco)
