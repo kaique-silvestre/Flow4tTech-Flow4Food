@@ -29,9 +29,9 @@ from src.api.routes import relatorios as relatorios_routes
 from src.api.routes import users as users_routes
 from src.core.config import get_settings
 from src.core.errors import register_exception_handlers
+from src.core.limiter import limiter
 from src.core.logging import configure_logging, get_logger
 from src.core.middleware import RequestIdMiddleware
-from src.core.limiter import limiter
 from src.core.scheduler import start as scheduler_start
 from src.core.scheduler import stop as scheduler_stop
 from src.core.sentry import init_sentry
@@ -66,7 +66,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
 
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
     register_exception_handlers(app)
 

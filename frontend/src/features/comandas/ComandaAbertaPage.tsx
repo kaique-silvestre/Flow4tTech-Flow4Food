@@ -56,7 +56,7 @@ export function ComandaAbertaPage() {
 
   const [busca, setBusca] = useState("");
   const { data: produtosPage } = useProdutos(undefined, { ativo: true });
-  const todosProdutos = produtosPage?.itens ?? [];
+  const todosProdutos = useMemo(() => produtosPage?.itens ?? [], [produtosPage]);
   const { data: categoriasTree = [] } = useCategorias();
   const categoriaFlat = useMemo(() => flattenCategorias(categoriasTree), [categoriasTree]);
   const categoriaMap = useMemo(() =>

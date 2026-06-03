@@ -176,9 +176,9 @@ def historico_periodo(db: Session, inicio: datetime.date, fim: datetime.date) ->
         )
     ).all()
     compras_map: dict[datetime.date, Decimal] = {}
-    for r in rows_compras:
-        if r.data_compra:
-            compras_map[r.data_compra] = compras_map.get(r.data_compra, Decimal("0")) + (r.total or Decimal("0"))
+    for rc in rows_compras:
+        if rc.data_compra:
+            compras_map[rc.data_compra] = compras_map.get(rc.data_compra, Decimal("0")) + (rc.total or Decimal("0"))
     result = []
     current = inicio
     while current <= fim:
@@ -217,10 +217,10 @@ def resumo_anual(db: Session, ano: int) -> list[dict]:
         )
     ).all()
     compras_map: dict[int, Decimal] = {}
-    for r in rows_compras:
-        if r.data_compra:
-            compras_map[r.data_compra.month] = (
-                compras_map.get(r.data_compra.month, Decimal("0")) + (r.total or Decimal("0"))
+    for rc in rows_compras:
+        if rc.data_compra:
+            compras_map[rc.data_compra.month] = (
+                compras_map.get(rc.data_compra.month, Decimal("0")) + (rc.total or Decimal("0"))
             )
     return [
         {

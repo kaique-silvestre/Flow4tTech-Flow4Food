@@ -47,8 +47,10 @@ def update_metodo(db: Session, metodo_id: int, data: MetodoPagamentoUpdateReques
         raise AppError(ErrorCode.NOT_FOUND, "Método de pagamento não encontrado", http_status=404)
     if obj.padrao and not data.ativo:
         raise AppError(ErrorCode.CONFLICT, "Métodos padrão não podem ser desativados", http_status=409)
-    obj = metodos_pagamento_repository.update(db, metodo_id, data, tipo=_infer_tipo(data.nome))
-    return obj
+    atualizado = metodos_pagamento_repository.update(db, metodo_id, data, tipo=_infer_tipo(data.nome))
+    if atualizado is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Método de pagamento não encontrado", http_status=404)
+    return atualizado
 
 
 def toggle_ativo_metodo(db: Session, metodo_id: int) -> MetodoPagamento:

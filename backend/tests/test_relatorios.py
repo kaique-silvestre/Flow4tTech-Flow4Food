@@ -73,7 +73,7 @@ def _criar_metodo(c, nome="PIX"):
 
 
 def _abrir_comanda(c, garcom_id, identificacao="Mesa 1"):
-    resp = c.post("/api/comandas", json={"identificacao": identificacao, "tipo_identificacao": "mesa", "garcom_id": garcom_id})
+    resp = c.post("/api/comandas", json={"identificacao": identificacao, "tipo_identificacao": "mesa", "garcom_id": garcom_id, "pessoas": ["Cliente 1"]})
     assert resp.status_code == 201, resp.text
     return resp.json()
 

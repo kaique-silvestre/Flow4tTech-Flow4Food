@@ -69,7 +69,7 @@ def _criar_categoria(c, nome="Cat"):
 def test_list_produtos_vazio(c):
     resp = c.get("/api/produtos")
     assert resp.status_code == 200
-    assert resp.json() == []
+    assert resp.json()["itens"] == []
 
 
 # ---------------------------------------------------------------------------
@@ -202,7 +202,7 @@ def test_desativar_produto(c):
     assert resp.json()["ativo"] is False
 
     # Não aparece em GET /api/produtos?ativo=true (filtra apenas ativos)
-    lista = c.get("/api/produtos", params={"ativo": "true"}).json()
+    lista = c.get("/api/produtos", params={"ativo": "true"}).json()["itens"]
     assert not any(x["id"] == p["id"] for x in lista)
 
 
@@ -217,13 +217,13 @@ def test_produto_inativo_nao_aparece_em_list(c):
     c.patch(f"/api/produtos/{p2['id']}/desativar")
 
     # sem filtro → retorna todos (ativo e inativo)
-    todos = c.get("/api/produtos").json()
+    todos = c.get("/api/produtos").json()["itens"]
     ids_todos = [x["id"] for x in todos]
     assert p1["id"] in ids_todos
     assert p2["id"] in ids_todos
 
     # ativo=true → apenas ativos
-    lista = c.get("/api/produtos", params={"ativo": "true"}).json()
+    lista = c.get("/api/produtos", params={"ativo": "true"}).json()["itens"]
     ids = [x["id"] for x in lista]
     assert p1["id"] in ids
     assert p2["id"] not in ids
