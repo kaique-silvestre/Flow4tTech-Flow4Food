@@ -21,8 +21,7 @@ from src.repositories.password_reset_repository import (
     get_valid_reset,
     invalidate_user_resets,
 )
-from src.repositories.tenant_repository import get_assinatura_by_tenant
-from src.repositories.tenant_repository import set_rls_tenant
+from src.repositories.tenant_repository import get_assinatura_by_tenant, set_rls_tenant
 from src.repositories.users_repository import (
     get_user_by_email,
     get_user_by_id,
