@@ -1,8 +1,7 @@
+import threading
 from collections.abc import Generator
-from contextvars import ContextVar
-from typing import Optional
 
-from sqlalchemy import create_engine, event, text
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from src.core.config import get_settings
@@ -21,37 +20,33 @@ engine = create_engine(
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
-# Stores the current request's tenant_id in a thread-local context.
-# Used by the after_begin listener to re-establish RLS context on every
-# new transaction — necessary because SQLAlchemy 2.0 releases the
-# connection back to the pool after each db.commit().
-_tenant_id_var: ContextVar[Optional[int]] = ContextVar("_request_tenant_id", default=None)
-
-
-@event.listens_for(Session, "after_begin")
-def _auto_set_tenant_on_begin(session, transaction, connection):  # type: ignore[misc]
-    """Re-establish RLS context at the start of every new transaction.
-
-    SQLAlchemy 2.0 releases connections to the pool after each commit.
-    The pool checkout listener resets ROLE and tenant_id on the fresh
-    connection; this event re-sets them so every transaction within a
-    request has the correct RLS context.
-    """
-    if getattr(transaction, "nested", False):
-        return  # savepoint — connection already has correct context
-    tid = _tenant_id_var.get()
-    if tid is not None and connection.dialect.name == "postgresql":
-        connection.execute(text("SET ROLE app_user"))
-        connection.execute(text("SET app.tenant_id = :tid"), {"tid": str(tid)})
+# Stores the current request's tenant_id for the duration of the request.
+# Uses threading.local (not ContextVar) because FastAPI runs sync routes in
+# threadpool threads and generator cleanup may run in a different asyncio
+# context — thread-local is correct for threadpool-scoped state.
+# Read by the pool checkout listener to re-establish RLS context on every
+# connection checkout — including after db.commit() in SQLAlchemy 2.0
+# which releases the connection back to the pool.
+_tenant_ctx = threading.local()
 
 
 if _settings.DATABASE_URL.startswith("postgresql"):
 
     @event.listens_for(engine, "checkout")
-    def _reset_tenant_on_checkout(dbapi_conn, connection_record, connection_proxy):
+    def _configure_tenant_on_checkout(dbapi_conn, connection_record, connection_proxy):
+        """Reset tenant context on checkout, then re-establish if a request is active.
+
+        Fires on every pool checkout — including after db.commit() in SQLAlchemy 2.0
+        which releases and re-checks-out the connection for the next transaction.
+        Using raw DBAPI cursor avoids any SQLAlchemy ORM event recursion issues.
+        """
         cursor = dbapi_conn.cursor()
         cursor.execute("RESET ROLE")
         cursor.execute("SET app.tenant_id = ''")
+        tid = getattr(_tenant_ctx, "tenant_id", None)
+        if tid is not None:
+            cursor.execute("SET ROLE app_user")
+            cursor.execute(f"SET app.tenant_id = '{int(tid)}'")
         cursor.close()
 
 

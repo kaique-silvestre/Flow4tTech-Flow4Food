@@ -5,10 +5,11 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.exceptions import InvalidTokenError
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from src.core.config import get_settings
-from src.core.database import _tenant_id_var, engine, get_db
+from src.core.database import _tenant_ctx, engine, get_db
 from src.repositories import revoked_tokens_repository
 
 _bearer = HTTPBearer(auto_error=False)
@@ -39,21 +40,27 @@ def get_tenant_db(
 ) -> Generator[Session, None, None]:
     """Session scoped to tenant via RLS (PostgreSQL only).
 
-    Sets _tenant_id_var in the current thread context so the
-    Session.after_begin event listener re-establishes RLS context at
-    the start of every new transaction — including after db.commit(),
-    which in SQLAlchemy 2.0 releases and re-checks-out the connection.
-    The pool checkout listener handles cleanup on connection return.
+    Two-layer approach:
+    1. Direct SET on db session here — necessary because get_current_user runs
+       is_revoked() (a SQL query) before this function, which checks out the
+       connection from the pool BEFORE _tenant_ctx is set. The checkout listener
+       fires without tenant context. We must re-apply SET ROLE / SET tenant_id
+       explicitly on the already-checked-out connection.
+    2. _tenant_ctx (thread-local) is set so the pool checkout listener
+       re-establishes RLS context on any NEW connection checked out after
+       db.commit() (SQLAlchemy 2.0 releases connection on commit).
     """
     tenant_id = payload.get("tenant_id")
-    token = None
-    if tenant_id is not None and engine.dialect.name == "postgresql":
-        token = _tenant_id_var.set(tenant_id)
+    is_pg = tenant_id is not None and engine.dialect.name == "postgresql"
+    if is_pg:
+        _tenant_ctx.tenant_id = tenant_id
+        db.execute(text("SET ROLE app_user"))
+        db.execute(text("SET app.tenant_id = :tid"), {"tid": str(tenant_id)})
     try:
         yield db
     finally:
-        if token is not None:
-            _tenant_id_var.reset(token)
+        if is_pg:
+            _tenant_ctx.tenant_id = None
 
 
 def require_permission(screen: str):
