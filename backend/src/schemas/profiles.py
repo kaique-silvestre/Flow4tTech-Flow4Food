@@ -6,6 +6,7 @@ from pydantic import BaseModel
 VALID_SCREENS = [
     "dashboard", "comandas", "compras", "estoque",
     "cadastros", "relatorios", "configuracoes", "gestao_usuarios",
+    "consumo_interno",
 ]
 
 

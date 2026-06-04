@@ -43,9 +43,9 @@ def create_assinatura(db: Session, assinatura: Assinatura) -> Assinatura:
 
 
 def set_rls_tenant(db: Session, tenant_id: int) -> None:
-    """Set app.tenant_id for RLS in the current transaction (PostgreSQL only)."""
+    """Set app.tenant_id for RLS (session-scoped, survives commits)."""
     with contextlib.suppress(Exception):
-        db.execute(text("SET LOCAL app.tenant_id = :tid"), {"tid": str(tenant_id)})
+        db.execute(text("SET app.tenant_id = :tid"), {"tid": str(tenant_id)})
 
 
 def clone_profiles_from_seed(db: Session, new_tenant_id: int) -> list[Profile]:
@@ -55,7 +55,7 @@ def clone_profiles_from_seed(db: Session, new_tenant_id: int) -> list[Profile]:
     """
     now = datetime.now(timezone.utc)
     with contextlib.suppress(Exception):
-        db.execute(text("SET LOCAL app.tenant_id = '1'"))
+        db.execute(text("SET app.tenant_id = '1'"))
 
     seed_profiles = (
         db.query(Profile)

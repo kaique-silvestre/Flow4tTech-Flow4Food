@@ -16,7 +16,7 @@ class Profile(Base):
     __tablename__ = "profiles"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    tenant_id: Mapped[int] = mapped_column(nullable=False, server_default="1")
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
     name: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(sa.String(300), nullable=True)  # noqa: UP045 — str|None breaks SQLAlchemy on Python 3.9
     is_system: Mapped[bool] = mapped_column(nullable=False, server_default="false")
@@ -34,7 +34,7 @@ class ProfilePermission(Base):
     __tablename__ = "profile_permissions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
     profile_id: Mapped[int] = mapped_column(sa.ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
     screen: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     can_access: Mapped[bool] = mapped_column(nullable=False, server_default="true")

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_db, require_permission
+from src.api.dependencies import get_current_user, get_db, get_tenant_db, require_permission
 from src.schemas.config_schemas import (
     AlterarSenhaRequest,
     EstabelecimentoResponse,
@@ -14,8 +14,7 @@ router = APIRouter(dependencies=[Depends(require_permission("configuracoes"))])
 
 @router.get("/estabelecimento", response_model=EstabelecimentoResponse)
 def get_estabelecimento(
-    db: Session = Depends(get_db),
-    _user: dict = Depends(get_current_user),
+    db: Session = Depends(get_tenant_db),
 ) -> EstabelecimentoResponse:
     return config_service.get_estabelecimento(db)
 
@@ -23,8 +22,7 @@ def get_estabelecimento(
 @router.patch("/estabelecimento", response_model=EstabelecimentoResponse)
 def update_estabelecimento(
     body: EstabelecimentoUpdate,
-    db: Session = Depends(get_db),
-    _user: dict = Depends(get_current_user),
+    db: Session = Depends(get_tenant_db),
 ) -> EstabelecimentoResponse:
     return config_service.update_estabelecimento(db, body)
 
