@@ -5,11 +5,10 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.exceptions import InvalidTokenError
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from src.core.config import get_settings
-from src.core.database import get_db
+from src.core.database import _tenant_id_var, engine, get_db
 from src.repositories import revoked_tokens_repository
 
 _bearer = HTTPBearer(auto_error=False)
@@ -38,12 +37,23 @@ def get_tenant_db(
     db: Session = Depends(get_db),
     payload: dict = Depends(get_current_user),
 ) -> Generator[Session, None, None]:
-    """Session scoped to tenant via RLS (PostgreSQL only)."""
+    """Session scoped to tenant via RLS (PostgreSQL only).
+
+    Sets _tenant_id_var in the current thread context so the
+    Session.after_begin event listener re-establishes RLS context at
+    the start of every new transaction — including after db.commit(),
+    which in SQLAlchemy 2.0 releases and re-checks-out the connection.
+    The pool checkout listener handles cleanup on connection return.
+    """
     tenant_id = payload.get("tenant_id")
-    if tenant_id is not None and db.bind is not None and db.bind.dialect.name == "postgresql":
-        db.execute(text("SET LOCAL ROLE app_user"))
-        db.execute(text("SET LOCAL app.tenant_id = :tid"), {"tid": str(tenant_id)})
-    yield db
+    token = None
+    if tenant_id is not None and engine.dialect.name == "postgresql":
+        token = _tenant_id_var.set(tenant_id)
+    try:
+        yield db
+    finally:
+        if token is not None:
+            _tenant_id_var.reset(token)
 
 
 def require_permission(screen: str):
