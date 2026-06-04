@@ -9,7 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from src.core.config import get_settings
-from src.core.database import _tenant_ctx, engine, get_db
+from src.core.database import _tenant_ctx, get_db
 from src.repositories import revoked_tokens_repository
 
 _bearer = HTTPBearer(auto_error=False)
@@ -51,7 +51,11 @@ def get_tenant_db(
        db.commit() (SQLAlchemy 2.0 releases connection on commit).
     """
     tenant_id = payload.get("tenant_id")
-    is_pg = tenant_id is not None and engine.dialect.name == "postgresql"
+    # Use session's bound engine — not the module-level engine — to detect dialect.
+    # In unit tests, db may be bound to SQLite while DATABASE_URL / engine is PostgreSQL.
+    _bind = getattr(db, "bind", None)
+    _dialect = getattr(getattr(_bind, "dialect", None), "name", "")
+    is_pg = tenant_id is not None and _dialect == "postgresql"
     if is_pg:
         _tenant_ctx.tenant_id = tenant_id
         db.execute(text("SET ROLE app_user"))
