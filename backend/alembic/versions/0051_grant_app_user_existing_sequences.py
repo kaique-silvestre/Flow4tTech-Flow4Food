@@ -24,9 +24,19 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _role_exists(bind, role_name: str) -> bool:
+    row = bind.execute(
+        sa.text("SELECT 1 FROM pg_roles WHERE rolname = :r"),
+        {"r": role_name},
+    ).fetchone()
+    return row is not None
+
+
 def upgrade() -> None:
     bind = op.get_bind()
     if bind.dialect.name != "postgresql":
+        return
+    if not _role_exists(bind, "app_user"):
         return
     bind.execute(sa.text("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user"))
 

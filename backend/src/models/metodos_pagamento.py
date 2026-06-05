@@ -18,7 +18,7 @@ class MetodoPagamento(Base):
     __tablename__ = "metodos_pagamento"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
     nome: Mapped[str] = mapped_column(nullable=False)
     ativo: Mapped[bool] = mapped_column(nullable=False, default=True)
     tipo: Mapped[str] = mapped_column(

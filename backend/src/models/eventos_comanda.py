@@ -22,7 +22,7 @@ class EventoComanda(Base):
     __tablename__ = "eventos_comanda"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
     comanda_id: Mapped[int] = mapped_column(nullable=False)
     tipo: Mapped[str] = mapped_column(nullable=False)
     payload: Mapped[Optional[str]] = mapped_column(nullable=True)

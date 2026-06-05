@@ -101,7 +101,7 @@ def test_baixa_sem_venda_atualiza_saldo(crud_client):
 def test_baixa_saldo_negativo_permitido(crud_client):
     item = _criar_item(crud_client, "Item Neg")
 
-    resp = _baixa(crud_client, item["id"], 5, "consumo_interno")
+    resp = _baixa(crud_client, item["id"], 5, "outro")
     assert resp.status_code == 201
     data = resp.json()
     assert data["saldo_negativo"] is True

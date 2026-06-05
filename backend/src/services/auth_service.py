@@ -21,7 +21,7 @@ from src.repositories.password_reset_repository import (
     get_valid_reset,
     invalidate_user_resets,
 )
-from src.repositories.tenant_repository import get_assinatura_by_tenant
+from src.repositories.tenant_repository import get_assinatura_by_tenant, set_rls_tenant
 from src.repositories.users_repository import (
     get_user_by_email,
     get_user_by_id,
@@ -125,6 +125,7 @@ def login(db: Session, identifier: str, password: str) -> TokenResponse:
     if not verify_password(password, user.password_hash):
         raise AppError(code=ErrorCode.SENHA_INCORRETA, message=_INVALID_MSG, http_status=401)
 
+    set_rls_tenant(db, user.tenant_id)
     user.last_login = datetime.now(timezone.utc)
     db.commit()
 

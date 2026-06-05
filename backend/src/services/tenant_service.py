@@ -1,3 +1,4 @@
+import contextlib
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -114,6 +115,12 @@ def criar_tenant(db: Session, data: TenantCreate) -> TenantResponse:
         db.flush()
 
         db.commit()
+        # Clean up RLS context so the connection returns clean to the pool.
+        # tenants and assinaturas tables have no RLS, so refresh works without context.
+        from sqlalchemy import text as _text
+        with contextlib.suppress(Exception):
+            db.execute(_text("RESET ROLE"))
+            db.execute(_text("SET app.tenant_id = ''"))
         db.refresh(tenant)
         db.refresh(assinatura)
     except AppError:

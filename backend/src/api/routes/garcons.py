@@ -2,7 +2,7 @@
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -103,12 +103,7 @@ def update_comissao(
     db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> ComissaoResponse:
-    comissao = db.get(ComissaoGarcom, comissao_id)
-    if comissao is None:
-        raise HTTPException(status_code=404, detail="Comissão não encontrada")
-    comissao.valor = body.valor
-    db.commit()
-    db.refresh(comissao)
+    comissao = garcons_service.update_comissao(db, comissao_id, body.valor)
     return ComissaoResponse.model_validate(comissao)
 
 
@@ -118,12 +113,7 @@ def toggle_pago_comissao(
     db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> ComissaoResponse:
-    comissao = db.get(ComissaoGarcom, comissao_id)
-    if comissao is None:
-        raise HTTPException(status_code=404, detail="Comissão não encontrada")
-    comissao.pago = not comissao.pago
-    db.commit()
-    db.refresh(comissao)
+    comissao = garcons_service.toggle_pago_comissao(db, comissao_id)
     return ComissaoResponse.model_validate(comissao)
 
 
@@ -133,8 +123,4 @@ def delete_comissao(
     db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> None:
-    comissao = db.get(ComissaoGarcom, comissao_id)
-    if comissao is None:
-        raise HTTPException(status_code=404, detail="Comissão não encontrada")
-    db.delete(comissao)
-    db.commit()
+    garcons_service.delete_comissao(db, comissao_id)

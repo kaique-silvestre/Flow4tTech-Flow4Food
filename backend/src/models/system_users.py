@@ -17,7 +17,7 @@ class SystemUser(Base):
     __tablename__ = "system_users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    tenant_id: Mapped[int] = mapped_column(nullable=False, server_default="1")
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
     profile_id: Mapped[int] = mapped_column(sa.ForeignKey("profiles.id", ondelete="RESTRICT"), nullable=False)
     name: Mapped[str] = mapped_column(sa.String(200), nullable=False)
     username: Mapped[str] = mapped_column(sa.String(100), nullable=False)

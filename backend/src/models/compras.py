@@ -12,7 +12,7 @@ class Compra(Base):
     __tablename__ = "compras"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
     fornecedor_id: Mapped[Optional[int]] = mapped_column(sa.ForeignKey("fornecedores.id"), nullable=True)
     data_compra: Mapped[datetime.date] = mapped_column(sa.Date(), nullable=False)
     numero_nota: Mapped[Optional[str]] = mapped_column(sa.String(50), nullable=True)
@@ -33,7 +33,7 @@ class ItemCompra(Base):
     __tablename__ = "itens_compra"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
     compra_id: Mapped[int] = mapped_column(sa.ForeignKey("compras.id"), nullable=False)
     insumo_id: Mapped[int] = mapped_column(sa.ForeignKey("insumos.id"), nullable=False)
     quantidade: Mapped[Decimal] = mapped_column(sa.Numeric(12, 4), nullable=False)

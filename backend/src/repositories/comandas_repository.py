@@ -240,7 +240,7 @@ def top_itens(db: Session, dias: int, limit: int) -> list[tuple[int, int]]:
             "SELECT ic.produto_id, COUNT(*) as cnt "
             "FROM itens_comanda ic "
             "JOIN comandas c ON c.id = ic.comanda_id "
-            "WHERE ic.cancelado = 0 "
+            "WHERE ic.cancelado = false "
             "AND ic.created_at >= :since "
             "GROUP BY ic.produto_id "
             "ORDER BY cnt DESC "
