@@ -1,73 +1,14 @@
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useComandasAbertasCount } from "@/features/comandas/useComandas";
 import { useInsumoCriticos } from "@/features/estoque/useEstoque";
 import { useContasPagarResumo } from "@/features/contas_pagar/useContasPagar";
 import { usePermissions } from "@/hooks/usePermission";
-import {
-  LayoutDashboard,
-  ClipboardList,
-  UtensilsCrossed,
-  ShoppingCart,
-  Package,
-  History,
-  BarChart3,
-  Tag,
-  Truck,
-  Users,
-  CreditCard,
-  Settings,
-  Menu,
-  BookOpen,
-  ChevronDown,
-  ChevronRight,
-  FlaskConical,
-  Wallet,
-  Banknote,
-  type LucideIcon,
-} from "lucide-react";
+import { ChevronRight, Menu } from "lucide-react";
+import { NAV_ITEMS, type SubNavItem } from "./navConfig";
 
-interface SubNavItem {
-  label: string;
-  to: string;
-  icon: LucideIcon;
-  screen?: string;
-}
-
-interface NavItem {
-  label: string;
-  to: string | null;
-  icon?: LucideIcon;
-  screen?: string;
-  children?: SubNavItem[];
-}
-
-const CADASTROS_CHILDREN: SubNavItem[] = [
-  { label: "Categorias", to: "/cadastros/categorias", icon: Tag, screen: "cadastros" },
-  { label: "Insumos", to: "/cadastros/insumos", icon: FlaskConical, screen: "cadastros" },
-  { label: "Fornecedores", to: "/cadastros/fornecedores", icon: Truck, screen: "cadastros" },
-  { label: "Garçons", to: "/cadastros/garcons", icon: Users, screen: "cadastros" },
-  { label: "Métodos Pgto.", to: "/cadastros/metodos-pagamento", icon: CreditCard, screen: "cadastros" },
-];
-
-const CONFIGURACOES_CHILDREN: SubNavItem[] = [
-  { label: "Configurações Gerais", to: "/configuracoes/gerais", icon: Settings, screen: "configuracoes" },
-  { label: "Usuários", to: "/configuracoes/usuarios", icon: Users, screen: "gestao_usuarios" },
-];
-
-const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", to: "/", icon: LayoutDashboard, screen: "dashboard" },
-  { label: "Comandas", to: "/comandas", icon: ClipboardList, screen: "comandas" },
-  { label: "Cardápio", to: "/cardapio", icon: UtensilsCrossed, screen: "comandas" },
-  { label: "Caixa", to: "/caixa", icon: Banknote, screen: "caixa" },
-  { label: "Compras", to: "/compras", icon: ShoppingCart, screen: "compras" },
-  { label: "Contas a Pagar", to: "/contas-pagar", icon: Wallet, screen: "compras" },
-  { label: "Estoque", to: "/estoque", icon: Package, screen: "estoque" },
-  { label: "Movimentos", to: "/estoque/movimentos", icon: History, screen: "estoque" },
-  { label: "Relatórios", to: "/relatorios", icon: BarChart3, screen: "relatorios" },
-  { label: "Cadastros", to: null, icon: BookOpen, screen: "cadastros", children: CADASTROS_CHILDREN },
-  { label: "Configurações", to: null, icon: Settings, children: CONFIGURACOES_CHILDREN },
-];
+/* ---------- component ---------- */
 
 interface SidebarProps {
   collapsed: boolean;
@@ -76,8 +17,11 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Cadastros: true, Configurações: true });
-  const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [flyoutPos, setFlyoutPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const navRef = useRef<HTMLDivElement>(null);
+  const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const location = useLocation();
   const { data: countAbertas = 0 } = useComandasAbertasCount();
   const { data: criticos = [] } = useInsumoCriticos();
   const countCriticos = criticos.length;
@@ -85,13 +29,53 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
   const countContasUrgentes = (contasResumo?.vencido ?? 0) + (contasResumo?.pendente ?? 0);
   const permissions = usePermissions();
 
-  function toggleGroup(label: string) {
-    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
-  }
+  const toggleGroup = useCallback((label: string) => {
+    setOpenGroup((prev) => {
+      if (prev === label) return null;
+      const btn = btnRefs.current[label];
+      if (btn) {
+        const rect = btn.getBoundingClientRect();
+        setFlyoutPos({ top: rect.top, left: rect.right + 6 });
+      }
+      return label;
+    });
+  }, []);
+
+  // Close flyout on outside click or Escape
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (navRef.current && !navRef.current.contains(target) && !target.closest("[data-sidebar-flyout]")) {
+        setOpenGroup(null);
+      }
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpenGroup(null);
+    }
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, []);
+
+  // Close flyout on route change
+  useEffect(() => {
+    setOpenGroup(null);
+  }, [location.pathname]);
 
   function visibleChildren(children: SubNavItem[]) {
     return children.filter((c) => !c.screen || permissions.includes(c.screen));
   }
+
+  function getGroupBadge(label: string): { count: number; color: string } | null {
+    if (label === "Vendas" && countAbertas > 0) return { count: countAbertas, color: "bg-amber-500" };
+    if (label === "Estoque" && countCriticos > 0) return { count: countCriticos, color: "bg-red-500" };
+    if (label === "Financeiro" && countContasUrgentes > 0) return { count: countContasUrgentes, color: "bg-orange-500" };
+    return null;
+  }
+
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.screen && !permissions.includes(item.screen)) return false;
@@ -99,108 +83,102 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
     return true;
   });
 
+  function renderFlyout(children: SubNavItem[], label: string) {
+    return createPortal(
+      <div
+        data-sidebar-flyout
+        style={{ top: flyoutPos.top, left: flyoutPos.left, animation: "flyout-in 150ms ease-out" }}
+        className="fixed z-[9999] min-w-48 rounded-lg border border-gray-200 bg-white py-1.5 shadow-xl"
+      >
+        <div className="px-3 pb-1.5 mb-1 border-b border-gray-100">
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</span>
+        </div>
+        {children.map((child) => (
+            <NavLink
+              key={child.to}
+              to={child.to}
+              end
+              className="flex items-center gap-2.5 mx-1.5 px-2.5 py-2 rounded-md text-sm transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            >
+              <child.icon size={16} className="shrink-0" />
+              <span>{child.label}</span>
+            </NavLink>
+        ))}
+      </div>,
+      document.body,
+    );
+  }
+
   return (
     <aside
       className={`
-        fixed inset-y-0 left-0 z-30 flex w-52 flex-col border-r bg-white shadow-xl transition-all duration-200
+        fixed inset-y-0 left-0 z-40 flex w-52 flex-col border-r border-gray-200 bg-white shadow-xl transition-all duration-200
         ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
-        lg:static lg:z-auto lg:shadow-none lg:translate-x-0
+        lg:relative lg:z-40 lg:shadow-none lg:translate-x-0
         ${collapsed ? "lg:w-14" : "lg:w-52"}
       `}
     >
       <button
-        className="hidden h-10 items-center justify-center border-b text-gray-400 hover:text-gray-700 shrink-0 lg:flex"
+        className="hidden h-12 items-center justify-center border-b border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-50 shrink-0 lg:flex transition-colors"
         onClick={onToggle}
         title={collapsed ? "Expandir menu" : "Colapsar menu"}
       >
         <Menu size={18} />
       </button>
-      <nav className="flex flex-col gap-1 overflow-hidden p-2">
+
+      <nav ref={navRef} className="flex flex-1 flex-col gap-0.5 p-2 overflow-y-auto">
         {visibleItems.map((item) => {
           if (item.children) {
             const children = visibleChildren(item.children);
-            const isOpen = openGroups[item.label] ?? true;
-            const isHovered = hoveredGroup === item.label;
-
-            if (collapsed) {
-              return (
-                <div
-                  key={item.label}
-                  className="relative"
-                  onMouseEnter={() => setHoveredGroup(item.label)}
-                  onMouseLeave={() => setHoveredGroup(null)}
-                >
-                  <button
-                    className="flex w-full items-center justify-center rounded px-2 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    title={item.label}
-                  >
-                    {item.icon && <item.icon size={18} className="shrink-0" />}
-                  </button>
-                  {isHovered && (
-                    <div className="absolute left-full top-0 z-50 ml-1 min-w-40 rounded-md border bg-white py-1 shadow-lg">
-                      {children.map((child) => (
-                        <NavLink
-                          key={child.to}
-                          to={child.to}
-                          end
-                          className={({ isActive }) =>
-                            `flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
-                              isActive
-                                ? "bg-gray-100 font-medium text-gray-900"
-                                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                            }`
-                          }
-                        >
-                          <child.icon size={16} className="shrink-0" />
-                          <span>{child.label}</span>
-                        </NavLink>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            }
+            const badge = getGroupBadge(item.label);
+            const isOpen = openGroup === item.label;
 
             return (
-              <div key={item.label}>
+              <div key={item.label} className="relative">
                 <button
+                  ref={(el) => { btnRefs.current[item.label] = el; }}
                   onClick={() => toggleGroup(item.label)}
-                  className="flex w-full items-center gap-2 rounded px-2 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  className={`group flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors duration-150 ${
+                    collapsed ? "justify-center" : ""
+                  } ${
+                    isOpen
+                      ? "bg-gray-100 text-gray-900 font-medium"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                  title={item.label}
                 >
-                  {item.icon && <item.icon size={18} className="shrink-0" />}
-                  <span className="flex-1 truncate text-left">{item.label}</span>
-                  {isOpen ? (
-                    <ChevronDown size={14} className="shrink-0" />
-                  ) : (
-                    <ChevronRight size={14} className="shrink-0" />
+                  {item.icon && (
+                    <item.icon
+                      size={18}
+                      className={`shrink-0 transition-colors duration-150 ${
+                        isOpen ? "text-gray-900" : "text-gray-400 group-hover:text-gray-600"
+                      }`}
+                    />
+                  )}
+                  {!collapsed && <span className="flex-1 truncate text-left">{item.label}</span>}
+                  {!collapsed && badge && (
+                    <span className={`rounded-full ${badge.color} px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white`}>
+                      {badge.count}
+                    </span>
+                  )}
+                  {collapsed && badge && (
+                    <span className={`absolute top-0.5 right-0.5 h-2 w-2 rounded-full ${badge.color} ring-2 ring-white`} />
+                  )}
+                  {!collapsed && (
+                    <ChevronRight
+                      size={14}
+                      className={`shrink-0 text-gray-400 transition-transform duration-150 ${
+                        isOpen ? "rotate-0" : ""
+                      }`}
+                    />
                   )}
                 </button>
-                {isOpen && (
-                  <div className="flex flex-col gap-1 pl-4">
-                    {children.map((child) => (
-                      <NavLink
-                        key={child.to}
-                        to={child.to}
-                        end
-                        title={child.label}
-                        className={({ isActive }) =>
-                          `flex items-center gap-2 rounded px-2 py-1.5 text-sm transition-colors ${
-                            isActive
-                              ? "bg-gray-100 font-medium text-gray-900"
-                              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          }`
-                        }
-                      >
-                        <child.icon size={16} className="shrink-0" />
-                        <span className="truncate">{child.label}</span>
-                      </NavLink>
-                    ))}
-                  </div>
-                )}
+                {isOpen && renderFlyout(children, item.label)}
               </div>
             );
           }
 
+          /* ---- DIRECT LINK ---- */
           if (item.to === null) {
             return collapsed ? null : (
               <span key={item.label} className="px-3 py-1 text-xs text-gray-400 select-none truncate">
@@ -215,42 +193,17 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
               to={item.to}
               end
               title={item.label}
-              className={({ isActive }) =>
-                `relative flex items-center gap-2 rounded px-2 py-2 text-sm transition-colors ${
-                  collapsed ? "justify-center" : ""
-                } ${
-                  isActive
-                    ? "bg-gray-100 font-medium text-gray-900"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`
-              }
+              className={`group relative flex items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900 ${
+                collapsed ? "justify-center" : ""
+              }`}
             >
-              {item.icon && <item.icon size={18} className="shrink-0" />}
+              {item.icon && (
+                <item.icon
+                  size={18}
+                  className="shrink-0 transition-colors duration-150 text-gray-400 group-hover:text-gray-600"
+                />
+              )}
               {!collapsed && <span className="truncate">{item.label}</span>}
-              {!collapsed && item.to === "/comandas" && countAbertas > 0 && (
-                <span className="ml-auto rounded-full bg-amber-500 px-2 py-0.5 text-xs text-white">
-                  {countAbertas}
-                </span>
-              )}
-              {collapsed && item.to === "/comandas" && countAbertas > 0 && (
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500" />
-              )}
-              {!collapsed && item.to === "/estoque" && countCriticos > 0 && (
-                <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs text-white">
-                  {countCriticos}
-                </span>
-              )}
-              {collapsed && item.to === "/estoque" && countCriticos > 0 && (
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
-              )}
-              {!collapsed && item.to === "/contas-pagar" && countContasUrgentes > 0 && (
-                <span className="ml-auto rounded-full bg-orange-500 px-2 py-0.5 text-xs text-white">
-                  {countContasUrgentes}
-                </span>
-              )}
-              {collapsed && item.to === "/contas-pagar" && countContasUrgentes > 0 && (
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-orange-500" />
-              )}
             </NavLink>
           );
         })}

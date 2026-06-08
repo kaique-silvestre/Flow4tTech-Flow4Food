@@ -14,6 +14,7 @@ from src.api.routes import categorias as categorias_routes
 from src.api.routes import comandas as comandas_routes
 from src.api.routes import compras as compras_routes
 from src.api.routes import config as config_routes
+from src.api.routes import consumo_interno as consumo_interno_routes
 from src.api.routes import contas_pagar as contas_pagar_routes
 from src.api.routes import dashboard as dashboard_routes
 from src.api.routes import estoque as estoque_routes
@@ -89,6 +90,7 @@ def create_app() -> FastAPI:
     app.include_router(relatorios_routes.router, prefix="/api/relatorios", tags=["relatorios"])
     app.include_router(dashboard_routes.router, prefix="/api/dashboard", tags=["dashboard"])
     app.include_router(comandas_routes.router, prefix="/api/comandas", tags=["comandas"])
+    app.include_router(consumo_interno_routes.router, prefix="/api/consumo-interno", tags=["consumo_interno"])
     app.include_router(contas_pagar_routes.router, prefix="/api/contas-pagar", tags=["contas_pagar"])
     app.include_router(caixa_routes.router, prefix="/api/caixa", tags=["caixa"])
 

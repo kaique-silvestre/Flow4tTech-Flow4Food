@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, stockDisplay } from "@/lib/format";
+import { formatCurrency, stockDisplay, parseApiDate } from "@/lib/format";
 import {
   useSaldoEstoque,
   useMovimentos,
@@ -15,6 +15,8 @@ const TIPO_OPTIONS = [
   { value: "entrada", label: "Entrada" },
   { value: "saida_venda", label: "Saída venda" },
   { value: "saida_perda", label: "Baixa" },
+  { value: "saida_consumo_interno", label: "Consumo interno" },
+  { value: "entrada_estorno", label: "Estorno" },
   { value: "estorno_compra", label: "Estorno compra" },
 ];
 
@@ -22,6 +24,8 @@ const TIPO_BADGE: Record<string, string> = {
   entrada: "bg-green-100 text-green-700",
   saida_venda: "bg-blue-100 text-blue-700",
   saida_perda: "bg-orange-100 text-orange-700",
+  saida_consumo_interno: "bg-purple-100 text-purple-700",
+  entrada_estorno: "bg-teal-100 text-teal-700",
   estorno_compra: "bg-gray-100 text-gray-500",
 };
 
@@ -29,6 +33,8 @@ const TIPO_LABEL: Record<string, string> = {
   entrada: "Entrada",
   saida_venda: "Saída venda",
   saida_perda: "Baixa",
+  saida_consumo_interno: "Consumo interno",
+  entrada_estorno: "Estorno",
   estorno_compra: "Estorno compra",
 };
 
@@ -129,7 +135,7 @@ function InsumoMovimentos() {
                 return (
                   <tr key={mov.id} className="border-b last:border-0">
                     <td className="py-2 pr-4 text-gray-500">
-                      {new Date(mov.created_at).toLocaleString("pt-BR", {
+                      {parseApiDate(mov.created_at).toLocaleString("pt-BR", {
                         day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit",
                       })}
                     </td>
@@ -240,7 +246,7 @@ function ProdutoMovimentos() {
               {result.itens.map((mov) => (
                 <tr key={mov.id} className="border-b last:border-0">
                   <td className="py-2 pr-4 text-gray-500">
-                    {new Date(mov.created_at).toLocaleString("pt-BR", {
+                    {parseApiDate(mov.created_at).toLocaleString("pt-BR", {
                       day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit",
                     })}
                   </td>

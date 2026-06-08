@@ -96,7 +96,7 @@ export function useAbrirComanda() {
       api.post<ComandaResponse>("/api/comandas", data).then((r) => r.data),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["comandas"] });
-      navigate(`/comandas/${data.id}`);
+      navigate(`/vendas/comandas/${data.id}`);
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.message;
@@ -206,7 +206,7 @@ export function useReopenComanda(comanda_id: number | string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comandas"] });
       qc.invalidateQueries({ queryKey: ["insumos"] });
-      navigate(`/comandas/${comanda_id}`);
+      navigate(`/vendas/comandas/${comanda_id}`);
       toast.success("Comanda reaberta com sucesso");
     },
     onError: (err: unknown) => {
@@ -244,7 +244,7 @@ export function useCancelarComanda(comanda_id: number | string, version: number)
       qc.invalidateQueries({ queryKey: ["comandas"] });
       qc.invalidateQueries({ queryKey: ["insumos"] });
       qc.invalidateQueries({ queryKey: ["estoque"] });
-      navigate("/comandas");
+      navigate("/vendas/comandas");
       toast.success("Comanda cancelada.");
     },
     onError: (err: unknown) => {

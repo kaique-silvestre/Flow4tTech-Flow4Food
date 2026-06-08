@@ -89,7 +89,7 @@ export default function FechamentoPage() {
   return (
     <div className="p-4 lg:p-6 max-w-3xl mx-auto space-y-6">
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" onClick={() => navigate(`/comandas/${id}`)}>
+        <Button variant="outline" size="sm" onClick={() => navigate(`/vendas/comandas/${id}`)}>
           ← Voltar
         </Button>
         <h1 className="text-lg font-bold sm:text-xl">
@@ -166,7 +166,7 @@ export default function FechamentoPage() {
             Total R$0,00 — todos os itens são cortesia ou desconto integral.
           </div>
           <div className="flex gap-3 justify-end">
-            <Button variant="outline" onClick={() => navigate(`/comandas/${id}`)}>
+            <Button variant="outline" onClick={() => navigate(`/vendas/comandas/${id}`)}>
               Cancelar
             </Button>
             <Button
@@ -380,7 +380,7 @@ export default function FechamentoPage() {
         )}
 
         <div className="flex flex-wrap gap-3 justify-end">
-          <Button type="button" variant="outline" onClick={() => navigate(`/comandas/${id}`)}>
+          <Button type="button" variant="outline" onClick={() => navigate(`/vendas/comandas/${id}`)}>
             Cancelar
           </Button>
           <Button

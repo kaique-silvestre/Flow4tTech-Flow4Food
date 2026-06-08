@@ -58,7 +58,7 @@ export function useFecharComanda(comanda_id: number | string) {
         navigate(`/comprovante/${comanda_id}`);
       } else {
         toast.success("Pagamento parcial registrado");
-        navigate(`/comandas/${comanda_id}`);
+        navigate(`/vendas/comandas/${comanda_id}`);
       }
     },
     onError: (err: unknown) => {
