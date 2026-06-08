@@ -404,7 +404,7 @@ export function DashboardPage() {
                   <div
                     key={comanda.id}
                     className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer"
-                    onClick={() => navigate(`/comandas/${comanda.id}`)}
+                    onClick={() => navigate(`/vendas/comandas/${comanda.id}`)}
                   >
                     <div>
                       <span className="font-medium text-sm text-gray-900">{comanda.identificacao}</span>
@@ -421,7 +421,7 @@ export function DashboardPage() {
                         className="text-xs text-blue-600 hover:underline"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/comandas/${comanda.id}`);
+                          navigate(`/vendas/comandas/${comanda.id}`);
                         }}
                       >
                         Abrir

@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, parseApiDate } from "@/lib/format";
 import type { Garcom, ComissaoResponse } from "./useGarcons";
 import {
   useGarcomStats,
@@ -42,7 +42,7 @@ function ComissaoRow({ c, onUpdated }: { c: ComissaoResponse; onUpdated: () => v
     <tr className="border-b last:border-0 text-sm">
       <td className="py-2 pr-3 text-gray-600">#{c.comanda_id}</td>
       <td className="py-2 pr-3 text-gray-600">
-        {new Date(c.created_at).toLocaleDateString("pt-BR")}
+        {parseApiDate(c.created_at).toLocaleDateString("pt-BR")}
       </td>
       <td className="py-2 pr-3">
         {editingValor !== null ? (

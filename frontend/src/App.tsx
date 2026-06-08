@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RequireAuth } from "@/components/auth/RequireAuth";
@@ -42,6 +42,8 @@ import { CaixaPage } from "@/features/caixa/CaixaPage";
 import { AssinaturaVencidaPage } from "@/features/assinatura/AssinaturaVencidaPage";
 import { ContaSuspensaPage } from "@/features/assinatura/ContaSuspensaPage";
 import { queryClient } from "@/lib/queryClient";
+import { ConsumoInternoPage } from "@/features/consumo_interno/ConsumoInternoPage";
+import { ConsumoInternoDetalhePage } from "@/features/consumo_interno/ConsumoInternoDetalhePage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
 export function App() {
@@ -57,16 +59,20 @@ export function App() {
             <Route path="/assinatura-vencida" element={<AssinaturaVencidaPage />} />
             <Route path="/conta-suspensa" element={<ContaSuspensaPage />} />
             <Route path="/comprovante/:id" element={<ComprovantePage />} />
-            <Route path="/comandas/:id/pre-conta" element={<PreContaPage />} />
+            <Route path="/vendas/comandas/:id/pre-conta" element={<PreContaPage />} />
             <Route element={<AppLayout />}>
               <Route element={<RequirePermission screen="dashboard" />}>
                 <Route path="/" element={<DashboardPage />} />
               </Route>
               <Route element={<RequirePermission screen="comandas" />}>
-                <Route path="/comandas" element={<ComandasPage />} />
-                <Route path="/comandas/:id" element={<ComandaAbertaPage />} />
-                <Route path="/comandas/:id/fechar" element={<FechamentoPage />} />
+                <Route path="/vendas/comandas" element={<ComandasPage />} />
+                <Route path="/vendas/comandas/:id" element={<ComandaAbertaPage />} />
+                <Route path="/vendas/comandas/:id/fechar" element={<FechamentoPage />} />
                 <Route path="/cardapio" element={<CardapioPage />} />
+              </Route>
+              <Route element={<RequirePermission screen="consumo_interno" />}>
+                <Route path="/consumo-interno" element={<ConsumoInternoPage />} />
+                <Route path="/consumo-interno/:consumidorId" element={<ConsumoInternoDetalhePage />} />
               </Route>
               <Route element={<RequirePermission screen="compras" />}>
                 <Route path="/compras" element={<ComprasPage />} />
@@ -85,7 +91,10 @@ export function App() {
                 <Route path="/cadastros/insumos" element={<InsumosPage />} />
               </Route>
               <Route element={<RequirePermission screen="relatorios" />}>
-                <Route path="/relatorios" element={<RelatoriosIndexPage />} />
+                <Route path="/relatorios" element={<Navigate to="/relatorios/vendas" replace />} />
+                <Route path="/relatorios/vendas" element={<RelatoriosIndexPage />} />
+                <Route path="/relatorios/compras" element={<RelatoriosIndexPage />} />
+                <Route path="/relatorios/financeiro" element={<RelatoriosIndexPage />} />
                 <Route path="/relatorios/vendas-do-dia" element={<VendasDoDiaPage />} />
                 <Route path="/relatorios/historico" element={<HistoricoComandasPage />} />
                 <Route path="/relatorios/fechamento-caixa" element={<FechamentoCaixaPage />} />

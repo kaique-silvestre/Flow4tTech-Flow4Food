@@ -42,17 +42,23 @@ Badges de contagem migram: badge de estoque crítico vai pro grupo Estoque, badg
 
 ### Critérios de aceite
 
-- [ ] Menu exibe grupos: Dashboard, Cardápio, Vendas, Compras, Estoque, Financeiro, Relatórios, Cadastros, Configurações (nesta ordem)
-- [ ] "Vendas" expande flyout com: Comandas, Consumo Interno
-- [ ] "Estoque" expande flyout com: Estoque, Movimentos
-- [ ] "Financeiro" expande flyout com: Contas a Pagar
-- [ ] "Relatórios" expande flyout com: Vendas, Compras, Financeiro
-- [ ] "Compras" é link direto sem dropdown
-- [ ] "Caixa" não aparece no menu
-- [ ] Flyout expande para o lado direito em modo expandido e colapsado
-- [ ] Badges migrados para os novos grupos (estoque crítico, contas urgentes, comandas abertas)
-- [ ] Navegação para todas as rotas existentes continua funcionando
-- [ ] Não há regressão visual no sidebar em modo desktop e mobile
+- [x] Menu exibe grupos: Dashboard, Cardápio, Vendas, Compras, Estoque, Financeiro, Relatórios, Cadastros, Configurações (nesta ordem)
+- [x] "Vendas" expande flyout com: Comandas, Consumo Interno
+- [x] "Estoque" expande flyout com: Estoque, Movimentos
+- [x] "Financeiro" expande flyout com: Contas a Pagar
+- [x] "Relatórios" expande flyout com: Vendas, Compras, Financeiro
+- [x] "Compras" é dropdown flyout com sub-item Compras (alterado a pedido do cliente)
+- [x] "Caixa" não aparece no menu
+- [x] Flyout expande para o lado direito em modo expandido e colapsado (via React Portal + fixed positioning)
+- [x] Badges migrados para os novos grupos (estoque crítico, contas urgentes, comandas abertas)
+- [x] Navegação para todas as rotas existentes continua funcionando
+- [x] Não há regressão visual no sidebar em modo desktop e mobile
+
+**Extras implementados (fora do escopo original):**
+- [x] Breadcrumb de navegação no topo de todas as telas (ex: "Vendas > Comandas")
+- [x] Rota `/comandas` migrada para `/vendas/comandas` para consistência com estrutura do menu
+- [x] Nav config extraída para `navConfig.ts` (compartilhada entre Sidebar e Breadcrumb)
+- [x] Flyout renderizado via React Portal (resolve clipping de `overflow-y-auto` no nav)
 
 ### User stories endereçadas
 
@@ -92,18 +98,18 @@ Criar o backend completo para o módulo de Consumo Interno.
 
 ### Critérios de aceite
 
-- [ ] Migration aplicada sem erro — tabela `itens_consumo_interno` criada
-- [ ] `POST /api/consumo-interno` com `{consumidor_id, produto_id, quantidade}` → item criado com `custo_unitario` calculado pelo `custo_medio` do produto/insumo
-- [ ] Após lançar item, `estoque_atual` dos insumos da ficha técnica é debitado imediatamente
-- [ ] Após lançar item, `MovimentoEstoque` criado com `tipo="saida_consumo_interno"`
-- [ ] `estoque_reservado` NÃO é alterado (diferente da comanda)
-- [ ] `GET /api/consumo-interno?consumidor_id=1&mes=6&ano=2026` → retorna apenas items do consumidor 1 em junho/2026
-- [ ] `GET /api/consumo-interno/resumo?mes=6&ano=2026` → retorna `[{consumidor_id, consumidor_nome, itens_no_mes, total, ultima_atividade}]`
-- [ ] `DELETE /api/consumo-interno/{id}` → estoque devolvido, `MovimentoEstoque` de entrada criado, registro deletado
-- [ ] Tentar acessar sem permissão `consumo_interno` → 403
-- [ ] `"consumo_interno"` aparece em `VALID_SCREENS`
-- [ ] Produto sem ficha técnica → `custo_unitario` é o `custo_medio` do insumo direto (se produto for baseado em insumo) ou `preco_venda` como fallback
-- [ ] Lançar item não cria registro de pagamento nem impacta contas a pagar/receber
+- [x] Migration aplicada sem erro — tabela `itens_consumo_interno` criada
+- [x] `POST /api/consumo-interno` com `{consumidor_id, produto_id, quantidade}` → item criado com `custo_unitario` calculado pelo `custo_medio` do produto/insumo
+- [x] Após lançar item, `estoque_atual` dos insumos da ficha técnica é debitado imediatamente
+- [x] Após lançar item, `MovimentoEstoque` criado com `tipo="saida_consumo_interno"`
+- [x] `estoque_reservado` NÃO é alterado (diferente da comanda)
+- [x] `GET /api/consumo-interno?consumidor_id=1&mes=6&ano=2026` → retorna apenas items do consumidor 1 em junho/2026
+- [x] `GET /api/consumo-interno/resumo?mes=6&ano=2026` → retorna `[{consumidor_id, consumidor_nome, itens_no_mes, total, ultima_atividade}]`
+- [x] `DELETE /api/consumo-interno/{id}` → estoque devolvido, `MovimentoEstoque` de entrada criado, registro deletado
+- [x] Tentar acessar sem permissão `consumo_interno` → 403
+- [x] `"consumo_interno"` aparece em `VALID_SCREENS`
+- [x] Produto sem ficha técnica → `custo_unitario` é o `custo_medio` do insumo direto (se produto for baseado em insumo) ou `preco_venda` como fallback
+- [x] Lançar item não cria registro de pagamento nem impacta contas a pagar/receber
 
 ### User stories endereçadas
 
@@ -145,18 +151,18 @@ Criar as telas de Consumo Interno no frontend.
 
 ### Critérios de aceite
 
-- [ ] Rota `/consumo-interno` acessível via menu Vendas → Consumo Interno
-- [ ] Visão geral exibe tabela com consumidores e totais do mês selecionado
-- [ ] Trocar mês/ano atualiza os dados
-- [ ] Clicar no nome do consumidor navega para detalhe
-- [ ] Botão "+ Lançar Consumo" abre modal funcional
-- [ ] Ao lançar item, tabela atualiza e toast de sucesso aparece
-- [ ] Custo unitário exibido com formatação monetária (R$)
-- [ ] Total acumulado exibido em destaque
-- [ ] Botão estornar pede confirmação antes de executar
-- [ ] Após estorno, item some da tabela e toast confirma
-- [ ] Sem permissão `consumo_interno`, menu item não aparece e rota redireciona
-- [ ] Layout responsivo em desktop e mobile
+- [x] Rota `/consumo-interno` acessível via menu Vendas → Consumo Interno
+- [x] Visão geral exibe tabela com consumidores e totais do mês selecionado
+- [x] Trocar mês/ano atualiza os dados
+- [x] Clicar no nome do consumidor navega para detalhe
+- [x] Botão "+ Lançar Consumo" abre modal funcional
+- [x] Ao lançar item, tabela atualiza e toast de sucesso aparece
+- [x] Custo unitário exibido com formatação monetária (R$)
+- [x] Total acumulado exibido em destaque
+- [x] Botão estornar pede confirmação antes de executar
+- [x] Após estorno, item some da tabela e toast confirma
+- [x] Sem permissão `consumo_interno`, menu item não aparece e rota redireciona
+- [x] Layout responsivo em desktop e mobile
 
 ### User stories endereçadas
 
@@ -522,9 +528,9 @@ Receita Bruta
 
 | # | Título | Tipo | Bloqueado por | Status |
 |---|--------|------|--------------|--------|
-| 1 | Reorganização do menu lateral | AFK | — | ⬜ |
-| 2 | Consumo Interno — model + API | AFK | — | ⬜ |
-| 3 | Consumo Interno — telas frontend | AFK | #2 | ⬜ |
+| 1 | Reorganização do menu lateral | AFK | — | ✅ |
+| 2 | Consumo Interno — model + API | AFK | — | ✅ |
+| 3 | Consumo Interno — telas frontend | AFK | #2 | ✅ |
 | 4 | XML NF-e — parser + aliases + API | AFK | — | ⬜ |
 | 5 | XML NF-e — modal de importação | AFK | #4 | ⬜ |
 | 6 | Relatórios — hubs por categoria | AFK | #1 | ⬜ |
@@ -537,4 +543,4 @@ Receita Bruta
 
 **Caminho crítico:** #1 → #6 → #7/#8/#9 (menu → hubs → relatórios novos).
 
-**10 issues, 0 concluídas.**
+**10 issues, 3 concluídas.**

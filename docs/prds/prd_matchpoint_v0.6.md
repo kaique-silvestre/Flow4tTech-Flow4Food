@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-O sistema Matchpoint está em operação no estabelecimento Estação Backpoint, mas enfrenta limitações que dificultam o controle operacional completo:
+O sistema Flow4Food está em operação no estabelecimento Estação Matchpoint, mas enfrenta limitações que dificultam o controle operacional completo:
 
 1. **Menu lateral desorganizado** — itens como Estoque, Movimentos, Contas a Pagar e Relatórios estão em nível flat, sem agrupamento lógico. Com o crescimento do sistema, a navegação ficou poluída e difícil de escanear. Caixa aparece no menu mas não será implementado agora.
 

@@ -161,7 +161,7 @@ export function ComandaAbertaPage() {
   }
 
   function handleImprimir() {
-    navigate(`/comandas/${id}/pre-conta`);
+    navigate(`/vendas/comandas/${id}/pre-conta`);
   }
 
   function saveEdit(ic: ItemComandaResponse) {
@@ -181,7 +181,7 @@ export function ComandaAbertaPage() {
   if (isError) {
     return (
       <div className="p-6">
-        <Button variant="outline" size="sm" onClick={() => navigate("/comandas")} className="mb-4">
+        <Button variant="outline" size="sm" onClick={() => navigate("/vendas/comandas")} className="mb-4">
           ← Voltar
         </Button>
         <p className="text-sm text-red-500">Comanda não encontrada ou erro ao carregar. Verifique se ela ainda existe.</p>
@@ -362,7 +362,7 @@ export function ComandaAbertaPage() {
       <div className="border-b bg-white px-4 py-3 lg:px-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => navigate("/comandas")}>
+            <Button variant="outline" size="sm" onClick={() => navigate("/vendas/comandas")}>
               ← Voltar
             </Button>
             <div>
@@ -664,7 +664,7 @@ export function ComandaAbertaPage() {
             <div className="flex gap-2">
               <Button
                 variant="default"
-                onClick={() => navigate(`/comandas/${id}/fechar`)}
+                onClick={() => navigate(`/vendas/comandas/${id}/fechar`)}
                 disabled={itensAtivos.length === 0}
                 title={itensAtivos.length === 0 ? "Adicione ao menos um item antes de fechar" : undefined}
               >
@@ -697,7 +697,7 @@ export function ComandaAbertaPage() {
           <div className="flex gap-2">
             <Button
               variant="default"
-              onClick={() => navigate(`/comandas/${id}/fechar`)}
+              onClick={() => navigate(`/vendas/comandas/${id}/fechar`)}
               disabled={itensAtivos.length === 0}
             >
               Fechar Conta
