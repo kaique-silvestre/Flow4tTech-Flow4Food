@@ -1,10 +1,18 @@
 import datetime
 import os
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("JWT_SECRET", "test-secret-only-for-tests")
 os.environ.setdefault("ENV", "test")
+
+_TZ_SP = ZoneInfo("America/Sao_Paulo")
+
+
+def _hoje_sp() -> str:
+    """Data de hoje no fuso de São Paulo — deve coincidir com _day_utc_range do repositório."""
+    return datetime.datetime.now(_TZ_SP).date().isoformat()
 
 import pytest
 from fastapi.testclient import TestClient
@@ -218,7 +226,7 @@ def test_perdas_agrupadas_por_motivo(c):
     _baixa_sem_venda(c, insumo["id"], "2", "perda")
     _baixa_sem_venda(c, insumo["id"], "1", "quebra")
 
-    hoje = datetime.date.today().isoformat()
+    hoje = _hoje_sp()
     resp = c.get(f"/api/relatorios/perdas-cortesias?data_inicio={hoje}&data_fim={hoje}")
     assert resp.status_code == 200, resp.text
     data = resp.json()
@@ -246,7 +254,7 @@ def test_vendas_por_garcom_respeita_garcom_abertura(c):
     _lancar_item(c, cmd2["id"], item["id"], cmd2["version"])
     _fechar(c, cmd2["id"], metodo["id"], "40.00")
 
-    hoje = datetime.date.today().isoformat()
+    hoje = _hoje_sp()
     resp = c.get(f"/api/relatorios/vendas-por-garcom?data_inicio={hoje}&data_fim={hoje}")
     assert resp.status_code == 200, resp.text
     garcons = {g["garcom_nome"]: g for g in resp.json()["garcons"]}
