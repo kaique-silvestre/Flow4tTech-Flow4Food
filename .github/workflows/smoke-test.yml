@@ -1,0 +1,40 @@
+name: Smoke Test — Staging
+
+# Roda após push em staging (ou seja, após merge de PR development→staging).
+# Aguarda o Railway terminar o deploy e confirma que o backend está respondendo.
+on:
+  push:
+    branches: [staging]
+
+jobs:
+  smoke-test:
+    name: Backend staging — health check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait for Railway deploy and check /health
+        env:
+          STAGING_URL: https://flow4tech-flow4food-staging.up.railway.app
+        run: |
+          echo "Aguardando Railway deploy ficar pronto..."
+          MAX_ATTEMPTS=10
+          INTERVAL=30
+          attempt=1
+
+          until [ $attempt -gt $MAX_ATTEMPTS ]; do
+            echo "Tentativa $attempt/$MAX_ATTEMPTS — GET $STAGING_URL/health"
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$STAGING_URL/health" || echo "000")
+
+            if [ "$STATUS" = "200" ]; then
+              echo "✓ Staging respondeu 200. Deploy OK."
+              exit 0
+            fi
+
+            echo "  Status: $STATUS — aguardando ${INTERVAL}s..."
+            sleep $INTERVAL
+            attempt=$((attempt + 1))
+          done
+
+          echo "✗ Staging não respondeu após $((MAX_ATTEMPTS * INTERVAL))s."
+          echo "  Verificar logs no Railway dashboard."
+          exit 1

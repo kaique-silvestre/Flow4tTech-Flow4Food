@@ -459,13 +459,13 @@ No Console do Railway (environment production):
 
 ---
 
-## 10. Pendências Críticas
+## 10. Pendências
 
 ### 10.1 Role `app_user` não existe no banco
 
-**Risco:** ALTO — sem essa role, `SET LOCAL ROLE app_user` falha silenciosamente ou gera erro. RLS pode não estar sendo aplicado corretamente.
+**Risco:** ALTO — sem essa role, `SET ROLE app_user` falha ou é ignorado. RLS pode não estar sendo aplicado corretamente.
 
-**O que é:** A `dependencies.py:44` executa `SET LOCAL ROLE app_user` a cada request autenticado. Essa role PostgreSQL precisa existir e ter permissões restritas para que o RLS funcione como esperado.
+**O que é:** `dependencies.py` executa `SET ROLE app_user` a cada request autenticado. Essa role PostgreSQL precisa existir e ter permissões restritas para que o RLS funcione como esperado.
 
 **Fix necessário:** Criar migration que:
 1. Cria a role `app_user` se não existir
@@ -473,7 +473,6 @@ No Console do Railway (environment production):
 3. **NÃO** concede `BYPASSRLS` para essa role
 
 ```sql
--- Exemplo do que a migration deve fazer
 DO $$ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_user') THEN
     CREATE ROLE app_user;
@@ -482,32 +481,46 @@ END $$;
 
 GRANT USAGE ON SCHEMA public TO app_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
--- Revogar acesso a tabelas que não devem ser acessadas pelo app
 REVOKE ALL ON alembic_version FROM app_user;
 ```
 
 **Investigar primeiro:** Verificar se a role existe no banco de prod antes de criar a migration.
 
-### 10.2 Sem CI/CD automatizado
+### 10.2 CI/CD automatizado ✅ Implementado
 
-**Risco:** MÉDIO — sem pipeline, é possível subir código quebrado para staging.
+Pipeline GitHub Actions operacional: lint, types, build, migrations, testes. Branch protection ativa em `staging` e `main`. Ver `ci-cd.md` para detalhes.
 
-**Sugestido:** GitHub Actions que rode em pull requests para `staging`:
-- `npm run type-check` (frontend)
-- `npm run lint` (frontend)  
-- `python -m pytest` (backend, quando houver testes)
+**Ainda faltam:** testes de integração reais no backend (hoje pytest passa com `continue-on-error`).
 
-### 10.3 Frontend staging não configurado
+### 10.3 Frontend staging sem URL própria
 
-**Status:** O frontend em Vercel provavelmente aponta para o backend de prod, não para staging.
+**Status:** Frontend não tem deploy próprio apontando para o backend staging.
 
-**Fix:** Configurar preview deployment no Vercel para branch `staging` com `VITE_API_URL` apontando para o backend de staging.
+**Workaround atual — testar staging localmente:**
 
-### 10.4 Sem backup automatizado do banco de prod
+```powershell
+# 1. Criar arquivo frontend/.env.staging.local (não commitado)
+# VITE_API_URL=https://flow4tech-flow4food-staging.up.railway.app
 
-**Risco:** ALTO — Railway não garante backup automático por padrão no plano básico.
+# 2. Rodar frontend localmente com a variável sobrescrita
+cd frontend
+$env:VITE_API_URL="https://flow4tech-flow4food-staging.up.railway.app"
+npm run dev
+```
 
-**Verificar:** Se o plano do Railway inclui backups automáticos. Se não, configurar backup periódico ou upgrade de plano.
+Acessar `http://localhost:5173` — frontend local, banco de staging.
+
+**Fix definitivo (Vercel):** Configurar preview deployment no Vercel para branch `staging`:
+1. Vercel dashboard → projeto → Settings → Environment Variables
+2. Adicionar `VITE_API_URL = https://flow4tech-flow4food-staging.up.railway.app`
+3. Scope: apenas branch `staging` (não afeta produção)
+4. Após configurar: todo push em `staging` gera preview URL com frontend + backend staging juntos
+
+### 10.4 Backup automatizado do banco de prod
+
+**Risco:** ALTO — Railway não garante backup automático no plano básico.
+
+**Ação:** Verificar no Railway dashboard (serviço Postgres → aba Backups) se backups automáticos estão ativos. Se não, considerar upgrade de plano ou configurar pg_dump periódico via cron no Railway.
 
 ---
 
