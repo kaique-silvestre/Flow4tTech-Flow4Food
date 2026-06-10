@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 
 import sqlalchemy as sa
@@ -20,6 +20,10 @@ class RefreshToken(Base):
     token_hash: Mapped[str] = mapped_column(sa.String(64), unique=True, nullable=False, index=True)
     expires_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
     revoked_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)  # noqa: UP045
-    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("NOW()"))
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=sa.text("NOW()"),
+    )
 
     user: Mapped[SystemUser] = relationship(back_populates="refresh_tokens")
