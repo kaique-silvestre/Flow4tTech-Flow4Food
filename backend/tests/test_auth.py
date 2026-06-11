@@ -14,10 +14,10 @@ from sqlalchemy.orm import sessionmaker
 
 from src.api.dependencies import get_current_user, get_db, require_permission
 from src.core.database import Base
-from src.models.profiles import Profile, ProfilePermission
+from src.models.profiles import PermissionTemplate, Profile, ProfilePermission, TemplatePermission
 from src.models.system_users import SystemUser
 from src.repositories import revoked_tokens_repository
-from src.services.auth_service import create_access_token, create_refresh_token, hash_password, rotate_refresh_token
+from src.services.auth_service import create_access_token, create_refresh_token, hash_password, resolve_permissions, rotate_refresh_token
 
 _JWT_SECRET = "test-secret-only-for-tests-32chars!!"
 _SQLITE_URL = "sqlite:///:memory:"
@@ -231,5 +231,81 @@ def test_rotate_refresh_token_recomputes_permissions(monkeypatch):
         payload = jwt.decode(new_access, _JWT_SECRET, algorithms=["HS256"])
         assert set(payload["permissions"]) == {"vendas", "cozinha"}
         assert new_raw_refresh != raw_refresh
+    finally:
+        db.close()
+
+
+# --- Issue 15 tests ---
+
+def _make_profile_with_template(db, now):
+    tmpl = PermissionTemplate(id=1, tenant_id=1, nome="Base", is_system=False)
+    t_perm1 = TemplatePermission(template_id=1, screen="vendas", can_access=True)
+    t_perm2 = TemplatePermission(template_id=1, screen="cozinha", can_access=True)
+    profile = Profile(id=2, tenant_id=1, name="Operador", template_id=1, created_at=now, updated_at=now)
+    user = SystemUser(
+        id=2, tenant_id=1, profile_id=2,
+        name="Op User", username="opuser",
+        password_hash=hash_password("pass"),
+        is_active=True, created_at=now, updated_at=now,
+    )
+    db.add_all([tmpl, t_perm1, t_perm2, profile, user])
+    db.commit()
+    return user
+
+
+def test_resolve_permissions_template_profile():
+    db = _Session()
+    try:
+        now = datetime.now(timezone.utc)
+        user = _make_profile_with_template(db, now)
+        db.expire_all()
+        db.refresh(user)
+        # load template relationship
+        _ = user.profile.template.permissions
+        perms = resolve_permissions(user)
+        assert set(perms) == {"vendas", "cozinha"}
+    finally:
+        db.close()
+
+
+def test_resolve_permissions_custom_profile():
+    db = _Session()
+    try:
+        now = datetime.now(timezone.utc)
+        profile = Profile(id=3, tenant_id=1, name="Custom", template_id=None, created_at=now, updated_at=now)
+        perm = ProfilePermission(id=10, tenant_id=1, profile_id=3, screen="relatorios", can_access=True, created_at=now)
+        user = SystemUser(
+            id=3, tenant_id=1, profile_id=3,
+            name="Custom User", username="customuser",
+            password_hash=hash_password("pass"),
+            is_active=True, created_at=now, updated_at=now,
+        )
+        db.add_all([profile, perm, user])
+        db.commit()
+        db.expire_all()
+        db.refresh(user)
+        _ = user.profile.permissions
+        perms = resolve_permissions(user)
+        assert perms == ["relatorios"]
+    finally:
+        db.close()
+
+
+def test_rotate_refresh_token_uses_template_permissions(monkeypatch):
+    import src.services.auth_service as auth_svc
+    monkeypatch.setattr(auth_svc, "get_assinatura_by_tenant", lambda db, tid: None)
+
+    db = _Session()
+    try:
+        now = datetime.now(timezone.utc)
+        _make_profile_with_template(db, now)
+        user = db.query(SystemUser).filter_by(id=2).first()
+
+        raw_refresh = create_refresh_token(db, user.id)
+        db.expire_all()
+        new_access, _ = rotate_refresh_token(db, raw_refresh)
+
+        payload = jwt.decode(new_access, _JWT_SECRET, algorithms=["HS256"])
+        assert set(payload["permissions"]) == {"vendas", "cozinha"}
     finally:
         db.close()

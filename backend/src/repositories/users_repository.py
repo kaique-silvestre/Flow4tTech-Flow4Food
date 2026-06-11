@@ -2,12 +2,18 @@ from typing import Optional
 
 from sqlalchemy.orm import Session, joinedload
 
-from src.models.profiles import Profile
+from src.models.profiles import PermissionTemplate, Profile
 from src.models.system_users import SystemUser
 
 
 def _with_profile(q):
-    return q.options(joinedload(SystemUser.profile).joinedload(Profile.permissions))
+    return q.options(
+        joinedload(SystemUser.profile)
+        .joinedload(Profile.permissions),
+        joinedload(SystemUser.profile)
+        .joinedload(Profile.template)
+        .joinedload(PermissionTemplate.permissions),
+    )
 
 
 def get_user_by_username(db: Session, tenant_id: int, username: str) -> Optional[SystemUser]:

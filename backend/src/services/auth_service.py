@@ -52,8 +52,17 @@ def create_access_token(payload: dict) -> str:
     )
 
 
+def resolve_permissions(user) -> list:
+    if user.profile_id is None:
+        return []
+    profile = user.profile
+    if profile.template_id is not None:
+        return [p.screen for p in profile.template.permissions if p.can_access]
+    return [p.screen for p in profile.permissions if p.can_access]
+
+
 def _build_token_response(user, subscription_status: str) -> TokenResponse:
-    permissions = [p.screen for p in user.profile.permissions if p.can_access]
+    permissions = resolve_permissions(user)
     payload = {
         "sub": str(user.id),
         "user_id": user.id,
@@ -102,7 +111,7 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str]:
         "name": user.name,
         "profile_id": user.profile_id,
         "profile_name": user.profile.name,
-        "permissions": [p.screen for p in user.profile.permissions if p.can_access],
+        "permissions": resolve_permissions(user),
         "subscription_status": subscription_status,
     })
     new_refresh = create_refresh_token(db, user.id)
