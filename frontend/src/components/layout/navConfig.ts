@@ -15,6 +15,7 @@ import {
   FlaskConical,
   Wallet,
   Coffee,
+  CalendarDays,
   type LucideIcon,
 } from "lucide-react";
 
@@ -72,6 +73,7 @@ const CONFIGURACOES_CHILDREN: SubNavItem[] = [
 
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard, screen: "dashboard" },
+  { label: "Calendário", to: "/calendario", icon: CalendarDays, screen: "calendario" },
   { label: "Cardápio", to: "/cardapio", icon: UtensilsCrossed, screen: "comandas" },
   { label: "Vendas", to: null, icon: ClipboardList, screen: "comandas", children: VENDAS_CHILDREN },
   { label: "Compras", to: null, icon: ShoppingCart, screen: "compras", children: COMPRAS_CHILDREN },

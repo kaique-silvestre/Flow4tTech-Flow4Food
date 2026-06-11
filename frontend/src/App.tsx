@@ -44,6 +44,7 @@ import { ContaSuspensaPage } from "@/features/assinatura/ContaSuspensaPage";
 import { queryClient } from "@/lib/queryClient";
 import { ConsumoInternoPage } from "@/features/consumo_interno/ConsumoInternoPage";
 import { ConsumoInternoDetalhePage } from "@/features/consumo_interno/ConsumoInternoDetalhePage";
+import { CalendarioPage } from "@/features/calendario/CalendarioPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
 export function App() {
@@ -108,6 +109,9 @@ export function App() {
               </Route>
               <Route element={<RequirePermission screen="caixa" />}>
                 <Route path="/caixa" element={<CaixaPage />} />
+              </Route>
+              <Route element={<RequirePermission screen="calendario" />}>
+                <Route path="/calendario" element={<CalendarioPage />} />
               </Route>
               <Route element={<RequirePermission screen="configuracoes" />}>
                 <Route path="/configuracoes/gerais" element={<ConfiguracoesPage />} />
