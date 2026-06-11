@@ -47,6 +47,11 @@ import { ConsumoInternoDetalhePage } from "@/features/consumo_interno/ConsumoInt
 import { CalendarioPage } from "@/features/calendario/CalendarioPage";
 import { PromocoesPage } from "@/features/cadastros/promocoes/PromocoesPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
+import { RequirePlatformAuth } from "@/components/auth/RequirePlatformAuth";
+import { PlatformLoginPage } from "@/features/platform/PlatformLoginPage";
+import { PlatformLayout } from "@/features/platform/PlatformLayout";
+import { PlatformTenantsPage } from "@/features/platform/PlatformTenantsPage";
+import { PlatformTenantDetailPage } from "@/features/platform/PlatformTenantDetailPage";
 
 export function App() {
   return (
@@ -54,6 +59,13 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
+          <Route path="/platform/login" element={<PlatformLoginPage />} />
+          <Route element={<RequirePlatformAuth />}>
+            <Route element={<PlatformLayout />}>
+              <Route path="/platform/tenants" element={<PlatformTenantsPage />} />
+              <Route path="/platform/tenants/:tenantId" element={<PlatformTenantDetailPage />} />
+            </Route>
+          </Route>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
           <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
