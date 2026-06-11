@@ -20,16 +20,6 @@ def upgrade() -> None:
     conn = op.get_bind()
     is_pg = conn.dialect.name == "postgresql"
 
-    if is_pg:
-        conn.execute(sa.text(
-            "CREATE TYPE tipo_recorrencia AS ENUM ('nenhuma', 'semanal', 'mensal')"
-        ))
-
-    recorrencia_type = (
-        sa.Enum("nenhuma", "semanal", "mensal", name="tipo_recorrencia", create_type=False)
-        if is_pg
-        else sa.String(10)
-    )
     dias_type = sa.ARRAY(sa.Integer()) if is_pg else sa.JSON()
 
     op.create_table(
@@ -49,7 +39,7 @@ def upgrade() -> None:
         sa.Column("data_fim", sa.Date(), nullable=True),
         sa.Column("hora_inicio", sa.Time(), nullable=False, server_default="00:00:00"),
         sa.Column("hora_fim", sa.Time(), nullable=False, server_default="23:59:59"),
-        sa.Column("recorrencia", recorrencia_type, nullable=False, server_default="nenhuma"),
+        sa.Column("recorrencia", sa.String(10), nullable=False, server_default="nenhuma"),
         sa.Column("dias_semana", dias_type, nullable=True),
         sa.Column("dias_mes", dias_type, nullable=True),
         sa.Column(
@@ -75,6 +65,22 @@ def upgrade() -> None:
     )
 
     if is_pg:
+        conn.execute(sa.text(
+            "DO $$ BEGIN "
+            "CREATE TYPE tipo_recorrencia AS ENUM ('nenhuma', 'semanal', 'mensal'); "
+            "EXCEPTION WHEN duplicate_object THEN NULL; END $$"
+        ))
+        conn.execute(sa.text(
+            "ALTER TABLE promocoes ALTER COLUMN recorrencia DROP DEFAULT"
+        ))
+        conn.execute(sa.text(
+            "ALTER TABLE promocoes "
+            "ALTER COLUMN recorrencia TYPE tipo_recorrencia "
+            "USING recorrencia::tipo_recorrencia"
+        ))
+        conn.execute(sa.text(
+            "ALTER TABLE promocoes ALTER COLUMN recorrencia SET DEFAULT 'nenhuma'::tipo_recorrencia"
+        ))
         conn.execute(sa.text("ALTER TABLE promocoes ENABLE ROW LEVEL SECURITY"))
         conn.execute(sa.text(
             "CREATE POLICY tenant_isolation ON promocoes "
