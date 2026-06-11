@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_tenant_db, require_permission
+from src.schemas.permission_templates import AssignTemplateRequest
 from src.schemas.profiles import ProfileCreate, ProfileResponse, ProfileUpdate
 from src.services.profiles_service import (
     create_new_profile,
@@ -11,6 +12,7 @@ from src.services.profiles_service import (
     toggle_profile_active,
     update_existing_profile,
 )
+from src.services.templates_service import assign_template_to_profile
 
 router = APIRouter()
 
@@ -58,6 +60,16 @@ def toggle_active(
     payload: dict = Depends(require_permission("gestao_usuarios")),
 ) -> ProfileResponse:
     return toggle_profile_active(db, payload["tenant_id"], profile_id)
+
+
+@router.patch("/{profile_id}/template", status_code=204)
+def assign_profile_template(
+    profile_id: int,
+    body: AssignTemplateRequest,
+    db: Session = Depends(get_tenant_db),
+    payload: dict = Depends(require_permission("gestao_usuarios")),
+) -> None:
+    assign_template_to_profile(db, payload["tenant_id"], profile_id, body)
 
 
 @router.delete("/{profile_id}", status_code=204)
