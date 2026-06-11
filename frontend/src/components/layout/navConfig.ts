@@ -16,6 +16,7 @@ import {
   Wallet,
   Coffee,
   CalendarDays,
+  Percent,
   type LucideIcon,
 } from "lucide-react";
 
@@ -64,6 +65,7 @@ const CADASTROS_CHILDREN: SubNavItem[] = [
   { label: "Fornecedores", to: "/cadastros/fornecedores", icon: Truck, screen: "cadastros" },
   { label: "Garçons", to: "/cadastros/garcons", icon: Users, screen: "cadastros" },
   { label: "Métodos Pgto.", to: "/cadastros/metodos-pagamento", icon: CreditCard, screen: "cadastros" },
+  { label: "Promoções", to: "/cadastros/promocoes", icon: Percent, screen: "cadastros" },
 ];
 
 const CONFIGURACOES_CHILDREN: SubNavItem[] = [

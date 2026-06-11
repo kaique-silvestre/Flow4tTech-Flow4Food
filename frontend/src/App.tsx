@@ -45,6 +45,7 @@ import { queryClient } from "@/lib/queryClient";
 import { ConsumoInternoPage } from "@/features/consumo_interno/ConsumoInternoPage";
 import { ConsumoInternoDetalhePage } from "@/features/consumo_interno/ConsumoInternoDetalhePage";
 import { CalendarioPage } from "@/features/calendario/CalendarioPage";
+import { PromocoesPage } from "@/features/cadastros/promocoes/PromocoesPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 
 export function App() {
@@ -90,6 +91,7 @@ export function App() {
                 <Route path="/cadastros/garcons" element={<GarconsPage />} />
                 <Route path="/cadastros/metodos-pagamento" element={<MetodosPagamentoPage />} />
                 <Route path="/cadastros/insumos" element={<InsumosPage />} />
+                <Route path="/cadastros/promocoes" element={<PromocoesPage />} />
               </Route>
               <Route element={<RequirePermission screen="relatorios" />}>
                 <Route path="/relatorios" element={<Navigate to="/relatorios/vendas" replace />} />

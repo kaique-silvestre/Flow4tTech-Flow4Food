@@ -9,6 +9,7 @@ import {
   useDeleteEvento,
   type EventoResponse,
 } from "./useEventos";
+import { usePromocoesMes, type PromoçaoResponse } from "@/features/cadastros/promocoes/usePromocoes";
 
 function getMesLabel(mes: string): string {
   const [year, month] = mes.split("-").map(Number);
@@ -50,9 +51,23 @@ interface ModalState {
   editing: EventoResponse | null;
 }
 
+function isPromoAtiva(p: PromoçaoResponse, date: Date): boolean {
+  const d = date.toISOString().slice(0, 10);
+  if (d < p.data_inicio) return false;
+  if (p.data_fim && d > p.data_fim) return false;
+  if (p.recorrencia === "semanal" && p.dias_semana) {
+    return p.dias_semana.includes(date.getDay());
+  }
+  if (p.recorrencia === "mensal" && p.dias_mes) {
+    return p.dias_mes.includes(date.getDate());
+  }
+  return true;
+}
+
 export function CalendarioPage() {
   const [mesAtual, setMesAtual] = useState(todayMes);
   const { data: eventos = [], isLoading } = useEventos(mesAtual);
+  const { data: promocoes = [] } = usePromocoesMes(mesAtual);
   const createMutation = useCreateEvento();
   const patchMutation = usePatchEvento();
   const deleteMutation = useDeleteEvento();
@@ -138,6 +153,7 @@ export function CalendarioPage() {
               }
               const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
               const dayEvents = eventosByDate[dateStr] ?? [];
+              const dayPromos = promocoes.filter((p) => isPromoAtiva(p, day));
               const isToday = dateStr === new Date().toISOString().slice(0, 10);
               return (
                 <div
@@ -168,6 +184,15 @@ export function CalendarioPage() {
                         >
                           ×
                         </button>
+                      </div>
+                    ))}
+                    {dayPromos.map((p) => (
+                      <div
+                        key={`promo-${p.id}`}
+                        title={`${p.nome} · ${p.tipo_desconto === "porcentagem" ? p.valor_desconto + "%" : "R$ " + p.valor_desconto} · ${p.hora_inicio?.slice(0, 5) ?? "00:00"}–${p.hora_fim?.slice(0, 5) ?? "23:59"}${p.produto_ids.length > 0 ? ` · ${p.produto_ids.length} produto(s)` : ""}`}
+                        className="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-800 truncate cursor-default"
+                      >
+                        {p.nome}
                       </div>
                     ))}
                   </div>

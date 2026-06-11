@@ -27,6 +27,7 @@ from src.api.routes import metodos_pagamento as metodos_pagamento_routes
 from src.api.routes import permission_templates as permission_templates_routes
 from src.api.routes import platform_auth as platform_auth_routes
 from src.api.routes import eventos as eventos_routes
+from src.api.routes import promocoes as promocoes_routes
 from src.api.routes import produtos as produtos_routes
 from src.api.routes import profiles as profiles_routes
 from src.api.routes import relatorios as relatorios_routes
@@ -100,6 +101,7 @@ def create_app() -> FastAPI:
     app.include_router(contas_pagar_routes.router, prefix="/api/contas-pagar", tags=["contas_pagar"])
     app.include_router(caixa_routes.router, prefix="/api/caixa", tags=["caixa"])
     app.include_router(eventos_routes.router, prefix="/api/eventos", tags=["eventos"])
+    app.include_router(promocoes_routes.router, prefix="/api/promocoes", tags=["promocoes"])
 
     log = get_logger(__name__)
     log.info("app_started", env=settings.ENV, version=settings.APP_VERSION)
