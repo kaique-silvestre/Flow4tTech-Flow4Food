@@ -63,6 +63,8 @@ class ItemComandaResponse(BaseModel):
     motivo_cancelamento: Optional[str]
     estornado: bool
     created_at: datetime.datetime
+    promocao_id: Optional[int] = None
+    promocao_nome: Optional[str] = None
 
 
 class ComandaResponse(BaseModel):
