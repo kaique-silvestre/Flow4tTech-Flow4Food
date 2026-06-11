@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCreateProfile, useUpdateProfile, type ProfileResponse } from "./useProfiles";
+import { usePermissionTemplates, useAssignProfileTemplate } from "./usePermissionTemplates";
 
 const SCREENS: { id: string; label: string }[] = [
   { id: "dashboard", label: "Dashboard" },
@@ -43,12 +44,19 @@ export function ProfileModal({ open, onClose, profile }: Props) {
   const isAdmin = profile?.name === "Admin";
   const createProfile = useCreateProfile();
   const updateProfile = useUpdateProfile(profile?.id ?? 0);
+  const { data: templates = [] } = usePermissionTemplates();
+  const assignTemplate = useAssignProfileTemplate();
+
+  const [templateId, setTemplateId] = useState<number | null>(null);
+  const templateActive = templateId !== null && !isAdmin;
+  const locked = isAdmin || templateActive;
 
   const {
     register,
     handleSubmit,
     control,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -62,10 +70,23 @@ export function ProfileModal({ open, onClose, profile }: Props) {
         description: profile.description ?? "",
         screens: profile.permissions,
       });
+      setTemplateId(profile.template_id);
     } else {
       reset({ name: "", description: "", screens: [] });
+      setTemplateId(null);
     }
   }, [profile, reset]);
+
+  function applyTemplate(id: number | null) {
+    setTemplateId(id);
+    if (id !== null) {
+      const tpl = templates.find((t) => t.id === id);
+      if (tpl) setValue("screens", tpl.screens, { shouldValidate: true });
+    }
+    if (isEdit && profile) {
+      assignTemplate.mutate({ profileId: profile.id, templateId: id });
+    }
+  }
 
   async function onSubmit(data: FormValues) {
     if (isEdit) {
@@ -92,6 +113,36 @@ export function ProfileModal({ open, onClose, profile }: Props) {
             <Label>Descrição (opcional)</Label>
             <Input {...register("description")} disabled={isAdmin} />
           </div>
+          {!isAdmin && (
+            <div className="space-y-1">
+              <Label>Template de permissão</Label>
+              <select
+                className="w-full rounded-md border px-3 py-2 text-sm"
+                value={templateId ?? ""}
+                onChange={(e) =>
+                  applyTemplate(e.target.value === "" ? null : Number(e.target.value))
+                }
+              >
+                <option value="">Personalizado (sem template)</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nome}
+                    {t.is_system ? " (sistema)" : ""}
+                  </option>
+                ))}
+              </select>
+              {templateActive && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-1"
+                  onClick={() => applyTemplate(null)}
+                >
+                  Personalizar
+                </Button>
+              )}
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Telas com acesso</Label>
             <Controller
@@ -103,7 +154,7 @@ export function ProfileModal({ open, onClose, profile }: Props) {
                     <label key={screen.id} className="flex items-center gap-2 text-sm">
                       <input
                         type="checkbox"
-                        disabled={isAdmin}
+                        disabled={locked}
                         checked={field.value.includes(screen.id)}
                         onChange={(e) => {
                           if (e.target.checked) {
