@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from src.models.profiles import PermissionTemplate, Profile
 from src.models.system_users import SystemUser
+from src.models.user_permissions import UserPermission  # noqa: F401 — ensure table is registered
 
 
 def _with_profile(q):
@@ -13,6 +14,7 @@ def _with_profile(q):
         joinedload(SystemUser.profile)
         .joinedload(Profile.template)
         .joinedload(PermissionTemplate.permissions),
+        joinedload(SystemUser.user_permissions),
     )
 
 

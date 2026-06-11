@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -11,8 +11,26 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCreateUser, useUpdateUser, useResetPassword, type UserResponse } from "./useUsers";
+import {
+  useCreateUser,
+  useUpdateUser,
+  useResetPassword,
+  useUserPermissions,
+  useSetUserPermissions,
+  type UserResponse,
+} from "./useUsers";
 import { useProfiles } from "./useProfiles";
+
+const SCREENS: { id: string; label: string }[] = [
+  { id: "dashboard", label: "Dashboard" },
+  { id: "comandas", label: "Comandas / Cardápio" },
+  { id: "compras", label: "Compras" },
+  { id: "estoque", label: "Estoque" },
+  { id: "cadastros", label: "Cadastros" },
+  { id: "relatorios", label: "Relatórios" },
+  { id: "configuracoes", label: "Configurações" },
+  { id: "gestao_usuarios", label: "Gestão de Usuários" },
+];
 
 const ALPHABET = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
 function generatePassword(len = 10): string {
@@ -25,9 +43,10 @@ const createSchema = z.object({
   name: z.string().min(1, "Obrigatório"),
   username: z.string().min(1, "Obrigatório"),
   email: z.string().email("Email inválido").or(z.literal("")).optional(),
-  profile_id: z.coerce.number().min(1, "Selecione um perfil"),
+  profile_id: z.coerce.number().optional().nullable(),
   password: z.string().min(6, "Mínimo 6 caracteres"),
   is_active: z.boolean(),
+  screens: z.array(z.string()),
 });
 
 const editSchema = createSchema.omit({ password: true });
@@ -42,16 +61,21 @@ interface Props {
 
 export function UserModal({ open, onClose, user }: Props) {
   const isEdit = !!user;
+  const isFreeUser = isEdit && user.profile_id == null;
   const { data: profiles = [] } = useProfiles();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser(user?.id ?? 0);
   const resetPwd = useResetPassword();
+  const { data: existingPerms = [] } = useUserPermissions(user?.id ?? 0, isFreeUser);
+  const setPerms = useSetUserPermissions(user?.id ?? 0);
 
   const {
     register,
     handleSubmit,
     reset,
     setValue,
+    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<CreateForm>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,11 +84,15 @@ export function UserModal({ open, onClose, user }: Props) {
       name: "",
       username: "",
       email: "",
-      profile_id: 0,
+      profile_id: undefined,
       password: "",
       is_active: true,
+      screens: [],
     },
   });
+
+  const watchedProfileId = watch("profile_id");
+  const showScreens = !watchedProfileId || watchedProfileId === 0;
 
   useEffect(() => {
     if (user) {
@@ -72,28 +100,44 @@ export function UserModal({ open, onClose, user }: Props) {
         name: user.name,
         username: user.username,
         email: user.email ?? "",
-        profile_id: user.profile_id,
+        profile_id: user.profile_id ?? undefined,
         is_active: user.is_active,
+        screens: existingPerms,
       });
     } else {
-      reset({ name: "", username: "", email: "", profile_id: 0, password: "", is_active: true });
+      reset({ name: "", username: "", email: "", profile_id: undefined, password: "", is_active: true, screens: [] });
     }
-  }, [user, reset]);
+  }, [user, reset, existingPerms]);
 
   async function onSubmit(data: CreateForm) {
+    const profileId = data.profile_id && data.profile_id > 0 ? data.profile_id : null;
     const payload = {
       ...data,
       email: data.email || undefined,
+      profile_id: profileId,
     };
     if (isEdit) {
       await updateUser.mutateAsync({
         name: payload.name,
         email: payload.email,
-        profile_id: payload.profile_id,
+        profile_id: profileId ?? undefined,
         is_active: payload.is_active,
       });
+      if (profileId == null) {
+        await setPerms.mutateAsync(data.screens);
+      }
     } else {
-      await createUser.mutateAsync(payload);
+      const created = await createUser.mutateAsync({
+        name: payload.name,
+        username: payload.username,
+        email: payload.email,
+        profile_id: profileId,
+        password: payload.password,
+        is_active: payload.is_active,
+      });
+      if (profileId == null && data.screens.length > 0 && created?.id) {
+        await setPerms.mutateAsync(data.screens);
+      }
     }
     onClose();
   }
@@ -121,18 +165,46 @@ export function UserModal({ open, onClose, user }: Props) {
             {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
           </div>
           <div className="space-y-1">
-            <Label>Perfil</Label>
+            <Label>Perfil (opcional)</Label>
             <select
               {...register("profile_id", { valueAsNumber: true })}
               className="w-full rounded border px-3 py-2 text-sm"
             >
-              <option value={0}>Selecione...</option>
+              <option value={0}>Sem perfil fixo</option>
               {profiles.filter((p) => p.is_active).map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
-            {errors.profile_id && <p className="text-xs text-red-500">{errors.profile_id.message}</p>}
           </div>
+          {showScreens && (
+            <div className="space-y-2">
+              <Label>Telas com acesso</Label>
+              <Controller
+                control={control}
+                name="screens"
+                render={({ field }) => (
+                  <div className="space-y-1">
+                    {SCREENS.map((screen) => (
+                      <label key={screen.id} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={field.value.includes(screen.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              field.onChange([...field.value, screen.id]);
+                            } else {
+                              field.onChange(field.value.filter((s) => s !== screen.id));
+                            }
+                          }}
+                        />
+                        <span>{screen.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              />
+            </div>
+          )}
           {!isEdit && (
             <div className="space-y-1">
               <Label>Senha provisória</Label>

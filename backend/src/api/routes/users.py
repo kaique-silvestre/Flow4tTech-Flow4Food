@@ -7,6 +7,7 @@ from src.api.dependencies import get_db, get_tenant_db, require_permission
 from src.schemas.users import (
     ResetPasswordResponse,
     UserCreate,
+    UserPermissionsUpdate,
     UsernameCheckResponse,
     UserResponse,
     UserUpdate,
@@ -17,8 +18,10 @@ from src.services.users_service import (
     create_new_user,
     delete_existing_user,
     get_user,
+    get_user_permissions,
     get_users,
     reset_password,
+    set_user_permissions,
     toggle_user_active,
     update_existing_user,
 )
@@ -106,3 +109,22 @@ def do_reset_password(
 ) -> ResetPasswordResponse:
     temp = reset_password(db, payload["tenant_id"], user_id)
     return ResetPasswordResponse(temp_password=temp)
+
+
+@router.get("/{user_id}/permissions", response_model=list[str])
+def get_permissions(
+    user_id: int,
+    db: Session = Depends(get_tenant_db),
+    payload: dict = Depends(require_permission("gestao_usuarios")),
+) -> list[str]:
+    return get_user_permissions(db, payload["tenant_id"], user_id)
+
+
+@router.put("/{user_id}/permissions", response_model=list[str])
+def set_permissions(
+    user_id: int,
+    body: UserPermissionsUpdate,
+    db: Session = Depends(get_tenant_db),
+    payload: dict = Depends(require_permission("gestao_usuarios")),
+) -> list[str]:
+    return set_user_permissions(db, payload["tenant_id"], user_id, body.screens)

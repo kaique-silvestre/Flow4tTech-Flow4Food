@@ -11,6 +11,7 @@ from src.models.profiles import Profile
 
 if TYPE_CHECKING:
     from src.models.refresh_tokens import RefreshToken
+    from src.models.user_permissions import UserPermission
 
 
 class SystemUser(Base):
@@ -18,7 +19,7 @@ class SystemUser(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
-    profile_id: Mapped[int] = mapped_column(sa.ForeignKey("profiles.id", ondelete="RESTRICT"), nullable=False)
+    profile_id: Mapped[Optional[int]] = mapped_column(sa.ForeignKey("profiles.id", ondelete="RESTRICT"), nullable=True)  # noqa: UP045
     name: Mapped[str] = mapped_column(sa.String(200), nullable=False)
     username: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     email: Mapped[Optional[str]] = mapped_column(sa.String(254), nullable=True)  # noqa: UP045
@@ -28,7 +29,10 @@ class SystemUser(Base):
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("NOW()"))
     updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("NOW()"))
 
-    profile: Mapped[Profile] = relationship(back_populates="users")
+    profile: Mapped[Optional[Profile]] = relationship(back_populates="users")  # noqa: UP045
+    user_permissions: Mapped[list[UserPermission]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
     password_resets: Mapped[list[PasswordReset]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
