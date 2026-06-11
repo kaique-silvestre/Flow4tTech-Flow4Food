@@ -56,3 +56,26 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+
+
+# Platform engine — separate pool, no RLS, no tenant context listener.
+# Falls back to DATABASE_URL when DATABASE_URL_PLATFORM is empty (dev only).
+_platform_url = _settings.DATABASE_URL_PLATFORM or _settings.DATABASE_URL
+_platform_connect_args: dict = {}
+if _platform_url.startswith("postgresql"):
+    _platform_connect_args = {"options": "-c timezone=UTC"}
+platform_engine = create_engine(
+    _platform_url,
+    pool_pre_ping=True,
+    future=True,
+    connect_args=_platform_connect_args,
+)
+PlatformSessionLocal = sessionmaker(bind=platform_engine, autoflush=False, autocommit=False, future=True)
+
+
+def get_platform_db() -> Generator[Session, None, None]:
+    db = PlatformSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

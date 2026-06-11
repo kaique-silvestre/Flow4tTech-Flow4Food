@@ -86,4 +86,23 @@ def require_active_subscription(payload: dict = Depends(get_current_user)) -> di
     return payload
 
 
-__all__ = ["get_db", "get_tenant_db", "get_current_user", "require_permission", "require_active_subscription"]
+def require_platform_admin(
+    credentials: Annotated[Optional[HTTPAuthorizationCredentials], Depends(_bearer)],
+) -> dict:
+    if credentials is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token ausente")
+    settings = get_settings()
+    try:
+        payload = jwt.decode(credentials.credentials, settings.JWT_SECRET, algorithms=["HS256"])
+    except InvalidTokenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido"
+        ) from exc
+    if not payload.get("platform_admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso restrito a platform admins")
+    if "tenant_id" in payload:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token de tenant não permitido aqui")
+    return payload
+
+
+__all__ = ["get_db", "get_tenant_db", "get_current_user", "require_permission", "require_active_subscription", "require_platform_admin"]
