@@ -4,6 +4,26 @@ import { toast } from "@/lib/toast";
 import { api, type ApiErrorBody } from "@/lib/api";
 import type { CompraFormValues } from "./compraSchemas";
 
+export interface NFeItemResponse {
+  nome_xml: string;
+  ean_xml: string | null;
+  quantidade: number;
+  unidade_xml: string;
+  custo_unitario: number;
+  custo_total: number;
+  insumo_id: number | null;
+  insumo_nome: string | null;
+}
+
+export interface NFeImportResponse {
+  numero_nota: string;
+  data_compra: string;
+  cnpj_xml: string;
+  fornecedor_id: number | null;
+  fornecedor_nome_xml: string;
+  itens: NFeItemResponse[];
+}
+
 export interface ItemCompraResponse {
   item_id: number;
   item_nome: string;
@@ -128,6 +148,23 @@ export function useCancelarCompra() {
       } else {
         toast.error("Erro ao cancelar nota.");
       }
+    },
+  });
+}
+
+export function useImportarNfe() {
+  return useMutation({
+    mutationFn: async (file: File): Promise<NFeImportResponse> => {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await api.post<NFeImportResponse>("/api/compras/importar-nfe", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data;
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      toast.error(msg ?? "Erro ao importar NF-e.");
     },
   });
 }

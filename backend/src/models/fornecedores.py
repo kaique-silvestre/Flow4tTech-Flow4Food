@@ -15,3 +15,4 @@ class Fornecedor(Base):
     telefone: Mapped[Optional[str]] = mapped_column(nullable=True)
     email: Mapped[Optional[str]] = mapped_column(nullable=True)
     ativo: Mapped[bool] = mapped_column(nullable=False, server_default=sa.true())
+    cnpj: Mapped[Optional[str]] = mapped_column(sa.String(14), nullable=True)
