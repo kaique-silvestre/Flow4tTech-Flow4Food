@@ -26,6 +26,8 @@ from src.api.routes import itens as itens_routes
 from src.api.routes import metodos_pagamento as metodos_pagamento_routes
 from src.api.routes import permission_templates as permission_templates_routes
 from src.api.routes import platform_auth as platform_auth_routes
+from src.api.routes import platform_announcements as platform_announcements_routes
+from src.api.routes import announcements as announcements_routes
 from src.api.routes import cockpit as cockpit_routes
 from src.api.routes import eventos as eventos_routes
 from src.api.routes import promocoes as promocoes_routes
@@ -80,6 +82,8 @@ def create_app() -> FastAPI:
     app.include_router(admin_routes.router, prefix="/api/admin", tags=["admin"])
     app.include_router(platform_auth_routes._public_router, prefix="/api/platform", tags=["platform"])
     app.include_router(platform_auth_routes.router, prefix="/api/platform", tags=["platform"])
+    app.include_router(platform_announcements_routes.router, prefix="/api/platform", tags=["platform"])
+    app.include_router(announcements_routes.router, prefix="/api/app", tags=["announcements"])
     app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
     app.include_router(users_routes.router, prefix="/api/users", tags=["users"])
     app.include_router(profiles_routes.router, prefix="/api/profiles", tags=["profiles"])

@@ -1,4 +1,4 @@
-from src.models.assinaturas import Assinatura  # noqa: F401
+from src.models.assinaturas import Assinatura, AssinaturaHistory  # noqa: F401
 from src.models.auth import ConfigSeguranca  # noqa: F401
 from src.models.billing import PagamentoAssinatura, Plano  # noqa: F401
 from src.models.caixa import CaixaMovimento, CaixaSessao  # noqa: F401
@@ -8,7 +8,6 @@ from src.models.comissoes_garcom import ComissaoGarcom  # noqa: F401
 from src.models.compras import Compra, ItemCompra  # noqa: F401
 from src.models.consumo_interno import ItemConsumoInterno  # noqa: F401
 from src.models.contas_pagar import ContaPagar, Notificacao  # noqa: F401
-from src.models.estabelecimento import Estabelecimento  # noqa: F401
 from src.models.eventos_comanda import EventoComanda  # noqa: F401
 from src.models.ficha_tecnica import FichaTecnica  # noqa: F401
 from src.models.fornecedores import Fornecedor  # noqa: F401
@@ -23,4 +22,10 @@ from src.models.profiles import Profile, ProfilePermission  # noqa: F401
 from src.models.refresh_tokens import RefreshToken  # noqa: F401
 from src.models.revoked_tokens import RevokedToken  # noqa: F401
 from src.models.system_users import PasswordReset, SystemUser  # noqa: F401
+from src.models.platform_settings import PlatformSettings  # noqa: F401
 from src.models.tenants import Tenant  # noqa: F401
+from src.models.user_permissions import UserPermission  # noqa: F401
+from src.models.platform_announcements import AnnouncementRead, AnnouncementTarget, PlatformAnnouncement  # noqa: F401
+from src.models.platform_admin import PlatformAdmin  # noqa: F401
+from src.models.tenant_features import TenantFeature  # noqa: F401
+from src.models.audit_logs import AuditLog  # noqa: F401

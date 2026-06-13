@@ -96,6 +96,52 @@ export function useTenantCockpit(tenantId: number | null) {
   });
 }
 
+export interface AnnouncementItem {
+  id: number;
+  title: string;
+  body: string;
+  expires_at: string | null;
+  target: string;
+  is_active: boolean;
+  created_at: string | null;
+  read_count: number;
+}
+
+export interface AnnouncementCreate {
+  title: string;
+  body: string;
+  expires_at?: string | null;
+  target: "all" | "specific";
+  tenant_ids?: number[];
+}
+
+export function usePlatformAnnouncements() {
+  return useQuery<AnnouncementItem[]>({
+    queryKey: ["platform-announcements"],
+    queryFn: async () => {
+      const { data } = await axios.get(`${BASE}/api/platform/announcements`, {
+        headers: authHeaders(),
+      });
+      return data;
+    },
+  });
+}
+
+export function useCreateAnnouncement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: AnnouncementCreate) => {
+      const { data } = await axios.post(`${BASE}/api/platform/announcements`, body, {
+        headers: authHeaders(),
+      });
+      return data as AnnouncementItem;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["platform-announcements"] });
+    },
+  });
+}
+
 export function useUpdateAssinatura() {
   const queryClient = useQueryClient();
   return useMutation({
