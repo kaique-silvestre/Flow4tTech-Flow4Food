@@ -1,8 +1,8 @@
 ---
 iteration: 1
 max_iterations: 8
-plan_path: ".claude/PRPs/plans/issue-30-comunicados.md"
-started_at: "2026-06-13T00:00:00Z"
+plan_path: ".claude/PRPs/plans/issue-25-platform-admin-panel.md"
+started_at: "2026-06-13T03:00:00Z"
 status: COMPLETE
 ---
 
@@ -30,6 +30,34 @@ status: COMPLETE
 - `platform_auth.py` já tem `CockpitMetricsItem` e routes de cockpit (adicionadas por issue #27).
 - Cockpit queries usam PG-only SQL (DATE_TRUNC, EXTRACT, INTERVAL) — tests devem mockar o repositório.
 - Patch target para mocks: `src.repositories.platform_repository.<func>` (não o import local).
+
+## Iteration 1 - 2026-06-13T03:35:00Z (Issue #25 COMPLETE)
+
+### Completed
+- Migrations: 0074 tenant_features, 0075 assinatura_history, 0076 audit_logs
+- Models: TenantFeature, AssinaturaHistory, AuditLog
+- platform_repository: full tenant CRUD, assinatura update + history, user CRUD, profile permissions, feature flags upsert
+- platform_auth routes: 15 new endpoints (tenants CRUD, assinatura, users, profiles, features, settings, impersonation)
+- auth_service: create_access_token with optional expires_delta for 2h impersonation JWT
+- check_subscription fixed to use get_db (SQLite compat in tests)
+- ProfilePermission fix: pass created_at explicitly to avoid NOW() in SQLite
+- 17 tests all passing
+- Frontend: full hook suite in usePlatformApi.ts (create/update tenant, history, user/profile/feature CRUD, impersonation)
+- PlatformTenantsPage: Nova Empresa modal + qtd_usuarios column
+- PlatformTenantDetailPage: 4-tab UI (Dados/Assinatura, Usuários, Perfis, Feature Flags)
+- Topbar: impersonation banner
+- Commit: affbb9a
+
+### Validation Status
+- ruff: PASS | type-check: PASS | lint: PASS | build: PASS
+- Tests: 17/17 new PASS; 280 total PASS; 3 pre-existing fails unrelated
+
+### Learnings
+- ProfilePermission has NOW() server_default — must pass created_at=now explicitly in SQLite tests
+- check_subscription must use get_db not get_platform_db (both point to same DB in tests via override)
+- Custom error handler wraps ALL HTTPException detail dicts → assert on resp.text not resp.json()["detail"]
+
+---
 
 ## Iteration 1 - 2026-06-13T03:20:00Z (Issue #30 COMPLETE)
 
