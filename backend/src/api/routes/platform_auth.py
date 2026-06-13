@@ -42,6 +42,20 @@ class AssinaturaStatusUpdate(BaseModel):
     status: Literal["trial", "ativa", "suspensa", "cancelada"]
 
 
+class CockpitMetricsItem(BaseModel):
+    id: int
+    nome_fantasia: str
+    cnpj: Optional[str]  # noqa: UP045
+    status_tenant: str
+    status_assinatura: Optional[str]  # noqa: UP045
+    dias_cliente: int
+    ultimo_login: Optional[datetime]  # noqa: UP045
+    comandas_mes: int
+    faturamento_mes: float
+    usuarios_ativos_30d: int
+    compras_mes: int
+
+
 # Public router — login endpoint has no auth dependency
 _public_router = APIRouter()
 
@@ -89,6 +103,36 @@ def get_tenant_users(
 ) -> list[TenantUserItem]:
     rows = platform_repository.get_tenant_users(db, tenant_id)
     return [TenantUserItem(**r) for r in rows]
+
+
+@router.get(
+    "/cockpit",
+    response_model=list[CockpitMetricsItem],
+    status_code=status.HTTP_200_OK,
+    tags=["platform"],
+)
+def get_cockpit(
+    status: Optional[str] = None,  # noqa: UP045
+    db: Session = Depends(get_platform_db),
+) -> list[CockpitMetricsItem]:
+    rows = platform_repository.get_cockpit_metrics(db, status_filter=status)
+    return [CockpitMetricsItem(**r) for r in rows]
+
+
+@router.get(
+    "/tenants/{tenant_id}/cockpit",
+    response_model=CockpitMetricsItem,
+    status_code=status.HTTP_200_OK,
+    tags=["platform"],
+)
+def get_tenant_cockpit(
+    tenant_id: int,
+    db: Session = Depends(get_platform_db),
+) -> CockpitMetricsItem:
+    row = platform_repository.get_tenant_cockpit_metrics(db, tenant_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Tenant não encontrado")
+    return CockpitMetricsItem(**row)
 
 
 @router.patch(

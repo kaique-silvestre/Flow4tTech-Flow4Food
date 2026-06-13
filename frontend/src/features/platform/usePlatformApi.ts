@@ -54,6 +54,48 @@ export function useTenantUsers(tenantId: number | null) {
   });
 }
 
+export interface CockpitMetricsItem {
+  id: number;
+  nome_fantasia: string;
+  cnpj: string | null;
+  status_tenant: string;
+  status_assinatura: string | null;
+  dias_cliente: number;
+  ultimo_login: string | null;
+  comandas_mes: number;
+  faturamento_mes: number;
+  usuarios_ativos_30d: number;
+  compras_mes: number;
+}
+
+export function usePlatformCockpit(statusFilter?: string) {
+  return useQuery<CockpitMetricsItem[]>({
+    queryKey: ["platform-cockpit", statusFilter],
+    queryFn: async () => {
+      const params = statusFilter ? { status: statusFilter } : {};
+      const { data } = await axios.get(`${BASE}/api/platform/cockpit`, {
+        headers: authHeaders(),
+        params,
+      });
+      return data;
+    },
+  });
+}
+
+export function useTenantCockpit(tenantId: number | null) {
+  return useQuery<CockpitMetricsItem>({
+    queryKey: ["platform-tenant-cockpit", tenantId],
+    queryFn: async () => {
+      const { data } = await axios.get(
+        `${BASE}/api/platform/tenants/${tenantId}/cockpit`,
+        { headers: authHeaders() }
+      );
+      return data;
+    },
+    enabled: tenantId !== null,
+  });
+}
+
 export function useUpdateAssinatura() {
   const queryClient = useQueryClient();
   return useMutation({
