@@ -118,6 +118,39 @@ function ComunicadoBanner() {
   );
 }
 
+function ImpersonationBanner() {
+  const token = useAuthStore((s) => s.token);
+  const clearToken = useAuthStore((s) => s.clearToken);
+  const navigate = useNavigate();
+
+  const isImpersonating = (() => {
+    if (!token) return false;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+      return payload.impersonation === true;
+    } catch {
+      return false;
+    }
+  })();
+
+  if (!isImpersonating) return null;
+
+  function handleExit() {
+    clearToken();
+    toast.success("Impersonação encerrada");
+    navigate("/login", { replace: true });
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-purple-300 bg-purple-50 px-3 py-1 text-xs text-purple-900">
+      <span className="font-medium">Modo impersonação</span>
+      <button onClick={handleExit} className="text-purple-600 hover:text-purple-800 underline">
+        Sair
+      </button>
+    </div>
+  );
+}
+
 function getInitials(name?: string, username?: string): string {
   const target = name || username || "?";
   return target
@@ -178,6 +211,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        <ImpersonationBanner />
         <ComunicadoBanner />
         <ProximoEventoBanner />
       </div>

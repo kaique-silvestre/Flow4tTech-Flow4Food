@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/lib/toast";
-import { useTenants, useUpdateAssinatura, type TenantListItem } from "./usePlatformApi";
+import { useTenants, useUpdateAssinatura, useCreateTenant, type TenantListItem } from "./usePlatformApi";
 
 const STATUS_OPTIONS = ["", "trial", "ativa", "suspensa", "cancelada"] as const;
 
@@ -19,8 +19,107 @@ const STATUS_COLORS: Record<string, string> = {
   cancelada: "bg-gray-100 text-gray-600",
 };
 
+function CreateTenantModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [nomeFantasia, setNomeFantasia] = useState("");
+  const [cnpj, setCnpj] = useState("");
+  const [maxUsers, setMaxUsers] = useState(10);
+  const [trialDays, setTrialDays] = useState(14);
+  const create = useCreateTenant();
+
+  if (!open) return null;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nomeFantasia.trim()) {
+      toast.error("Nome fantasia é obrigatório");
+      return;
+    }
+    create.mutate(
+      { nome_fantasia: nomeFantasia.trim(), cnpj: cnpj.trim() || undefined, max_users: maxUsers, trial_days: trialDays },
+      {
+        onSuccess: () => {
+          toast.success("Empresa criada com sucesso");
+          onClose();
+          setNomeFantasia("");
+          setCnpj("");
+          setMaxUsers(10);
+          setTrialDays(14);
+        },
+        onError: () => toast.error("Erro ao criar empresa"),
+      }
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">Nova Empresa</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Nome Fantasia *</label>
+            <input
+              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={nomeFantasia}
+              onChange={(e) => setNomeFantasia(e.target.value)}
+              placeholder="Nome da empresa"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">CNPJ</label>
+            <input
+              className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={cnpj}
+              onChange={(e) => setCnpj(e.target.value)}
+              placeholder="00.000.000/0001-00"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Máx. usuários</label>
+              <input
+                type="number"
+                min={1}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={maxUsers}
+                onChange={(e) => setMaxUsers(parseInt(e.target.value, 10) || 10)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Trial (dias)</label>
+              <input
+                type="number"
+                min={1}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={trialDays}
+                onChange={(e) => setTrialDays(parseInt(e.target.value, 10) || 14)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg px-4 py-2 text-sm text-gray-700 border hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={create.isPending}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {create.isPending ? "Criando..." : "Criar"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export function PlatformTenantsPage() {
   const [statusFilter, setStatusFilter] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
   const { data: tenants = [], isLoading } = useTenants(statusFilter || undefined);
   const updateAssinatura = useUpdateAssinatura();
   const navigate = useNavigate();
@@ -38,17 +137,25 @@ export function PlatformTenantsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Tenants</h1>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Todos os status</option>
-          {STATUS_OPTIONS.filter(Boolean).map((s) => (
-            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-          ))}
-        </select>
+        <h1 className="text-xl font-semibold text-gray-900">Empresas</h1>
+        <div className="flex items-center gap-3">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Todos os status</option>
+            {STATUS_OPTIONS.filter(Boolean).map((s) => (
+              <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+          >
+            + Nova Empresa
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -60,7 +167,7 @@ export function PlatformTenantsPage() {
               <tr>
                 <th className="px-4 py-3 font-medium">Empresa</th>
                 <th className="px-4 py-3 font-medium">CNPJ</th>
-                <th className="px-4 py-3 font-medium">Status Tenant</th>
+                <th className="px-4 py-3 font-medium">Usuários</th>
                 <th className="px-4 py-3 font-medium">Assinatura</th>
                 <th className="px-4 py-3 font-medium">Vencimento</th>
                 <th className="px-4 py-3 font-medium">Ações</th>
@@ -75,8 +182,8 @@ export function PlatformTenantsPage() {
                 >
                   <td className="px-4 py-3 font-medium text-gray-900">{t.nome_fantasia}</td>
                   <td className="px-4 py-3 text-gray-500">{t.cnpj ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    <span className="capitalize">{t.status_tenant}</span>
+                  <td className="px-4 py-3 text-gray-500">
+                    {t.qtd_usuarios ?? 0}/{t.max_users}
                   </td>
                   <td className="px-4 py-3">
                     {t.status_assinatura ? (
@@ -117,7 +224,7 @@ export function PlatformTenantsPage() {
               {tenants.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
-                    Nenhum tenant encontrado
+                    Nenhuma empresa encontrada
                   </td>
                 </tr>
               )}
@@ -125,6 +232,8 @@ export function PlatformTenantsPage() {
           </table>
         </div>
       )}
+
+      <CreateTenantModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   );
 }
