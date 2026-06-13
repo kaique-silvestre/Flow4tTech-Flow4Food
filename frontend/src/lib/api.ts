@@ -72,11 +72,15 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 402) {
-      const user = useAuthStore.getState().user;
-      const isAdmin = user?.profile_name === "Admin";
-      const target = isAdmin ? "/assinatura-vencida" : "/conta-suspensa";
-      if (window.location.pathname !== target) {
-        window.location.assign(target);
+      const detail = (error.response.data as { detail?: { code?: string; status?: string; contact?: string } })?.detail;
+      if (detail?.code === "SUBSCRIPTION_BLOCKED") {
+        const params = new URLSearchParams({
+          status: detail.status ?? "suspensa",
+          contact: detail.contact ?? "",
+        });
+        if (window.location.pathname !== "/blocked") {
+          window.location.assign(`/blocked?${params.toString()}`);
+        }
       }
       return Promise.reject(error);
     }

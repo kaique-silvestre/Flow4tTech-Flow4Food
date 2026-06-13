@@ -1,15 +1,18 @@
 from collections.abc import Generator
+from datetime import timezone
 from typing import Annotated, Optional
 
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.exceptions import InvalidTokenError
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from src.core.config import get_settings
-from src.core.database import _tenant_ctx, get_db
+from src.core.database import _tenant_ctx, get_db, get_platform_db  # noqa: F401
+from src.models.assinaturas import Assinatura
+from src.models.platform_settings import PlatformSettings
 from src.repositories import revoked_tokens_repository
 
 _bearer = HTTPBearer(auto_error=False)
@@ -34,9 +37,40 @@ def get_current_user(
     return payload
 
 
-def get_tenant_db(
+def check_subscription(
     db: Session = Depends(get_db),
     payload: dict = Depends(get_current_user),
+) -> dict:
+    """Block access for tenants with suspended/cancelled/expired subscriptions."""
+    from datetime import datetime
+    tenant_id = payload.get("tenant_id")
+    if not tenant_id:
+        return payload
+    assinatura = db.execute(
+        select(Assinatura).where(Assinatura.tenant_id == tenant_id)
+    ).scalar_one_or_none()
+    if assinatura is None:
+        return payload
+    now = datetime.now(timezone.utc)
+    dv = assinatura.data_vencimento
+    if dv is not None and dv.tzinfo is None:
+        dv = dv.replace(tzinfo=timezone.utc)
+    trial_expired = assinatura.status == "trial" and dv is not None and dv < now
+    if assinatura.status in {"suspensa", "cancelada"} or trial_expired:
+        setting = db.execute(
+            select(PlatformSettings).where(PlatformSettings.key == "contact_email")
+        ).scalar_one_or_none()
+        contact = setting.value if setting else "contato@flow4tech.com.br"
+        raise HTTPException(
+            status_code=402,
+            detail={"code": "SUBSCRIPTION_BLOCKED", "status": assinatura.status, "contact": contact},
+        )
+    return payload
+
+
+def get_tenant_db(
+    db: Session = Depends(get_db),
+    payload: dict = Depends(check_subscription),
 ) -> Generator[Session, None, None]:
     """Session scoped to tenant via RLS (PostgreSQL only).
 
@@ -105,4 +139,4 @@ def require_platform_admin(
     return payload
 
 
-__all__ = ["get_db", "get_tenant_db", "get_current_user", "require_permission", "require_active_subscription", "require_platform_admin"]
+__all__ = ["get_db", "get_tenant_db", "get_current_user", "check_subscription", "require_permission", "require_active_subscription", "require_platform_admin"]  # noqa: E501

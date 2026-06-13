@@ -41,6 +41,7 @@ import { ContasPagarPage } from "@/features/contas_pagar/ContasPagarPage";
 import { CaixaPage } from "@/features/caixa/CaixaPage";
 import { AssinaturaVencidaPage } from "@/features/assinatura/AssinaturaVencidaPage";
 import { ContaSuspensaPage } from "@/features/assinatura/ContaSuspensaPage";
+import { BlockedPage } from "@/features/assinatura/BlockedPage";
 import { queryClient } from "@/lib/queryClient";
 import { ConsumoInternoPage } from "@/features/consumo_interno/ConsumoInternoPage";
 import { ConsumoInternoDetalhePage } from "@/features/consumo_interno/ConsumoInternoDetalhePage";
@@ -75,6 +76,7 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
           <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
+          <Route path="/blocked" element={<BlockedPage />} />
           <Route element={<RequireAuth />}>
             <Route path="/assinatura-vencida" element={<AssinaturaVencidaPage />} />
             <Route path="/conta-suspensa" element={<ContaSuspensaPage />} />
