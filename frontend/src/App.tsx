@@ -52,6 +52,9 @@ import { PlatformLoginPage } from "@/features/platform/PlatformLoginPage";
 import { PlatformLayout } from "@/features/platform/PlatformLayout";
 import { PlatformTenantsPage } from "@/features/platform/PlatformTenantsPage";
 import { PlatformTenantDetailPage } from "@/features/platform/PlatformTenantDetailPage";
+import { PlatformCockpitPage } from "@/features/platform/PlatformCockpitPage";
+import { PlatformAnnouncementsPage } from "@/features/platform/PlatformAnnouncementsPage";
+import { PlatformAuditPage } from "@/features/platform/PlatformAuditPage";
 
 export function App() {
   return (
@@ -64,6 +67,9 @@ export function App() {
             <Route element={<PlatformLayout />}>
               <Route path="/platform/tenants" element={<PlatformTenantsPage />} />
               <Route path="/platform/tenants/:tenantId" element={<PlatformTenantDetailPage />} />
+              <Route path="/platform/cockpit" element={<PlatformCockpitPage />} />
+              <Route path="/platform/announcements" element={<PlatformAnnouncementsPage />} />
+              <Route path="/platform/audit" element={<PlatformAuditPage />} />
             </Route>
           </Route>
           <Route path="/login" element={<LoginPage />} />
