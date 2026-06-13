@@ -25,9 +25,11 @@ class TenantListItem(BaseModel):
     id: int
     nome_fantasia: str
     cnpj: Optional[str]  # noqa: UP045
+    max_users: int = 0
     status_tenant: str
     status_assinatura: Optional[str]  # noqa: UP045
     data_vencimento: Optional[datetime]  # noqa: UP045
+    qtd_usuarios: int = 0
 
 
 class TenantUserItem(BaseModel):
