@@ -7,6 +7,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from src.models.assinaturas import Assinatura, AssinaturaHistory
+from src.models.platform_admin import PlatformAdmin
 from src.models.platform_settings import PlatformSettings
 from src.models.profiles import Profile, ProfilePermission
 from src.models.system_users import SystemUser
@@ -135,11 +136,13 @@ def get_tenant_users(db: Session, tenant_id: int) -> list[dict]:
             SystemUser.id,
             SystemUser.name,
             SystemUser.username,
+            SystemUser.email,
+            SystemUser.profile_id,
             SystemUser.last_login,
             SystemUser.is_active,
             Profile.name.label("profile_name"),
         )
-        .join(Profile, Profile.id == SystemUser.profile_id)
+        .outerjoin(Profile, Profile.id == SystemUser.profile_id)
         .where(SystemUser.tenant_id == tenant_id)
         .order_by(SystemUser.id)
     )
@@ -149,6 +152,8 @@ def get_tenant_users(db: Session, tenant_id: int) -> list[dict]:
             "id": r.id,
             "name": r.name,
             "username": r.username,
+            "email": r.email,
+            "profile_id": r.profile_id,
             "profile_name": r.profile_name,
             "last_login": r.last_login,
             "is_active": r.is_active,
@@ -279,16 +284,25 @@ def get_assinatura_history(db: Session, tenant_id: int) -> list[dict]:
     if assinatura is None:
         return []
     rows = db.execute(
-        select(AssinaturaHistory)
+        select(
+            AssinaturaHistory.id,
+            AssinaturaHistory.from_status,
+            AssinaturaHistory.to_status,
+            AssinaturaHistory.changed_by,
+            AssinaturaHistory.created_at,
+            PlatformAdmin.name.label("changed_by_name"),
+        )
+        .outerjoin(PlatformAdmin, PlatformAdmin.id == AssinaturaHistory.changed_by)
         .where(AssinaturaHistory.assinatura_id == assinatura.id)
         .order_by(AssinaturaHistory.created_at.desc())
-    ).scalars().all()
+    ).all()
     return [
         {
             "id": r.id,
             "from_status": r.from_status,
             "to_status": r.to_status,
             "changed_by": r.changed_by,
+            "changed_by_name": r.changed_by_name,
             "created_at": r.created_at,
         }
         for r in rows

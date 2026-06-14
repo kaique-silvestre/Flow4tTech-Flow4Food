@@ -36,7 +36,9 @@ class TenantUserItem(BaseModel):
     id: int
     name: str
     username: str
-    profile_name: str
+    email: Optional[str]  # noqa: UP045
+    profile_id: Optional[int]  # noqa: UP045
+    profile_name: Optional[str]  # noqa: UP045
     last_login: Optional[datetime]  # noqa: UP045
     is_active: bool
 
@@ -202,6 +204,7 @@ class AssinaturaHistoryItem(BaseModel):
     from_status: Optional[str]  # noqa: UP045
     to_status: str
     changed_by: Optional[int]  # noqa: UP045
+    changed_by_name: Optional[str] = None  # noqa: UP045
     created_at: datetime
 
 
