@@ -40,6 +40,7 @@ export interface TenantUserItem {
   name: string;
   username: string;
   email: string | null;
+  profile_id: number | null;
   profile_name: string | null;
   last_login: string | null;
   is_active: boolean;
@@ -81,8 +82,10 @@ export interface AnnouncementCreate {
 export interface ProfileItem {
   id: number;
   name: string;
+  description: string | null;
   is_active: boolean;
   permissions: string[];
+  user_count: number;
 }
 
 export interface FeatureItem {
@@ -95,6 +98,7 @@ export interface AssinaturaHistoryItem {
   from_status: string | null;
   to_status: string;
   changed_by: number | null;
+  changed_by_name: string | null;
   created_at: string;
 }
 
@@ -268,6 +272,8 @@ export function useCreateTenantUser() {
       username: string;
       email?: string;
       password: string;
+      profile_id?: number;
+      is_active?: boolean;
     }) => {
       const { data } = await axios.post(
         `${BASE}/api/platform/tenants/${tenantId}/users`,
@@ -278,6 +284,7 @@ export function useCreateTenantUser() {
     },
     onSuccess: (_data, vars) => {
       void queryClient.invalidateQueries({ queryKey: ["platform-tenant-users", vars.tenantId] });
+      void queryClient.invalidateQueries({ queryKey: ["platform-tenant-detail", vars.tenantId] });
     },
   });
 }
@@ -293,6 +300,10 @@ export function useUpdateTenantUser() {
       tenantId: number;
       userId: number;
       name?: string;
+      username?: string;
+      email?: string;
+      password?: string;
+      profile_id?: number;
       is_active?: boolean;
     }) => {
       const { data } = await axios.patch(
@@ -304,6 +315,7 @@ export function useUpdateTenantUser() {
     },
     onSuccess: (_data, vars) => {
       void queryClient.invalidateQueries({ queryKey: ["platform-tenant-users", vars.tenantId] });
+      void queryClient.invalidateQueries({ queryKey: ["platform-tenant-detail", vars.tenantId] });
     },
   });
 }

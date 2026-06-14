@@ -18,6 +18,7 @@ import {
   type ProfileItem,
 } from "./usePlatformApi";
 import { useAuthStore } from "@/stores/authStore";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const STATUS_OPTIONS = ["trial", "ativa", "suspensa", "cancelada"] as const;
 const STATUS_LABELS: Record<string, string> = { trial: "Trial", ativa: "Ativa", suspensa: "Suspensa", cancelada: "Cancelada" };
@@ -41,6 +42,9 @@ function DadosTab({ tenantId }: { tenantId: number }) {
   const updateAssinatura = useUpdateAssinaturaFull();
   const [editing, setEditing] = useState(false);
   const [nomeFantasia, setNomeFantasia] = useState("");
+  const [cnpj, setCnpj] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [maxUsers, setMaxUsers] = useState(0);
   const [status, setStatus] = useState("");
   const [dataVencimento, setDataVencimento] = useState("");
@@ -49,6 +53,9 @@ function DadosTab({ tenantId }: { tenantId: number }) {
 
   function startEdit() {
     setNomeFantasia(detail!.nome_fantasia);
+    setCnpj(detail!.cnpj ?? "");
+    setEndereco(detail!.endereco ?? "");
+    setTelefone(detail!.telefone ?? "");
     setMaxUsers(detail!.max_users);
     setStatus(detail!.status_assinatura ?? "");
     setDataVencimento(detail!.data_vencimento ? detail!.data_vencimento.slice(0, 16) : "");
@@ -57,7 +64,7 @@ function DadosTab({ tenantId }: { tenantId: number }) {
 
   function handleSave() {
     updateTenant.mutate(
-      { tenantId, nome_fantasia: nomeFantasia, max_users: maxUsers },
+      { tenantId, nome_fantasia: nomeFantasia, cnpj: cnpj || undefined, endereco: endereco || undefined, telefone: telefone || undefined, max_users: maxUsers },
       {
         onSuccess: () => {
           if (status !== detail!.status_assinatura || dataVencimento) {
@@ -92,6 +99,31 @@ function DadosTab({ tenantId }: { tenantId: number }) {
                 className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
                 value={nomeFantasia}
                 onChange={(e) => setNomeFantasia(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">CNPJ</label>
+              <input
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                placeholder="00.000.000/0000-00"
+                value={cnpj}
+                onChange={(e) => setCnpj(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Endereço</label>
+              <input
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                value={endereco}
+                onChange={(e) => setEndereco(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Telefone</label>
+              <input
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
               />
             </div>
             <div>
@@ -147,6 +179,14 @@ function DadosTab({ tenantId }: { tenantId: number }) {
               <dt className="text-gray-500">CNPJ</dt>
               <dd className="font-medium text-gray-900">{detail.cnpj ?? "—"}</dd>
             </div>
+            <div className="col-span-2">
+              <dt className="text-gray-500">Endereço</dt>
+              <dd className="font-medium text-gray-900">{detail.endereco ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">Telefone</dt>
+              <dd className="font-medium text-gray-900">{detail.telefone ?? "—"}</dd>
+            </div>
             <div>
               <dt className="text-gray-500">Usuários</dt>
               <dd className="font-medium text-gray-900">{detail.qtd_usuarios}/{detail.max_users}</dd>
@@ -178,10 +218,16 @@ function DadosTab({ tenantId }: { tenantId: number }) {
             {history.map((h) => (
               <div key={h.id} className="flex items-center gap-3 text-sm text-gray-700">
                 <span className="text-gray-400 text-xs">{new Date(h.created_at).toLocaleString("pt-BR")}</span>
-                <span className="text-gray-400">→</span>
+                <span className="text-gray-400">·</span>
                 <span>{h.from_status ?? "—"}</span>
                 <span className="text-gray-400">→</span>
                 <span className="font-medium">{h.to_status}</span>
+                {h.changed_by_name && (
+                  <>
+                    <span className="text-gray-400">·</span>
+                    <span className="text-gray-500 text-xs">{h.changed_by_name}</span>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -191,33 +237,107 @@ function DadosTab({ tenantId }: { tenantId: number }) {
   );
 }
 
+type UserFormState = {
+  name: string;
+  username: string;
+  email: string;
+  password: string;
+  profile_id: string;
+  is_active: boolean;
+};
+
+const EMPTY_FORM: UserFormState = { name: "", username: "", email: "", password: "", profile_id: "", is_active: true };
+
 function UsuariosTab({ tenantId }: { tenantId: number }) {
+  const { data: detail } = useTenantDetail(tenantId);
   const { data: users = [], isLoading } = useTenantUsers(tenantId);
+  const { data: profiles = [] } = useTenantProfiles(tenantId);
   const createUser = useCreateTenantUser();
   const updateUser = useUpdateTenantUser();
+  const updateTenant = useUpdateTenant();
   const impersonate = useImpersonateUser();
   const setToken = useAuthStore((s) => s.setToken);
-  const [addOpen, setAddOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
-  function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    createUser.mutate(
-      { tenantId, name: name.trim(), username: username.trim(), email: email.trim() || undefined, password },
-      {
-        onSuccess: () => { toast.success("Usuário criado"); setAddOpen(false); setName(""); setUsername(""); setEmail(""); setPassword(""); },
-        onError: () => toast.error("Erro ao criar usuário"),
-      }
-    );
+  const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
+  const [editTarget, setEditTarget] = useState<TenantUserItem | null>(null);
+  const [form, setForm] = useState<UserFormState>(EMPTY_FORM);
+  const [confirmToggle, setConfirmToggle] = useState<TenantUserItem | null>(null);
+  const [editingMaxUsers, setEditingMaxUsers] = useState(false);
+  const [maxUsersVal, setMaxUsersVal] = useState(0);
+
+  const activeCount = users.filter((u) => u.is_active).length;
+
+  function openCreate() {
+    setForm(EMPTY_FORM);
+    setEditTarget(null);
+    setModalMode("create");
   }
 
-  function handleToggleActive(u: TenantUserItem) {
+  function openEdit(u: TenantUserItem) {
+    setForm({
+      name: u.name,
+      username: u.username,
+      email: u.email ?? "",
+      password: "",
+      profile_id: u.profile_id != null ? String(u.profile_id) : "",
+      is_active: u.is_active,
+    });
+    setEditTarget(u);
+    setModalMode("edit");
+  }
+
+  function closeModal() {
+    setModalMode(null);
+    setEditTarget(null);
+    setForm(EMPTY_FORM);
+  }
+
+  function setField<K extends keyof UserFormState>(k: K, v: UserFormState[K]) {
+    setForm((prev) => ({ ...prev, [k]: v }));
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const profileId = form.profile_id ? parseInt(form.profile_id, 10) : undefined;
+
+    if (modalMode === "create") {
+      createUser.mutate(
+        {
+          tenantId,
+          name: form.name.trim(),
+          username: form.username.trim(),
+          email: form.email.trim() || undefined,
+          password: form.password,
+          profile_id: profileId,
+          is_active: form.is_active,
+        },
+        { onSuccess: () => { toast.success("Usuário criado"); closeModal(); }, onError: () => toast.error("Erro ao criar usuário") }
+      );
+    } else if (modalMode === "edit" && editTarget) {
+      updateUser.mutate(
+        {
+          tenantId,
+          userId: editTarget.id,
+          name: form.name.trim(),
+          username: form.username.trim(),
+          email: form.email.trim() || undefined,
+          password: form.password || undefined,
+          profile_id: profileId,
+          is_active: form.is_active,
+        },
+        { onSuccess: () => { toast.success("Usuário atualizado"); closeModal(); }, onError: () => toast.error("Erro ao atualizar") }
+      );
+    }
+  }
+
+  function confirmToggleActive() {
+    if (!confirmToggle) return;
     updateUser.mutate(
-      { tenantId, userId: u.id, is_active: !u.is_active },
-      { onSuccess: () => toast.success("Atualizado"), onError: () => toast.error("Erro") }
+      { tenantId, userId: confirmToggle.id, is_active: !confirmToggle.is_active },
+      {
+        onSuccess: () => { toast.success("Atualizado"); setConfirmToggle(null); },
+        onError: () => { toast.error("Erro"); setConfirmToggle(null); },
+      }
     );
   }
 
@@ -235,61 +355,76 @@ function UsuariosTab({ tenantId }: { tenantId: number }) {
     );
   }
 
+  function startEditMaxUsers() {
+    setMaxUsersVal(detail?.max_users ?? 0);
+    setEditingMaxUsers(true);
+  }
+
+  function saveMaxUsers() {
+    updateTenant.mutate(
+      { tenantId, max_users: maxUsersVal },
+      {
+        onSuccess: () => { toast.success("Limite atualizado"); setEditingMaxUsers(false); },
+        onError: () => toast.error("Erro ao atualizar limite"),
+      }
+    );
+  }
+
   if (isLoading) return <p className="text-sm text-gray-500">Carregando…</p>;
+
+  const isPending = createUser.isPending || updateUser.isPending;
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      {/* Indicator + max_users edit */}
+      <div className="flex items-center justify-between bg-white rounded-xl border px-5 py-3">
+        <span className="text-sm text-gray-700">
+          <span className="font-semibold text-gray-900">{activeCount}</span>
+          {" / "}
+          {editingMaxUsers ? (
+            <span className="inline-flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                className="w-16 rounded border px-2 py-0.5 text-sm"
+                value={maxUsersVal}
+                onChange={(e) => setMaxUsersVal(parseInt(e.target.value, 10) || 1)}
+              />
+              <button onClick={saveMaxUsers} disabled={updateTenant.isPending} className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+                OK
+              </button>
+              <button onClick={() => setEditingMaxUsers(false)} className="text-xs px-2 py-1 rounded border text-gray-600 hover:bg-gray-50">
+                ✕
+              </button>
+            </span>
+          ) : (
+            <span>
+              <span className="font-semibold text-gray-900">{detail?.max_users ?? "…"}</span>
+              {" "}
+              <button onClick={startEditMaxUsers} className="text-xs text-blue-600 hover:underline ml-1">editar</button>
+            </span>
+          )}
+          {" "}usuários ativos
+        </span>
         <button
-          onClick={() => setAddOpen(true)}
+          onClick={openCreate}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
         >
           + Novo Usuário
         </button>
       </div>
 
-      {addOpen && (
-        <div className="bg-white rounded-xl border p-4">
-          <form onSubmit={handleCreate} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Nome</label>
-                <input className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Username</label>
-                <input className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={username} onChange={(e) => setUsername(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
-                <input type="email" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Senha</label>
-                <input type="password" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={password} onChange={(e) => setPassword(e.target.value)} />
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button type="submit" disabled={createUser.isPending} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50">
-                {createUser.isPending ? "Criando..." : "Criar"}
-              </button>
-              <button type="button" onClick={() => setAddOpen(false)} className="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
+      {/* Table */}
       <div className="bg-white rounded-xl border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 text-left">
             <tr>
               <th className="px-4 py-3 font-medium">Nome</th>
               <th className="px-4 py-3 font-medium">Username</th>
+              <th className="px-4 py-3 font-medium">E-mail</th>
               <th className="px-4 py-3 font-medium">Perfil</th>
               <th className="px-4 py-3 font-medium">Último Login</th>
-              <th className="px-4 py-3 font-medium">Ativo</th>
+              <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Ações</th>
             </tr>
           </thead>
@@ -298,18 +433,25 @@ function UsuariosTab({ tenantId }: { tenantId: number }) {
               <tr key={u.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium text-gray-900">{u.name}</td>
                 <td className="px-4 py-3 text-gray-500">{u.username}</td>
+                <td className="px-4 py-3 text-gray-500">{u.email ?? "—"}</td>
                 <td className="px-4 py-3">{u.profile_name ?? "—"}</td>
                 <td className="px-4 py-3 text-gray-500">{u.last_login ? new Date(u.last_login).toLocaleString("pt-BR") : "Nunca"}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                    {u.is_active ? "Sim" : "Não"}
+                    {u.is_active ? "Ativo" : "Inativo"}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleToggleActive(u)}
-                      className={`text-xs px-2 py-1 rounded ${u.is_active ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
+                      onClick={() => openEdit(u)}
+                      className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => setConfirmToggle(u)}
+                      className={`text-xs px-2 py-1 rounded ${u.is_active ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
                     >
                       {u.is_active ? "Desativar" : "Ativar"}
                     </button>
@@ -325,26 +467,114 @@ function UsuariosTab({ tenantId }: { tenantId: number }) {
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">Nenhum usuário</td>
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">Nenhum usuário</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Create / Edit modal */}
+      {modalMode !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-base font-semibold text-gray-900 mb-4">
+              {modalMode === "create" ? "Novo Usuário" : "Editar Usuário"}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Nome</label>
+                  <input required className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={form.name} onChange={(e) => setField("name", e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Username</label>
+                  <input required className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={form.username} onChange={(e) => setField("username", e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">E-mail</label>
+                  <input type="email" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={form.email} onChange={(e) => setField("email", e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Senha{modalMode === "edit" && <span className="text-gray-400 font-normal"> (deixe vazio para manter)</span>}
+                  </label>
+                  <input
+                    type="password"
+                    required={modalMode === "create"}
+                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                    value={form.password}
+                    onChange={(e) => setField("password", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Perfil</label>
+                  <select className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" value={form.profile_id} onChange={(e) => setField("profile_id", e.target.value)}>
+                    <option value="">— Nenhum —</option>
+                    {profiles.map((p: ProfileItem) => (
+                      <option key={p.id} value={String(p.id)}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 pt-5">
+                  <input
+                    id="is_active"
+                    type="checkbox"
+                    checked={form.is_active}
+                    onChange={(e) => setField("is_active", e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <label htmlFor="is_active" className="text-sm font-medium text-gray-700">Ativo</label>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="submit" disabled={isPending} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50">
+                  {isPending ? "Salvando..." : modalMode === "create" ? "Criar" : "Salvar"}
+                </button>
+                <button type="button" onClick={closeModal} className="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle active confirmation */}
+      <ConfirmDialog
+        open={confirmToggle !== null}
+        title={confirmToggle?.is_active ? `Desativar ${confirmToggle?.name}?` : `Ativar ${confirmToggle?.name}?`}
+        description={confirmToggle?.is_active ? "O usuário perderá acesso ao sistema." : "O usuário voltará a ter acesso ao sistema."}
+        confirmLabel={confirmToggle?.is_active ? "Desativar" : "Ativar"}
+        isPending={updateUser.isPending}
+        onConfirm={confirmToggleActive}
+        onCancel={() => setConfirmToggle(null)}
+      />
     </div>
   );
 }
 
+const PROFILE_SCREENS: { id: string; label: string }[] = [
+  { id: "dashboard", label: "Dashboard" },
+  { id: "comandas", label: "Comandas / Cardápio" },
+  { id: "compras", label: "Compras" },
+  { id: "estoque", label: "Estoque" },
+  { id: "cadastros", label: "Cadastros" },
+  { id: "relatorios", label: "Relatórios" },
+  { id: "configuracoes", label: "Configurações" },
+  { id: "gestao_usuarios", label: "Gestão de Usuários" },
+];
+const SCREEN_LABELS = Object.fromEntries(PROFILE_SCREENS.map((s) => [s.id, s.label]));
+
 function PerfisTab({ tenantId }: { tenantId: number }) {
   const { data: profiles = [], isLoading } = useTenantProfiles(tenantId);
   const updateProfile = useUpdateTenantProfile();
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingProfile, setEditingProfile] = useState<ProfileItem | null>(null);
   const [editPerms, setEditPerms] = useState<string[]>([]);
-
-  const ALL_SCREENS = ["dashboard", "caixa", "cardapio", "compras", "estoque", "financeiro", "relatorios", "cadastros", "configuracoes"];
+  const [confirmToggleProfile, setConfirmToggleProfile] = useState<ProfileItem | null>(null);
 
   function startEdit(p: ProfileItem) {
-    setEditingId(p.id);
+    setEditingProfile(p);
     setEditPerms([...p.permissions]);
   }
 
@@ -352,12 +582,31 @@ function PerfisTab({ tenantId }: { tenantId: number }) {
     setEditPerms((prev) => prev.includes(screen) ? prev.filter((s) => s !== screen) : [...prev, screen]);
   }
 
-  function handleSave(p: ProfileItem) {
+  function handleSavePerms() {
+    if (!editingProfile) return;
     updateProfile.mutate(
-      { tenantId, profileId: p.id, permissions: editPerms },
+      { tenantId, profileId: editingProfile.id, permissions: editPerms },
       {
-        onSuccess: () => { toast.success("Perfil atualizado"); setEditingId(null); },
+        onSuccess: () => { toast.success("Permissões atualizadas"); setEditingProfile(null); },
         onError: () => toast.error("Erro ao salvar"),
+      }
+    );
+  }
+
+  function handleToggleActive(p: ProfileItem) {
+    if (p.is_active && p.user_count > 0) {
+      setConfirmToggleProfile(p);
+      return;
+    }
+    doToggleProfile(p);
+  }
+
+  function doToggleProfile(p: ProfileItem) {
+    updateProfile.mutate(
+      { tenantId, profileId: p.id, is_active: !p.is_active },
+      {
+        onSuccess: () => { toast.success(p.is_active ? "Perfil desativado" : "Perfil ativado"); setConfirmToggleProfile(null); },
+        onError: () => toast.error("Erro ao atualizar"),
       }
     );
   }
@@ -365,51 +614,128 @@ function PerfisTab({ tenantId }: { tenantId: number }) {
   if (isLoading) return <p className="text-sm text-gray-500">Carregando…</p>;
 
   return (
-    <div className="space-y-3">
-      {profiles.map((p) => (
-        <div key={p.id} className="bg-white rounded-xl border p-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="font-medium text-gray-900">{p.name}</span>
-            {editingId !== p.id ? (
-              <button onClick={() => startEdit(p)} className="text-sm text-blue-600 hover:underline">Editar permissões</button>
-            ) : (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleSave(p)}
-                  disabled={updateProfile.isPending}
-                  className="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                >
-                  Salvar
-                </button>
-                <button onClick={() => setEditingId(null)} className="text-sm px-3 py-1 border text-gray-700 rounded hover:bg-gray-50">
-                  Cancelar
-                </button>
-              </div>
-            )}
+    <div className="space-y-4">
+      {confirmToggleProfile && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <p className="flex-1 text-sm font-medium text-amber-900">
+            Perfil &ldquo;{confirmToggleProfile.name}&rdquo; tem {confirmToggleProfile.user_count} usuário{confirmToggleProfile.user_count !== 1 ? "s" : ""} vinculado{confirmToggleProfile.user_count !== 1 ? "s" : ""}. Confirmar desativação?
+          </p>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => doToggleProfile(confirmToggleProfile)}
+              disabled={updateProfile.isPending}
+              className="text-xs px-3 py-1.5 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50"
+            >
+              Confirmar
+            </button>
+            <button
+              onClick={() => setConfirmToggleProfile(null)}
+              className="text-xs px-3 py-1.5 border text-gray-700 rounded hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
           </div>
-          {editingId === p.id ? (
-            <div className="flex flex-wrap gap-2">
-              {ALL_SCREENS.map((screen) => (
-                <label key={screen} className="flex items-center gap-1.5 text-sm cursor-pointer">
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl border overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-gray-600 text-left">
+            <tr>
+              <th className="px-4 py-3 font-medium">Nome</th>
+              <th className="px-4 py-3 font-medium">Descrição</th>
+              <th className="px-4 py-3 font-medium">Permissões</th>
+              <th className="px-4 py-3 font-medium">Usuários</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {profiles.map((p) => (
+              <tr key={p.id} className="hover:bg-gray-50">
+                <td className="px-4 py-3 font-medium text-gray-900">{p.name}</td>
+                <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate">{p.description ?? "—"}</td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    {p.permissions.length > 0
+                      ? p.permissions.map((perm) => (
+                          <span key={perm} className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700">
+                            {SCREEN_LABELS[perm] ?? perm}
+                          </span>
+                        ))
+                      : <span className="text-xs text-gray-400">Nenhuma</span>}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-gray-700">{p.user_count}</td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                    {p.is_active ? "Ativo" : "Inativo"}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => startEdit(p)}
+                      className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => handleToggleActive(p)}
+                      disabled={updateProfile.isPending}
+                      className={`text-xs px-2 py-1 rounded disabled:opacity-50 ${p.is_active ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
+                    >
+                      {p.is_active ? "Desativar" : "Ativar"}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {profiles.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">Nenhum perfil cadastrado</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {editingProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h3 className="text-base font-semibold text-gray-900 mb-1">Editar permissões</h3>
+            <p className="text-sm text-gray-500 mb-4">{editingProfile.name}</p>
+            <div className="space-y-2.5 mb-6">
+              {PROFILE_SCREENS.map((screen) => (
+                <label key={screen.id} className="flex items-center gap-2.5 text-sm cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={editPerms.includes(screen)}
-                    onChange={() => togglePerm(screen)}
+                    checked={editPerms.includes(screen.id)}
+                    onChange={() => togglePerm(screen.id)}
+                    className="rounded"
                   />
-                  {screen}
+                  <span className="text-gray-700">{screen.label}</span>
                 </label>
               ))}
             </div>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {p.permissions.length > 0 ? p.permissions.map((perm) => (
-                <span key={perm} className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">{perm}</span>
-              )) : <span className="text-xs text-gray-400">Nenhuma permissão</span>}
+            <div className="flex gap-3">
+              <button
+                onClick={handleSavePerms}
+                disabled={updateProfile.isPending}
+                className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {updateProfile.isPending ? "Salvando..." : "Salvar"}
+              </button>
+              <button
+                onClick={() => setEditingProfile(null)}
+                className="flex-1 rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
             </div>
-          )}
+          </div>
         </div>
-      ))}
-      {profiles.length === 0 && <p className="text-sm text-gray-400">Nenhum perfil cadastrado</p>}
+      )}
     </div>
   );
 }
