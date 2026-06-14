@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RequireAuth } from "@/components/auth/RequireAuth";
@@ -57,11 +58,32 @@ import { PlatformCockpitPage } from "@/features/platform/PlatformCockpitPage";
 import { PlatformAnnouncementsPage } from "@/features/platform/PlatformAnnouncementsPage";
 import { PlatformAuditPage } from "@/features/platform/PlatformAuditPage";
 
+export const IMPERSONATION_SESSION_KEY = "impersonation_token";
+
+function ImpersonationTokenHandler() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get("impersonation_token");
+    if (token) {
+      sessionStorage.setItem(IMPERSONATION_SESSION_KEY, token);
+      params.delete("impersonation_token");
+      const clean = params.toString() ? `?${params.toString()}` : "";
+      navigate(location.pathname + clean, { replace: true });
+    }
+  }, [location.search, location.pathname, navigate]);
+
+  return null;
+}
+
 export function App() {
   return (
     <Sentry.ErrorBoundary fallback={<p className="p-8 text-red-600">Erro inesperado. Recarregue a página.</p>}>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <ImpersonationTokenHandler />
         <Routes>
           <Route path="/platform/login" element={<PlatformLoginPage />} />
           <Route element={<RequirePlatformAuth />}>

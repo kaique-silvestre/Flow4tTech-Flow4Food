@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
+import { IMPERSONATION_SESSION_KEY } from "@/App";
 import { toast } from "@/lib/toast";
 import { Menu, CalendarDays, ArrowUpRight, X } from "lucide-react";
 import { useActiveAnnouncements, useMarkAnnouncementRead } from "@/features/comunicados/useAnnouncements";
@@ -118,34 +119,40 @@ function ComunicadoBanner() {
   );
 }
 
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    return JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+  } catch {
+    return null;
+  }
+}
+
 function ImpersonationBanner() {
-  const token = useAuthStore((s) => s.token);
-  const clearToken = useAuthStore((s) => s.clearToken);
   const navigate = useNavigate();
 
-  const isImpersonating = (() => {
-    if (!token) return false;
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-      return payload.impersonation === true;
-    } catch {
-      return false;
-    }
-  })();
+  const impersonationToken = sessionStorage.getItem(IMPERSONATION_SESSION_KEY);
+  if (!impersonationToken) return null;
 
-  if (!isImpersonating) return null;
+  const payload = decodeJwtPayload(impersonationToken);
+  if (!payload || payload.impersonation !== true) return null;
+
+  const adminEmail = (payload.impersonated_by_email as string) || "admin";
 
   function handleExit() {
-    clearToken();
-    toast.success("Impersonação encerrada");
-    navigate("/login", { replace: true });
+    sessionStorage.removeItem(IMPERSONATION_SESSION_KEY);
+    toast.success("Sessão de suporte encerrada");
+    if (window.opener) {
+      window.close();
+    } else {
+      navigate("/login", { replace: true });
+    }
   }
 
   return (
     <div className="flex items-center gap-2 rounded-lg border border-purple-300 bg-purple-50 px-3 py-1 text-xs text-purple-900">
-      <span className="font-medium">Modo impersonação</span>
+      <span className="font-medium">Sessão de suporte ativa — {adminEmail}</span>
       <button onClick={handleExit} className="text-purple-600 hover:text-purple-800 underline">
-        Sair
+        Encerrar sessão de suporte
       </button>
     </div>
   );

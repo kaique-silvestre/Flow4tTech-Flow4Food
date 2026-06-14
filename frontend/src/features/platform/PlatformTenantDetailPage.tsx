@@ -17,7 +17,7 @@ import {
   type TenantUserItem,
   type ProfileItem,
 } from "./usePlatformApi";
-import { useAuthStore } from "@/stores/authStore";
+import { IMPERSONATION_SESSION_KEY } from "@/App";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const STATUS_OPTIONS = ["trial", "ativa", "suspensa", "cancelada"] as const;
@@ -256,7 +256,6 @@ function UsuariosTab({ tenantId }: { tenantId: number }) {
   const updateUser = useUpdateTenantUser();
   const updateTenant = useUpdateTenant();
   const impersonate = useImpersonateUser();
-  const setToken = useAuthStore((s) => s.setToken);
 
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [editTarget, setEditTarget] = useState<TenantUserItem | null>(null);
@@ -346,11 +345,11 @@ function UsuariosTab({ tenantId }: { tenantId: number }) {
       { tenantId, userId: u.id },
       {
         onSuccess: ({ access_token }) => {
-          setToken(access_token);
-          window.open("/", "_blank");
-          toast.success(`Impersonando ${u.name}`);
+          sessionStorage.setItem(IMPERSONATION_SESSION_KEY, access_token);
+          window.open(`/?impersonation_token=${access_token}`, "_blank");
+          toast.success(`Sessão de suporte iniciada como ${u.name}`);
         },
-        onError: () => toast.error("Erro ao impersonar"),
+        onError: () => toast.error("Erro ao iniciar sessão de suporte"),
       }
     );
   }
@@ -459,7 +458,7 @@ function UsuariosTab({ tenantId }: { tenantId: number }) {
                       onClick={() => handleImpersonate(u)}
                       className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200"
                     >
-                      Impersonar
+                      Entrar como
                     </button>
                   </div>
                 </td>

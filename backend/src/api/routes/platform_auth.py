@@ -534,6 +534,7 @@ def impersonate_user(
         ).scalars().all()
 
     admin_id = payload.get("sub") or payload.get("admin_id")
+    admin_email = payload.get("email", "")
     token_payload: dict[str, Any] = {
         "sub": str(user.id),
         "user_id": user.id,
@@ -541,6 +542,7 @@ def impersonate_user(
         "permissions": list(perms),
         "impersonation": True,
         "impersonated_by": admin_id,
+        "impersonated_by_email": admin_email,
     }
     token = create_access_token(token_payload, expires_delta=timedelta(hours=2))
     return ImpersonateResponse(access_token=token)
