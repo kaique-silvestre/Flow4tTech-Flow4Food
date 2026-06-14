@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_tenant_db, require_permission
+from src.api.dependencies import get_tenant_db, require_feature, require_permission
 from src.schemas.permission_templates import AssignTemplateRequest
 from src.schemas.profiles import ProfileCreate, ProfileResponse, ProfileUpdate
 from src.services.profiles_service import (
@@ -14,7 +14,7 @@ from src.services.profiles_service import (
 )
 from src.services.templates_service import assign_template_to_profile
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_feature("gestao_usuarios"))])
 
 
 @router.get("", response_model=list[ProfileResponse])

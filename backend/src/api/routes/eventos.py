@@ -3,11 +3,16 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_tenant_db, require_permission
+from src.api.dependencies import (
+    get_current_user,
+    get_tenant_db,
+    require_feature,
+    require_permission,
+)
 from src.schemas.eventos import EventoCreate, EventoPatch, EventoResponse
 from src.services import eventos_service
 
-router = APIRouter(dependencies=[Depends(require_permission("calendario"))])
+router = APIRouter(dependencies=[Depends(require_feature("calendario")), Depends(require_permission("calendario"))])
 
 
 @router.get("", response_model=list[EventoResponse])

@@ -3,7 +3,12 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_tenant_db, require_permission
+from src.api.dependencies import (
+    get_current_user,
+    get_tenant_db,
+    require_feature,
+    require_permission,
+)
 from src.schemas.contas_pagar_schemas import (
     ContaPagarResponse,
     ContasPagarPageResponse,
@@ -13,7 +18,7 @@ from src.schemas.contas_pagar_schemas import (
 )
 from src.services import contas_pagar_service
 
-router = APIRouter(dependencies=[Depends(require_permission("compras"))])
+router = APIRouter(dependencies=[Depends(require_feature("financeiro")), Depends(require_permission("compras"))])
 
 
 @router.get("", response_model=ContasPagarPageResponse)

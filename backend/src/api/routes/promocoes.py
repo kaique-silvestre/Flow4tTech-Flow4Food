@@ -3,11 +3,16 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_tenant_db, require_permission
+from src.api.dependencies import (
+    get_current_user,
+    get_tenant_db,
+    require_feature,
+    require_permission,
+)
 from src.schemas.promocoes import PromoçaoCreate, PromoçaoResponse, PromoçaoUpdate
 from src.services import promocoes_service
 
-router = APIRouter(dependencies=[Depends(require_permission("cadastros"))])
+router = APIRouter(dependencies=[Depends(require_feature("cadastros")), Depends(require_permission("cadastros"))])
 
 
 @router.get("/mes", response_model=list[PromoçaoResponse])

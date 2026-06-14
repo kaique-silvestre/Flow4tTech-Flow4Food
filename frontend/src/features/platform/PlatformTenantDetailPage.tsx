@@ -29,7 +29,33 @@ const STATUS_COLORS: Record<string, string> = {
   cancelada: "bg-gray-100 text-gray-600",
 };
 
-const AVAILABLE_FEATURES = ["compras", "relatorios", "financeiro", "cockpit", "exportar_pdf"] as const;
+const AVAILABLE_FEATURES = [
+  "dashboard",
+  "calendario",
+  "comandas",
+  "consumo_interno",
+  "compras",
+  "estoque",
+  "relatorios",
+  "cadastros",
+  "configuracoes",
+  "gestao_usuarios",
+  "financeiro",
+] as const;
+
+const FEATURE_LABELS: Record<string, string> = {
+  dashboard: "Dashboard",
+  calendario: "Calendário",
+  comandas: "Comandas / Vendas",
+  consumo_interno: "Consumo Interno",
+  compras: "Compras / NF-e",
+  estoque: "Estoque",
+  relatorios: "Relatórios",
+  cadastros: "Cadastros",
+  configuracoes: "Configurações",
+  gestao_usuarios: "Gestão de Usuários",
+  financeiro: "Financeiro",
+};
 
 type Tab = "dados" | "usuarios" | "perfis" | "features";
 
@@ -767,7 +793,7 @@ function FeaturesTab({ tenantId }: { tenantId: number }) {
   function handleSave() {
     upsert.mutate(
       { tenantId, features: localFeatures },
-      { onSuccess: () => toast.success("Feature flags atualizadas"), onError: () => toast.error("Erro ao salvar") }
+      { onSuccess: () => toast.success("Módulos atualizados"), onError: () => toast.error("Erro ao salvar") }
     );
   }
 
@@ -775,7 +801,7 @@ function FeaturesTab({ tenantId }: { tenantId: number }) {
 
   return (
     <div className="bg-white rounded-xl border p-5 space-y-4">
-      <h3 className="font-medium text-gray-900">Feature Flags</h3>
+      <h3 className="font-medium text-gray-900">Módulos habilitados</h3>
       <div className="space-y-3">
         {AVAILABLE_FEATURES.map((feature) => (
           <label key={feature} className="flex items-center gap-3 cursor-pointer">
@@ -785,7 +811,7 @@ function FeaturesTab({ tenantId }: { tenantId: number }) {
             >
               <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition-transform ${localFeatures[feature] ? "translate-x-4" : "translate-x-0"}`} />
             </div>
-            <span className="text-sm text-gray-700 capitalize">{feature.replace(/_/g, " ")}</span>
+            <span className="text-sm text-gray-700">{FEATURE_LABELS[feature] ?? feature}</span>
           </label>
         ))}
       </div>
@@ -806,7 +832,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "dados", label: "Dados & Assinatura" },
   { key: "usuarios", label: "Usuários" },
   { key: "perfis", label: "Perfis" },
-  { key: "features", label: "Feature Flags" },
+  { key: "features", label: "Módulos" },
 ];
 
 export function PlatformTenantDetailPage() {

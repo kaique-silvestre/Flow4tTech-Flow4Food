@@ -1,14 +1,15 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_db, get_tenant_db, require_permission
+from src.api.dependencies import get_db, get_tenant_db, require_feature, require_permission
+from src.services import audit_service
 from src.schemas.users import (
     ResetPasswordResponse,
     UserCreate,
-    UserPermissionsUpdate,
     UsernameCheckResponse,
+    UserPermissionsUpdate,
     UserResponse,
     UserUpdate,
 )
@@ -26,7 +27,7 @@ from src.services.users_service import (
     update_existing_user,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_feature("gestao_usuarios"))])
 
 _perm = Depends(require_permission("gestao_usuarios"))
 
@@ -44,10 +45,21 @@ def list_users(
 @router.post("", response_model=UserResponse, status_code=201)
 def create_user(
     body: UserCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
     payload: dict = Depends(require_permission("gestao_usuarios")),
 ) -> UserResponse:
-    return create_new_user(db, payload["tenant_id"], body)
+    result = create_new_user(db, payload["tenant_id"], body)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "user.create",
+        tenant_id=payload["tenant_id"],
+        user_id=payload["user_id"],
+        entity="SystemUser",
+        entity_id=result.id,
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.get("/check-username", response_model=UsernameCheckResponse)
@@ -77,19 +89,40 @@ def get_one_user(
 def update_user(
     user_id: int,
     body: UserUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
     payload: dict = Depends(require_permission("gestao_usuarios")),
 ) -> UserResponse:
-    return update_existing_user(db, payload["tenant_id"], user_id, body, payload["user_id"])
+    result = update_existing_user(db, payload["tenant_id"], user_id, body, payload["user_id"])
+    background_tasks.add_task(
+        audit_service.log_background,
+        "user.update",
+        tenant_id=payload["tenant_id"],
+        user_id=payload["user_id"],
+        entity="SystemUser",
+        entity_id=user_id,
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.delete("/{user_id}", status_code=204)
 def delete_user(
     user_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
     payload: dict = Depends(require_permission("gestao_usuarios")),
 ) -> None:
     delete_existing_user(db, payload["tenant_id"], user_id, payload["user_id"])
+    background_tasks.add_task(
+        audit_service.log_background,
+        "user.delete",
+        tenant_id=payload["tenant_id"],
+        user_id=payload["user_id"],
+        entity="SystemUser",
+        entity_id=user_id,
+        impersonated_by=payload.get("impersonated_by"),
+    )
 
 
 @router.patch("/{user_id}/activate", response_model=UserResponse)

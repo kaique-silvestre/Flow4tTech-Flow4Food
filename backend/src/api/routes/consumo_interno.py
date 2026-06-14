@@ -4,7 +4,12 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_tenant_db, require_permission
+from src.api.dependencies import (
+    get_current_user,
+    get_tenant_db,
+    require_feature,
+    require_permission,
+)
 from src.schemas.consumo_interno import (
     ItemConsumoInternoResponse,
     LancarConsumoBatchRequest,
@@ -14,7 +19,7 @@ from src.schemas.consumo_interno import (
 )
 from src.services import consumo_interno_service
 
-router = APIRouter(dependencies=[Depends(require_permission("consumo_interno"))])
+router = APIRouter(dependencies=[Depends(require_feature("consumo_interno")), Depends(require_permission("consumo_interno"))])
 
 
 @router.post("", response_model=ItemConsumoInternoResponse)

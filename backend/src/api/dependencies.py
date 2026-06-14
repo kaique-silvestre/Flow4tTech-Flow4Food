@@ -113,6 +113,28 @@ def require_permission(screen: str):
     return _check
 
 
+def require_feature(feature_key: str):
+    def _check(
+        payload: dict = Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ) -> dict:
+        tenant_id = payload.get("tenant_id")
+        if not tenant_id:
+            return payload
+        from src.models.tenant_features import TenantFeature
+        row = db.execute(
+            select(TenantFeature).where(
+                TenantFeature.tenant_id == tenant_id,
+                TenantFeature.feature == feature_key,
+            )
+        ).scalar_one_or_none()
+        if row is not None and not row.enabled:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Módulo desabilitado: {feature_key}")
+        return payload
+
+    return _check
+
+
 def require_active_subscription(payload: dict = Depends(get_current_user)) -> dict:
     sub_status = payload.get("subscription_status", "trial")
     if sub_status not in {"ativa", "trial"}:
@@ -139,4 +161,4 @@ def require_platform_admin(
     return payload
 
 
-__all__ = ["get_db", "get_tenant_db", "get_current_user", "check_subscription", "require_permission", "require_active_subscription", "require_platform_admin"]  # noqa: E501
+__all__ = ["get_db", "get_tenant_db", "get_current_user", "check_subscription", "require_permission", "require_feature", "require_active_subscription", "require_platform_admin"]  # noqa: E501

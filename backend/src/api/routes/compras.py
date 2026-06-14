@@ -3,7 +3,12 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_tenant_db, require_permission
+from src.api.dependencies import (
+    get_current_user,
+    get_tenant_db,
+    require_feature,
+    require_permission,
+)
 from src.schemas.compras import (
     CompraCreateRequest,
     CompraPatchRequest,
@@ -13,7 +18,7 @@ from src.schemas.compras import (
 from src.schemas.nfe import NFeImportResponse
 from src.services import compras_service, nfe_match_service, nfe_parser
 
-router = APIRouter(dependencies=[Depends(require_permission("compras"))])
+router = APIRouter(dependencies=[Depends(require_feature("compras")), Depends(require_permission("compras"))])
 
 
 @router.post("/importar-nfe", response_model=NFeImportResponse)

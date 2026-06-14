@@ -7,10 +7,12 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from src.api.routes import admin as admin_routes
+from src.api.routes import announcements as announcements_routes
 from src.api.routes import auth as auth_routes
 from src.api.routes import backup as backup_routes
 from src.api.routes import caixa as caixa_routes
 from src.api.routes import categorias as categorias_routes
+from src.api.routes import cockpit as cockpit_routes
 from src.api.routes import comandas as comandas_routes
 from src.api.routes import compras as compras_routes
 from src.api.routes import config as config_routes
@@ -18,6 +20,8 @@ from src.api.routes import consumo_interno as consumo_interno_routes
 from src.api.routes import contas_pagar as contas_pagar_routes
 from src.api.routes import dashboard as dashboard_routes
 from src.api.routes import estoque as estoque_routes
+from src.api.routes import eventos as eventos_routes
+from src.api.routes import features as features_routes
 from src.api.routes import fornecedores as fornecedores_routes
 from src.api.routes import garcons as garcons_routes
 from src.api.routes import health
@@ -25,14 +29,12 @@ from src.api.routes import insumos as insumos_routes
 from src.api.routes import itens as itens_routes
 from src.api.routes import metodos_pagamento as metodos_pagamento_routes
 from src.api.routes import permission_templates as permission_templates_routes
-from src.api.routes import platform_auth as platform_auth_routes
 from src.api.routes import platform_announcements as platform_announcements_routes
-from src.api.routes import announcements as announcements_routes
-from src.api.routes import cockpit as cockpit_routes
-from src.api.routes import eventos as eventos_routes
-from src.api.routes import promocoes as promocoes_routes
+from src.api.routes import platform_audit as platform_audit_routes
+from src.api.routes import platform_auth as platform_auth_routes
 from src.api.routes import produtos as produtos_routes
 from src.api.routes import profiles as profiles_routes
+from src.api.routes import promocoes as promocoes_routes
 from src.api.routes import relatorios as relatorios_routes
 from src.api.routes import users as users_routes
 from src.core.config import get_settings
@@ -83,7 +85,9 @@ def create_app() -> FastAPI:
     app.include_router(platform_auth_routes._public_router, prefix="/api/platform", tags=["platform"])
     app.include_router(platform_auth_routes.router, prefix="/api/platform", tags=["platform"])
     app.include_router(platform_announcements_routes.router, prefix="/api/platform", tags=["platform"])
+    app.include_router(platform_audit_routes.router, prefix="/api/platform", tags=["platform"])
     app.include_router(announcements_routes.router, prefix="/api/app", tags=["announcements"])
+    app.include_router(features_routes.router, prefix="/api/app", tags=["features"])
     app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
     app.include_router(users_routes.router, prefix="/api/users", tags=["users"])
     app.include_router(profiles_routes.router, prefix="/api/profiles", tags=["profiles"])
