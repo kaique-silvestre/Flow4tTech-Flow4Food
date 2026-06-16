@@ -1,9 +1,12 @@
 import bcrypt
+from datetime import timedelta
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
 from src.repositories import platform_admins_repository
 from src.services.auth_service import create_access_token
+
+PLATFORM_TOKEN_EXPIRES = timedelta(hours=8)
 
 
 def create_platform_token(platform_admin_id: int, email: str) -> str:
@@ -13,7 +16,7 @@ def create_platform_token(platform_admin_id: int, email: str) -> str:
         "platform_admin": True,
         "email": email,
     }
-    return create_access_token(payload)
+    return create_access_token(payload, expires_delta=PLATFORM_TOKEN_EXPIRES)
 
 
 def login(db: Session, email: str, password: str) -> str:

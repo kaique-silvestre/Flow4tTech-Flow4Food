@@ -14,9 +14,9 @@ from src.models.ficha_tecnica import FichaTecnica
 from src.models.insumos import Insumo
 from src.models.itens_comanda import ItemComanda
 from src.models.metodos_pagamento import MetodoPagamento
-from src.models.promocoes import Promocao, PromocaoProduto
 from src.models.movimentos_estoque import TipoMovimento
 from src.models.produtos import Produto
+from src.models.promocoes import Promocao, PromocaoProduto
 from src.repositories import (
     comandas_repository,
     estoque_repository,
