@@ -15,6 +15,9 @@ class Tenant(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     nome_fantasia: Mapped[str] = mapped_column(sa.String(200), nullable=False)
     cnpj: Mapped[Optional[str]] = mapped_column(sa.String(18), nullable=True, unique=True)  # noqa: UP045
+    endereco: Mapped[Optional[str]] = mapped_column(sa.String(300), nullable=True)  # noqa: UP045
+    telefone: Mapped[Optional[str]] = mapped_column(sa.String(30), nullable=True)  # noqa: UP045
     status: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default="ativo")
     admin_user_id: Mapped[Optional[int]] = mapped_column(nullable=True)  # noqa: UP045
+    max_users: Mapped[int] = mapped_column(sa.Integer(), nullable=False, server_default="5")
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("NOW()"))

@@ -10,26 +10,37 @@ from src.schemas.config_schemas import (
 from src.services.auth_service import hash_password, verify_password
 
 
-def get_estabelecimento(db: Session) -> EstabelecimentoResponse:
-    est = estabelecimento_repository.get_estabelecimento(db)
-    if est is None:
+def _tenant_to_response(tenant) -> EstabelecimentoResponse:
+    return EstabelecimentoResponse(
+        id=tenant.id,
+        nome=tenant.nome_fantasia,
+        cnpj=tenant.cnpj,
+        endereco=tenant.endereco,
+        telefone=tenant.telefone,
+    )
+
+
+def get_estabelecimento(db: Session, tenant_id: int) -> EstabelecimentoResponse:
+    tenant = estabelecimento_repository.get_estabelecimento(db, tenant_id)
+    if tenant is None:
         return EstabelecimentoResponse(
-            id=1, nome="Estabelecimento", cnpj=None, endereco=None, telefone=None
+            id=tenant_id, nome="Estabelecimento", cnpj=None, endereco=None, telefone=None
         )
-    return EstabelecimentoResponse.model_validate(est)
+    return _tenant_to_response(tenant)
 
 
 def update_estabelecimento(
-    db: Session, body: EstabelecimentoUpdate
+    db: Session, tenant_id: int, body: EstabelecimentoUpdate
 ) -> EstabelecimentoResponse:
-    est = estabelecimento_repository.upsert_estabelecimento(
+    tenant = estabelecimento_repository.upsert_estabelecimento(
         db,
+        tenant_id=tenant_id,
         nome=body.nome,
         cnpj=body.cnpj,
         endereco=body.endereco,
         telefone=body.telefone,
     )
-    return EstabelecimentoResponse.model_validate(est)
+    return _tenant_to_response(tenant)
 
 
 def alterar_senha(db: Session, body: AlterarSenhaRequest) -> None:
