@@ -14,6 +14,7 @@ export interface UserResponse {
   username: string;
   email: string | null;
   is_active: boolean;
+  is_owner: boolean;
   last_login: string | null;
   created_at: string;
 }

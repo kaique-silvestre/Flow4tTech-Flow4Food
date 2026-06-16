@@ -64,6 +64,7 @@ export function ProfileModal({ open, onClose, profile }: Props) {
   });
 
   useEffect(() => {
+    if (!open) return;
     if (profile) {
       reset({
         name: profile.name,
@@ -75,7 +76,8 @@ export function ProfileModal({ open, onClose, profile }: Props) {
       reset({ name: "", description: "", screens: [] });
       setTemplateId(null);
     }
-  }, [profile, reset]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, profile?.id]);
 
   function applyTemplate(id: number | null) {
     setTemplateId(id);

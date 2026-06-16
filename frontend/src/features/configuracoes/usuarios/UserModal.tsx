@@ -94,6 +94,9 @@ export function UserModal({ open, onClose, user }: Props) {
   const watchedProfileId = watch("profile_id");
   const showScreens = !watchedProfileId || watchedProfileId === 0;
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const existingPermsKey = existingPerms.join(",");
+
   useEffect(() => {
     if (user) {
       reset({
@@ -107,7 +110,9 @@ export function UserModal({ open, onClose, user }: Props) {
     } else {
       reset({ name: "", username: "", email: "", profile_id: undefined, password: "", is_active: true, screens: [] });
     }
-  }, [user, reset, existingPerms]);
+  // existingPermsKey is a stable primitive derived from existingPerms to avoid new-array-reference re-runs
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, existingPermsKey, reset]);
 
   async function onSubmit(data: CreateForm) {
     const profileId = data.profile_id && data.profile_id > 0 ? data.profile_id : null;
