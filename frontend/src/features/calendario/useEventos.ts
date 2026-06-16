@@ -8,6 +8,8 @@ export interface EventoResponse {
   titulo: string;
   descricao: string | null;
   data_evento: string;
+  hora_inicio: string | null;
+  hora_fim: string | null;
   criado_por: number | null;
   created_at: string | null;
 }
@@ -16,11 +18,15 @@ export interface EventoCreate {
   titulo: string;
   descricao?: string | null;
   data_evento: string;
+  hora_inicio?: string | null;
+  hora_fim?: string | null;
 }
 
 export interface EventoPatch {
   titulo?: string;
   descricao?: string | null;
+  hora_inicio?: string | null;
+  hora_fim?: string | null;
 }
 
 const QK = "eventos";

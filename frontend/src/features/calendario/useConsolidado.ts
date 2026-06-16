@@ -9,8 +9,10 @@ export interface CockpitItem {
   data_referencia: string; // YYYY-MM-DD
   descricao: string;
   hora_inicio: string | null;
+  hora_fim: string | null;
   valor: number | null;
   fornecedor_nome: string | null;
+  itens: string[];
 }
 
 const QK = "cockpit-consolidado";
