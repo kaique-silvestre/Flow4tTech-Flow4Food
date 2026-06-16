@@ -40,6 +40,7 @@ class UserResponse(BaseModel):
     username: str
     email: Optional[str]
     is_active: bool
+    is_owner: bool
     last_login: Optional[datetime]
     created_at: datetime
 

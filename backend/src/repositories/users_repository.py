@@ -59,6 +59,14 @@ def list_users(
     return q.order_by(SystemUser.name).all()
 
 
+def count_users(db: Session, tenant_id: int) -> int:
+    return (
+        db.query(SystemUser)
+        .filter(SystemUser.tenant_id == tenant_id)
+        .count()
+    )
+
+
 def count_active_admins(db: Session, tenant_id: int, admin_profile_id: int) -> int:
     return (
         db.query(SystemUser)

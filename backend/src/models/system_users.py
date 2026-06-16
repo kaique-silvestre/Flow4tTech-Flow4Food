@@ -25,6 +25,7 @@ class SystemUser(Base):
     email: Mapped[Optional[str]] = mapped_column(sa.String(254), nullable=True)  # noqa: UP045
     password_hash: Mapped[str] = mapped_column(sa.String(200), nullable=False)
     is_active: Mapped[bool] = mapped_column(nullable=False, server_default="true")
+    is_owner: Mapped[bool] = mapped_column(nullable=False, server_default="false")
     last_login: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)  # noqa: UP045
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("NOW()"))
     updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.text("NOW()"))
