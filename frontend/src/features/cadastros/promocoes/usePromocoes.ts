@@ -69,7 +69,11 @@ export function useCreatePromocao() {
       qc.invalidateQueries({ queryKey: [QK] });
       toast.success("Promoção criada.");
     },
-    onError: () => toast.error("Erro ao criar promoção."),
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })
+        ?.response?.data?.error?.message;
+      toast.error(msg ?? "Erro ao criar promoção.");
+    },
   });
 }
 
@@ -82,7 +86,11 @@ export function useUpdatePromocao() {
       qc.invalidateQueries({ queryKey: [QK] });
       toast.success("Promoção atualizada.");
     },
-    onError: () => toast.error("Erro ao atualizar promoção."),
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })
+        ?.response?.data?.error?.message;
+      toast.error(msg ?? "Erro ao atualizar promoção.");
+    },
   });
 }
 

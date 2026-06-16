@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CategoriaModal } from "./CategoriaModal";
 import { useCategorias, useToggleCategoriaAtivo, type Categoria } from "./useCategorias";
 
@@ -13,6 +14,7 @@ export function CategoriasPage() {
   const [editing, setEditing] = useState<Categoria | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [filtro, setFiltro] = useState<Filtro>("ativos");
+  const [confirmId, setConfirmId] = useState<number | null>(null);
 
   function openCreate() {
     setEditing(null);
@@ -109,7 +111,7 @@ export function CategoriasPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => toggleAtivo.mutate(cat.id)}
+                      onClick={() => cat.ativo ? setConfirmId(cat.id) : toggleAtivo.mutate(cat.id)}
                       disabled={toggleAtivo.isPending}
                       className={cat.ativo ? "text-yellow-600 hover:text-yellow-700" : "text-green-600 hover:text-green-700"}
                     >
@@ -135,7 +137,7 @@ export function CategoriasPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => toggleAtivo.mutate(child.id)}
+                            onClick={() => child.ativo ? setConfirmId(child.id) : toggleAtivo.mutate(child.id)}
                             disabled={toggleAtivo.isPending}
                             className={child.ativo ? "text-yellow-600 hover:text-yellow-700" : "text-green-600 hover:text-green-700"}
                           >
@@ -156,6 +158,18 @@ export function CategoriasPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         editing={editing}
+      />
+
+      <ConfirmDialog
+        open={confirmId !== null}
+        title="Desativar categoria?"
+        confirmLabel="Desativar"
+        onConfirm={() => {
+          toggleAtivo.mutate(confirmId!);
+          setConfirmId(null);
+        }}
+        onCancel={() => setConfirmId(null)}
+        isPending={toggleAtivo.isPending}
       />
     </div>
   );

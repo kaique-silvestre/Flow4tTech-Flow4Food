@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Pagination, paginar } from "@/components/ui/pagination";
 import { FornecedorModal } from "./FornecedorModal";
 import { useFornecedores, useToggleFornecedorAtivo, type Fornecedor } from "./useFornecedores";
@@ -17,6 +18,7 @@ export function FornecedoresPage() {
   const [editing, setEditing] = useState<Fornecedor | null>(null);
   const [filtro, setFiltro] = useState<Filtro>("ativos");
   const [pagina, setPagina] = useState(1);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
 
   function openCreate() {
     setEditing(null);
@@ -89,7 +91,7 @@ export function FornecedoresPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => toggleAtivo.mutate(f.id)}
+                      onClick={() => f.ativo ? setConfirmId(f.id) : toggleAtivo.mutate(f.id)}
                       disabled={toggleAtivo.isPending}
                       className={f.ativo ? "text-yellow-600 hover:text-yellow-700" : "text-green-600 hover:text-green-700"}
                     >
@@ -115,6 +117,18 @@ export function FornecedoresPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         editing={editing}
+      />
+
+      <ConfirmDialog
+        open={confirmId !== null}
+        title="Desativar fornecedor?"
+        confirmLabel="Desativar"
+        onConfirm={() => {
+          toggleAtivo.mutate(confirmId!);
+          setConfirmId(null);
+        }}
+        onCancel={() => setConfirmId(null)}
+        isPending={toggleAtivo.isPending}
       />
     </div>
   );

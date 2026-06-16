@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,11 +32,12 @@ interface FormState {
   descricao: string;
   tipo_desconto: "porcentagem" | "valor_fixo";
   valor_desconto: string;
+  recorrente: boolean;
   data_inicio: string;
   data_fim: string;
   hora_inicio: string;
   hora_fim: string;
-  recorrencia: "nenhuma" | "semanal" | "mensal";
+  recorrencia: "semanal" | "mensal";
   dias_semana: number[];
   dias_mes: number[];
   produto_ids: number[];
@@ -46,27 +48,30 @@ const EMPTY: FormState = {
   descricao: "",
   tipo_desconto: "porcentagem",
   valor_desconto: "",
+  recorrente: false,
   data_inicio: "",
   data_fim: "",
   hora_inicio: "00:00",
   hora_fim: "23:59",
-  recorrencia: "nenhuma",
+  recorrencia: "semanal",
   dias_semana: [],
   dias_mes: [],
   produto_ids: [],
 };
 
 function toForm(p: PromoçaoResponse): FormState {
+  const recorrente = p.recorrencia !== "nenhuma";
   return {
     nome: p.nome,
     descricao: p.descricao ?? "",
     tipo_desconto: p.tipo_desconto,
     valor_desconto: String(p.valor_desconto),
+    recorrente,
     data_inicio: p.data_inicio,
     data_fim: p.data_fim ?? "",
     hora_inicio: p.hora_inicio?.slice(0, 5) ?? "00:00",
     hora_fim: p.hora_fim?.slice(0, 5) ?? "23:59",
-    recorrencia: p.recorrencia as FormState["recorrencia"],
+    recorrencia: recorrente ? (p.recorrencia as "semanal" | "mensal") : "semanal",
     dias_semana: p.dias_semana ?? [],
     dias_mes: p.dias_mes ?? [],
     produto_ids: p.produto_ids,
@@ -88,6 +93,8 @@ export function PromocoesPage() {
   });
   const [form, setForm] = useState<FormState>(EMPTY);
   const [busca, setBusca] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   function openCreate() {
     setForm(EMPTY);
@@ -130,18 +137,19 @@ export function PromocoesPage() {
   }
 
   function handleSave() {
+    const recorrencia = form.recorrente ? form.recorrencia : "nenhuma";
     const payload: PromoçaoCreate = {
       nome: form.nome.trim(),
       descricao: form.descricao || null,
       tipo_desconto: form.tipo_desconto,
       valor_desconto: parseFloat(form.valor_desconto) || 0,
       data_inicio: form.data_inicio,
-      data_fim: form.data_fim || null,
+      data_fim: form.recorrente ? null : (form.data_fim || null),
       hora_inicio: form.hora_inicio ? form.hora_inicio + ":00" : null,
       hora_fim: form.hora_fim ? form.hora_fim + ":00" : null,
-      recorrencia: form.recorrencia,
-      dias_semana: form.recorrencia === "semanal" ? form.dias_semana : null,
-      dias_mes: form.recorrencia === "mensal" ? form.dias_mes : null,
+      recorrencia,
+      dias_semana: recorrencia === "semanal" ? form.dias_semana : null,
+      dias_mes: recorrencia === "mensal" ? form.dias_mes : null,
       produto_ids: form.produto_ids,
     };
 
@@ -157,7 +165,9 @@ export function PromocoesPage() {
   );
 
   const isPending = createMut.isPending || updateMut.isPending;
-  const canSave = form.nome.trim() && form.data_inicio && form.valor_desconto;
+  const diasOk = !form.recorrente ||
+    (form.recorrencia === "semanal" ? form.dias_semana.length > 0 : form.dias_mes.length > 0);
+  const canSave = form.nome.trim() && form.data_inicio && form.valor_desconto && diasOk;
 
   const produtosNaMultiplas = (() => {
     if (!modal.open) return new Set<number>();
@@ -201,34 +211,70 @@ export function PromocoesPage() {
         <p className="text-sm text-gray-500">Nenhuma promoção encontrada.</p>
       ) : (
         <div className="rounded border divide-y text-sm">
-          {promocoes.map((p) => (
-            <div key={p.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
-              <div className="flex flex-col gap-0.5">
-                <span className="font-medium">{p.nome}</span>
-                <span className="text-xs text-gray-500">
-                  {fmtDesconto(p.tipo_desconto, p.valor_desconto)} · {fmtData(p.data_inicio)}
-                  {p.data_fim ? ` → ${fmtData(p.data_fim)}` : " (sem fim)"}
-                  {p.recorrencia !== "nenhuma" && ` · ${p.recorrencia}`}
-                </span>
+          {promocoes.map((p) => {
+            const produtosNaPromocao = produtos.filter((pr) => p.produto_ids.includes(pr.id));
+            const isExpanded = expandedId === p.id;
+            return (
+              <div key={p.id} className="hover:bg-gray-50">
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium">{p.nome}</span>
+                    <span className="text-xs text-gray-500">
+                      {fmtDesconto(p.tipo_desconto, p.valor_desconto)} · {fmtData(p.data_inicio)}
+                      {p.data_fim ? ` → ${fmtData(p.data_fim)}` : " (sem fim)"}
+                      {p.recorrencia !== "nenhuma" && ` · ${p.recorrencia}`}
+                    </span>
+                    {p.produto_ids.length > 0 && (
+                      <button
+                        className="mt-0.5 text-left text-xs text-blue-600 hover:underline w-fit"
+                        onClick={() => setExpandedId(isExpanded ? null : p.id)}
+                      >
+                        {p.produto_ids.length} produto{p.produto_ids.length !== 1 ? "s" : ""} {isExpanded ? "▲" : "▼"}
+                      </button>
+                    )}
+                    {p.produto_ids.length === 0 && (
+                      <span className="text-xs text-gray-400 italic">Sem produtos vinculados</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
+                      Editar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() => setConfirmDeleteId(p.id)}
+                      disabled={deleteMut.isPending}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                </div>
+                {isExpanded && produtosNaPromocao.length > 0 && (
+                  <div className="px-4 pb-3 flex flex-wrap gap-1.5">
+                    {produtosNaPromocao.map((pr) => (
+                      <span key={pr.id} className="rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs text-blue-800">
+                        {pr.nome}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
-                  Editar
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-red-600 hover:text-red-700"
-                  onClick={() => deleteMut.mutate(p.id)}
-                  disabled={deleteMut.isPending}
-                >
-                  Remover
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Remover promoção?"
+        description="Essa ação não pode ser desfeita."
+        confirmLabel="Remover"
+        onConfirm={() => { deleteMut.mutate(confirmDeleteId!); setConfirmDeleteId(null); }}
+        onCancel={() => setConfirmDeleteId(null)}
+        isPending={deleteMut.isPending}
+      />
 
       <Dialog open={modal.open} onOpenChange={(v) => !v && closeModal()}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -278,16 +324,117 @@ export function PromocoesPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1 block text-sm text-gray-600">Data Início *</label>
-                <Input type="date" value={form.data_inicio} onChange={(e) => setForm((f) => ({ ...f, data_inicio: e.target.value }))} />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm text-gray-600">Data Fim</label>
-                <Input type="date" value={form.data_fim} onChange={(e) => setForm((f) => ({ ...f, data_fim: e.target.value }))} />
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Tipo de validade</label>
+              <div className="flex gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="recorrente"
+                    checked={!form.recorrente}
+                    onChange={() => setForm((f) => ({ ...f, recorrente: false, recorrencia: "semanal", dias_semana: [], dias_mes: [] }))}
+                  />
+                  <span className="text-sm">Período fixo</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="recorrente"
+                    checked={form.recorrente}
+                    onChange={() => setForm((f) => ({ ...f, recorrente: true, data_fim: "", recorrencia: "semanal", dias_semana: [], dias_mes: [] }))}
+                  />
+                  <span className="text-sm">Recorrente</span>
+                </label>
               </div>
             </div>
+
+            {!form.recorrente ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">Data Início *</label>
+                  <Input type="date" value={form.data_inicio} onChange={(e) => setForm((f) => ({ ...f, data_inicio: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">Data Fim</label>
+                  <Input type="date" value={form.data_fim} onChange={(e) => setForm((f) => ({ ...f, data_fim: e.target.value }))} />
+                </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">Data de Início *</label>
+                  <Input type="date" value={form.data_inicio} onChange={(e) => setForm((f) => ({ ...f, data_inicio: e.target.value }))} />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm text-gray-600">Tipo de Recorrência *</label>
+                  <div className="flex gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="recorrencia"
+                        checked={form.recorrencia === "semanal"}
+                        onChange={() => setForm((f) => ({ ...f, recorrencia: "semanal", dias_semana: [], dias_mes: [] }))}
+                      />
+                      <span className="text-sm">Semanal</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="recorrencia"
+                        checked={form.recorrencia === "mensal"}
+                        onChange={() => setForm((f) => ({ ...f, recorrencia: "mensal", dias_semana: [], dias_mes: [] }))}
+                      />
+                      <span className="text-sm">Mensal</span>
+                    </label>
+                  </div>
+                </div>
+
+                {form.recorrencia === "semanal" && (
+                  <div>
+                    <label className="mb-1 block text-sm text-gray-600">Dias da Semana *</label>
+                    <div className="flex gap-1 flex-wrap">
+                      {DIAS_SEMANA_LABELS.map((label, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => toggleDiaSemana(i)}
+                          className={`rounded border px-2 py-1 text-xs ${
+                            form.dias_semana.includes(i)
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {form.recorrencia === "mensal" && (
+                  <div>
+                    <label className="mb-1 block text-sm text-gray-600">Dias do Mês *</label>
+                    <div className="flex gap-1 flex-wrap">
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => toggleDiaMes(d)}
+                          className={`rounded border w-8 h-7 text-xs ${
+                            form.dias_mes.includes(d)
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -299,63 +446,6 @@ export function PromocoesPage() {
                 <Input type="time" value={form.hora_fim} onChange={(e) => setForm((f) => ({ ...f, hora_fim: e.target.value }))} />
               </div>
             </div>
-
-            <div>
-              <label className="mb-1 block text-sm text-gray-600">Recorrência</label>
-              <select
-                className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                value={form.recorrencia}
-                onChange={(e) => setForm((f) => ({ ...f, recorrencia: e.target.value as FormState["recorrencia"], dias_semana: [], dias_mes: [] }))}
-              >
-                <option value="nenhuma">Sem recorrência</option>
-                <option value="semanal">Semanal</option>
-                <option value="mensal">Mensal</option>
-              </select>
-            </div>
-
-            {form.recorrencia === "semanal" && (
-              <div>
-                <label className="mb-1 block text-sm text-gray-600">Dias da Semana *</label>
-                <div className="flex gap-1 flex-wrap">
-                  {DIAS_SEMANA_LABELS.map((label, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => toggleDiaSemana(i)}
-                      className={`rounded border px-2 py-1 text-xs ${
-                        form.dias_semana.includes(i)
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {form.recorrencia === "mensal" && (
-              <div>
-                <label className="mb-1 block text-sm text-gray-600">Dias do Mês *</label>
-                <div className="flex gap-1 flex-wrap">
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => toggleDiaMes(d)}
-                      className={`rounded border w-8 h-7 text-xs ${
-                        form.dias_mes.includes(d)
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <div>
               <label className="mb-1 block text-sm text-gray-600">
