@@ -11,7 +11,9 @@ class CockpitItem(BaseModel):
     data_referencia: datetime.date
     descricao: str
     hora_inicio: Optional[datetime.time] = None
+    hora_fim: Optional[datetime.time] = None
     valor: Optional[Decimal] = None
     fornecedor_nome: Optional[str] = None
+    itens: list[str] = []
 
     model_config = {"from_attributes": True}

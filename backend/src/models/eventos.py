@@ -21,6 +21,8 @@ class TenantEvento(Base):
     titulo: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     descricao: Mapped[Optional[str]] = mapped_column(sa.Text(), nullable=True)  # noqa: UP045
     data_evento: Mapped[datetime.date] = mapped_column(sa.Date(), nullable=False)
+    hora_inicio: Mapped[Optional[datetime.time]] = mapped_column(sa.Time(), nullable=True)  # noqa: UP045
+    hora_fim: Mapped[Optional[datetime.time]] = mapped_column(sa.Time(), nullable=True)  # noqa: UP045
     criado_por: Mapped[Optional[int]] = mapped_column(  # noqa: UP045
         sa.BigInteger(),
         sa.ForeignKey("system_users.id", ondelete="SET NULL"),

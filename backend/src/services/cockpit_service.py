@@ -5,10 +5,11 @@ from typing import Optional
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
-from src.models.compras import Compra
+from src.models.compras import Compra, ItemCompra
 from src.models.contas_pagar import ContaPagar
 from src.models.eventos import TenantEvento
 from src.models.fornecedores import Fornecedor
+from src.models.insumos import Insumo
 from src.models.promocoes import Promocao
 from src.schemas.cockpit import CockpitItem
 
@@ -34,7 +35,7 @@ def list_consolidado(db: Session, mes: Optional[str], permissions: list[str]) ->
     # Layer 1: eventos (always, if calendario in permissions)
     if "calendario" in permissions:
         rows = db.execute(
-            select(TenantEvento.id, TenantEvento.data_evento, TenantEvento.titulo).where(
+            select(TenantEvento.id, TenantEvento.data_evento, TenantEvento.titulo, TenantEvento.hora_inicio, TenantEvento.hora_fim).where(
                 and_(TenantEvento.data_evento >= start, TenantEvento.data_evento <= end)
             )
         ).all()
@@ -44,6 +45,8 @@ def list_consolidado(db: Session, mes: Optional[str], permissions: list[str]) ->
                 referencia_id=row.id,
                 data_referencia=row.data_evento,
                 descricao=row.titulo,
+                hora_inicio=row.hora_inicio,
+                hora_fim=row.hora_fim,
             ))
 
     # Layer 2: promocoes (always, if calendario in permissions)
@@ -100,6 +103,7 @@ def list_consolidado(db: Session, mes: Optional[str], permissions: list[str]) ->
             select(
                 Compra.id,
                 Compra.data_prevista_recebimento,
+                Compra.hora_prevista_recebimento,
                 Fornecedor.nome.label("fornecedor_nome"),
             )
             .outerjoin(Fornecedor, Fornecedor.id == Compra.fornecedor_id)
@@ -112,14 +116,28 @@ def list_consolidado(db: Session, mes: Optional[str], permissions: list[str]) ->
                 )
             )
         ).all()
+        compra_ids = [row.id for row in rows]
+        itens_map: dict[int, list[str]] = {}
+        if compra_ids:
+            item_rows = db.execute(
+                select(ItemCompra.compra_id, Insumo.nome)
+                .join(Insumo, Insumo.id == ItemCompra.insumo_id)
+                .where(ItemCompra.compra_id.in_(compra_ids))
+                .order_by(ItemCompra.compra_id, Insumo.nome)
+            ).all()
+            for ir in item_rows:
+                itens_map.setdefault(ir.compra_id, []).append(ir.nome)
         for row in rows:
             fnome = row.fornecedor_nome
+            nomes_itens = itens_map.get(row.id, [])
             items.append(CockpitItem(
                 tipo="entrega_insumo",
                 referencia_id=row.id,
                 data_referencia=row.data_prevista_recebimento,
+                hora_inicio=row.hora_prevista_recebimento,
                 descricao=fnome or "Sem fornecedor",
                 fornecedor_nome=fnome,
+                itens=nomes_itens,
             ))
 
     items.sort(key=lambda x: x.data_referencia)
