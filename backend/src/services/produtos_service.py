@@ -41,6 +41,15 @@ def _build_response(db: Session, produto) -> ProdutoResponse:
                 else:
                     minimos.append(int(disponivel // comp.quantidade))
         producao_possivel = min(minimos) if minimos else 0
+    from src.services.comandas_service import apply_discount, resolve_promo
+    preco_promocional = None
+    nome_promocao = None
+    if produto.preco_venda is not None:
+        promo = resolve_promo(db, produto.id)
+        if promo:
+            preco_promocional = apply_discount(D(str(produto.preco_venda)), promo)
+            nome_promocao = promo.nome
+
     return ProdutoResponse(
         id=produto.id,
         nome=produto.nome,
@@ -49,6 +58,8 @@ def _build_response(db: Session, produto) -> ProdutoResponse:
         ativo=produto.ativo,
         ficha_tecnica=ficha_resp,
         producao_possivel=producao_possivel,
+        preco_promocional=preco_promocional,
+        nome_promocao=nome_promocao,
     )
 
 
