@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { toast } from "@/lib/toast";
 import {
@@ -769,22 +769,14 @@ function FeaturesTab({ tenantId }: { tenantId: number }) {
   const { data: features = [], isLoading } = useTenantFeatures(tenantId);
   const upsert = useUpsertTenantFeatures();
   const [localFeatures, setLocalFeatures] = useState<Record<string, boolean>>({});
-  const [initialized, setInitialized] = useState(false);
 
-  if (!initialized && features.length > 0) {
+  useEffect(() => {
+    if (isLoading) return;
     const map: Record<string, boolean> = {};
     for (const f of features) map[f.feature] = f.enabled;
     for (const f of AVAILABLE_FEATURES) if (!(f in map)) map[f] = false;
     setLocalFeatures(map);
-    setInitialized(true);
-  }
-
-  if (!initialized && features.length === 0 && !isLoading) {
-    const map: Record<string, boolean> = {};
-    for (const f of AVAILABLE_FEATURES) map[f] = false;
-    setLocalFeatures(map);
-    setInitialized(true);
-  }
+  }, [features, isLoading]);
 
   function toggleFeature(key: string) {
     setLocalFeatures((prev) => ({ ...prev, [key]: !prev[key] }));
