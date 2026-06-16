@@ -4,7 +4,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_db, get_tenant_db, require_feature, require_permission
-from src.services import audit_service
 from src.schemas.users import (
     ResetPasswordResponse,
     UserCreate,
@@ -13,6 +12,7 @@ from src.schemas.users import (
     UserResponse,
     UserUpdate,
 )
+from src.services import audit_service
 from src.services.users_service import (
     check_email_available,
     check_username_available,

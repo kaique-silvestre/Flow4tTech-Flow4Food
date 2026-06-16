@@ -1,14 +1,14 @@
 from datetime import datetime
 from typing import Any, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import require_platform_admin
 from src.core.database import get_platform_db
 from src.repositories import platform_repository
-from src.services import platform_auth_service
+from src.services import audit_service, platform_auth_service
 from src.services.auth_service import create_access_token, hash_password
 
 
@@ -149,12 +149,19 @@ def get_tenant_cockpit(
 def update_assinatura(
     tenant_id: int,
     body: AssinaturaStatusUpdate,
+    background_tasks: BackgroundTasks,
     payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> dict:
     changed_by = payload.get("sub")
     assinatura = platform_repository.update_assinatura_status(
         db, tenant_id, body.status, changed_by=int(changed_by) if changed_by else None
+    )
+    background_tasks.add_task(
+        audit_service.log_background,
+        "subscription.update",
+        tenant_id=tenant_id,
+        after={"status": body.status},
     )
     return {"tenant_id": tenant_id, "status": assinatura.status}
 
@@ -284,13 +291,15 @@ class ImpersonateResponse(BaseModel):
 )
 def create_tenant(
     body: PlatformTenantCreate,
+    background_tasks: BackgroundTasks,
+    payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> dict:
     trial_days = body.trial_days
     if trial_days is None:
         setting = platform_repository.get_setting(db, "trial_duration_days")
         trial_days = int(setting) if setting else 14
-    return platform_repository.create_platform_tenant(
+    result = platform_repository.create_platform_tenant(
         db,
         nome_fantasia=body.nome_fantasia,
         cnpj=body.cnpj,
@@ -299,6 +308,13 @@ def create_tenant(
         max_users=body.max_users,
         trial_days=trial_days,
     )
+    background_tasks.add_task(
+        audit_service.log_background,
+        "tenant.create",
+        tenant_id=result.get("id") if isinstance(result, dict) else None,
+        after={"nome_fantasia": body.nome_fantasia},
+    )
+    return result
 
 
 @router.get(
@@ -351,6 +367,7 @@ def update_tenant(
 def update_assinatura_full(
     tenant_id: int,
     body: AssinaturaFullUpdate,
+    background_tasks: BackgroundTasks,
     payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> dict:
@@ -361,6 +378,12 @@ def update_assinatura_full(
         body.status,
         data_vencimento=body.data_vencimento,
         changed_by=int(changed_by) if changed_by else None,
+    )
+    background_tasks.add_task(
+        audit_service.log_background,
+        "subscription.update_full",
+        tenant_id=tenant_id,
+        after={"status": body.status, "data_vencimento": body.data_vencimento.isoformat() if body.data_vencimento else None},
     )
     return {"tenant_id": tenant_id, "status": assinatura.status, "data_vencimento": assinatura.data_vencimento}
 
@@ -508,6 +531,7 @@ def upsert_tenant_features(
 def impersonate_user(
     tenant_id: int,
     user_id: int,
+    background_tasks: BackgroundTasks,
     payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> ImpersonateResponse:
@@ -545,6 +569,15 @@ def impersonate_user(
         "impersonated_by_email": admin_email,
     }
     token = create_access_token(token_payload, expires_delta=timedelta(hours=2))
+    background_tasks.add_task(
+        audit_service.log_background,
+        "impersonation.start",
+        tenant_id=tenant_id,
+        user_id=user_id,
+        entity="SystemUser",
+        entity_id=user_id,
+        impersonated_by=int(admin_id) if admin_id else None,
+    )
     return ImpersonateResponse(access_token=token)
 
 

@@ -504,3 +504,55 @@ export function useCreateAnnouncement() {
     },
   });
 }
+
+// ─── Audit Logs ──────────────────────────────────────────────────────────────
+
+export interface AuditLogItem {
+  id: number;
+  tenant_id: number | null;
+  tenant_name: string | null;
+  user_id: number | null;
+  user_name: string | null;
+  action: string;
+  entity: string | null;
+  entity_id: number | null;
+  impersonated_by: number | null;
+  created_at: string;
+}
+
+export interface AuditLogListResponse {
+  items: AuditLogItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AuditLogFilters {
+  tenant_id?: number;
+  user_id?: number;
+  action?: string;
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export function useAuditLogs(filters: AuditLogFilters = {}) {
+  return useQuery<AuditLogListResponse>({
+    queryKey: ["platform-audit-logs", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.tenant_id != null) params.set("tenant_id", String(filters.tenant_id));
+      if (filters.user_id != null) params.set("user_id", String(filters.user_id));
+      if (filters.action) params.set("action", filters.action);
+      if (filters.date_from) params.set("date_from", filters.date_from);
+      if (filters.date_to) params.set("date_to", filters.date_to);
+      if (filters.page != null) params.set("page", String(filters.page));
+      if (filters.page_size != null) params.set("page_size", String(filters.page_size));
+      const { data } = await axios.get(`${BASE}/api/platform/audit-logs?${params.toString()}`, {
+        headers: authHeaders(),
+      });
+      return data as AuditLogListResponse;
+    },
+  });
+}
