@@ -18,16 +18,16 @@ class Promocao(Base):
     )
     nome: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     descricao: Mapped[Optional[str]] = mapped_column(sa.Text(), nullable=True)  # noqa: UP045
-    tipo_desconto: Mapped[str] = mapped_column(sa.String(10), nullable=False)
+    tipo_desconto: Mapped[str] = mapped_column(sa.String(20), nullable=False)
     valor_desconto: Mapped[float] = mapped_column(sa.Numeric(10, 2), nullable=False)
     data_inicio: Mapped[datetime.date] = mapped_column(sa.Date(), nullable=False)
     data_fim: Mapped[Optional[datetime.date]] = mapped_column(sa.Date(), nullable=True)  # noqa: UP045
     hora_inicio: Mapped[Optional[datetime.time]] = mapped_column(sa.Time(), nullable=False, server_default="00:00:00")  # noqa: UP045
     hora_fim: Mapped[Optional[datetime.time]] = mapped_column(sa.Time(), nullable=False, server_default="23:59:59")  # noqa: UP045
-    # stored as JSON in SQLite (tests), as ARRAY(Integer) in PG (via migration)
+    # PG column is INTEGER[]; SQLite tests use JSON fallback
     recorrencia: Mapped[str] = mapped_column(sa.String(10), nullable=False, server_default="nenhuma")
-    dias_semana: Mapped[Optional[str]] = mapped_column(sa.JSON(), nullable=True)  # noqa: UP045
-    dias_mes: Mapped[Optional[str]] = mapped_column(sa.JSON(), nullable=True)  # noqa: UP045
+    dias_semana: Mapped[Optional[list]] = mapped_column(sa.ARRAY(sa.Integer()).with_variant(sa.JSON(), "sqlite"), nullable=True)  # noqa: UP045
+    dias_mes: Mapped[Optional[list]] = mapped_column(sa.ARRAY(sa.Integer()).with_variant(sa.JSON(), "sqlite"), nullable=True)  # noqa: UP045
     criado_por: Mapped[Optional[int]] = mapped_column(  # noqa: UP045
         sa.BigInteger(),
         sa.ForeignKey("system_users.id", ondelete="SET NULL"),
