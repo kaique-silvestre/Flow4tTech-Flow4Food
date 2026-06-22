@@ -578,7 +578,7 @@ export function CalendarioPage() {
           <div className="space-y-3">
             <div>
               <label className="mb-1 block text-sm text-gray-600">Data</label>
-              <Input type="date" value={dataInput} onChange={(e) => setDataInput(e.target.value)} disabled={!!modal.dateFixa} />
+              <Input type="date" value={dataInput} onChange={(e) => setDataInput(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
