@@ -99,9 +99,16 @@ def _fechar(c, comanda_id, metodo_id, valor):
 def _inserir_estabelecimento(c_fixture):
     db: Session = _TestingSession()
     try:
-        from src.models.estabelecimento import Estabelecimento
-        estab = Estabelecimento(id=1, nome="Bar Teste", cnpj="12.345.678/0001-99", endereco="Rua A, 1", telefone="(11) 9999-9999")
-        db.add(estab)
+        from src.models.tenants import Tenant
+        tenant = db.get(Tenant, 1)
+        if tenant is None:
+            tenant = Tenant(id=1, nome_fantasia="Bar Teste")
+            db.add(tenant)
+        else:
+            tenant.nome_fantasia = "Bar Teste"
+        tenant.cnpj = "12.345.678/0001-99"
+        tenant.endereco = "Rua A, 1"
+        tenant.telefone = "(11) 9999-9999"
         db.commit()
     finally:
         db.close()

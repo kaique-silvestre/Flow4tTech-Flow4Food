@@ -13,6 +13,7 @@ from src.api.dependencies import get_current_user, get_db
 from src.core.database import Base
 from src.main import app
 from src.models.auth import ConfigSeguranca
+from src.models.tenants import Tenant
 from src.services.auth_service import hash_password, verify_password
 
 _SQLITE_URL = "sqlite:///:memory:"
@@ -62,6 +63,11 @@ def test_get_estabelecimento_defaults(c: TestClient) -> None:
 
 
 def test_patch_estabelecimento(c: TestClient) -> None:
+    db = _TestingSession()
+    db.add(Tenant(id=1, nome_fantasia="Estabelecimento"))
+    db.commit()
+    db.close()
+
     r = c.patch(
         "/api/config/estabelecimento",
         json={"nome": "Bar do Ze", "telefone": "11999998888"},
@@ -107,7 +113,7 @@ def test_backup_json(c: TestClient) -> None:
     assert r.status_code == 200
     assert "application/json" in r.headers["content-type"]
     data = r.json()
-    assert "estabelecimento" in data
+    assert "tenants" in data
 
 
 def test_backup_xlsx(c: TestClient) -> None:
