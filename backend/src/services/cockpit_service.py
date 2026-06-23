@@ -31,24 +31,24 @@ def list_consolidado(db: Session, mes: Optional[str], permissions: list[str]) ->
 
     # Layer 1: eventos (always, if calendario in permissions)
     if "calendario" in permissions:
-        rows = db.execute(
+        rows_eventos = db.execute(
             select(TenantEvento.id, TenantEvento.data_evento, TenantEvento.titulo, TenantEvento.hora_inicio, TenantEvento.hora_fim).where(
                 and_(TenantEvento.data_evento >= start, TenantEvento.data_evento <= end)
             )
         ).all()
-        for row in rows:
+        for row_evento in rows_eventos:
             items.append(CockpitItem(
                 tipo="evento",
-                referencia_id=row.id,
-                data_referencia=row.data_evento,
-                descricao=row.titulo,
-                hora_inicio=row.hora_inicio,
-                hora_fim=row.hora_fim,
+                referencia_id=row_evento.id,
+                data_referencia=row_evento.data_evento,
+                descricao=row_evento.titulo,
+                hora_inicio=row_evento.hora_inicio,
+                hora_fim=row_evento.hora_fim,
             ))
 
     # Layer 2: promocoes (always, if calendario in permissions)
     if "calendario" in permissions:
-        rows = db.execute(
+        rows_promocoes = db.execute(
             select(Promocao.id, Promocao.data_inicio, Promocao.nome, Promocao.hora_inicio).where(
                 and_(
                     Promocao.data_inicio <= end,
@@ -56,18 +56,18 @@ def list_consolidado(db: Session, mes: Optional[str], permissions: list[str]) ->
                 )
             )
         ).all()
-        for row in rows:
+        for row_promocao in rows_promocoes:
             items.append(CockpitItem(
                 tipo="promocao",
-                referencia_id=row.id,
-                data_referencia=row.data_inicio,
-                descricao=row.nome,
-                hora_inicio=row.hora_inicio,
+                referencia_id=row_promocao.id,
+                data_referencia=row_promocao.data_inicio,
+                descricao=row_promocao.nome,
+                hora_inicio=row_promocao.hora_inicio,
             ))
 
     # Layer 3: contas_pagar (requires "financeiro" permission)
     if "financeiro" in permissions:
-        rows = db.execute(
+        rows_contas = db.execute(
             select(
                 ContaPagar.id,
                 ContaPagar.data_vencimento,
@@ -83,20 +83,20 @@ def list_consolidado(db: Session, mes: Optional[str], permissions: list[str]) ->
                 )
             )
         ).all()
-        for row in rows:
-            fnome: Optional[str] = row.fornecedor_nome
+        for row_conta in rows_contas:
+            fnome: Optional[str] = row_conta.fornecedor_nome
             items.append(CockpitItem(
                 tipo="conta_pagar",
-                referencia_id=row.id,
-                data_referencia=row.data_vencimento,
+                referencia_id=row_conta.id,
+                data_referencia=row_conta.data_vencimento,
                 descricao=fnome or "Sem fornecedor",
-                valor=Decimal(str(row.valor)),
+                valor=Decimal(str(row_conta.valor)),
                 fornecedor_nome=fnome,
             ))
 
     # Layer 4: entregas agendadas (requires "estoque" permission)
     if "estoque" in permissions:
-        rows = db.execute(
+        rows_entregas = db.execute(
             select(
                 Compra.id,
                 Compra.data_prevista_recebimento,
@@ -113,7 +113,7 @@ def list_consolidado(db: Session, mes: Optional[str], permissions: list[str]) ->
                 )
             )
         ).all()
-        compra_ids = [row.id for row in rows]
+        compra_ids = [row_entrega.id for row_entrega in rows_entregas]
         itens_map: dict[int, list[str]] = {}
         if compra_ids:
             item_rows = db.execute(
@@ -124,14 +124,14 @@ def list_consolidado(db: Session, mes: Optional[str], permissions: list[str]) ->
             ).all()
             for ir in item_rows:
                 itens_map.setdefault(ir.compra_id, []).append(ir.nome)
-        for row in rows:
-            fnome = row.fornecedor_nome
-            nomes_itens = itens_map.get(row.id, [])
+        for row_entrega in rows_entregas:
+            fnome = row_entrega.fornecedor_nome
+            nomes_itens = itens_map.get(row_entrega.id, [])
             items.append(CockpitItem(
                 tipo="entrega_insumo",
-                referencia_id=row.id,
-                data_referencia=row.data_prevista_recebimento,
-                hora_inicio=row.hora_prevista_recebimento,
+                referencia_id=row_entrega.id,
+                data_referencia=row_entrega.data_prevista_recebimento,
+                hora_inicio=row_entrega.hora_prevista_recebimento,
                 descricao=fnome or "Sem fornecedor",
                 fornecedor_nome=fnome,
                 itens=nomes_itens,
