@@ -63,8 +63,10 @@ def test_get_estabelecimento_defaults(c: TestClient) -> None:
 
 
 def test_patch_estabelecimento(c: TestClient) -> None:
+    import datetime as _dt
+
     db = _TestingSession()
-    db.add(Tenant(id=1, nome_fantasia="Estabelecimento"))
+    db.add(Tenant(id=1, nome_fantasia="Estabelecimento", created_at=_dt.datetime.now(_dt.timezone.utc)))
     db.commit()
     db.close()
 

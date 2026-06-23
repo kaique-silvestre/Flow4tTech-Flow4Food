@@ -99,10 +99,12 @@ def _fechar(c, comanda_id, metodo_id, valor):
 def _inserir_estabelecimento(c_fixture):
     db: Session = _TestingSession()
     try:
+        import datetime as _dt
+
         from src.models.tenants import Tenant
         tenant = db.get(Tenant, 1)
         if tenant is None:
-            tenant = Tenant(id=1, nome_fantasia="Bar Teste")
+            tenant = Tenant(id=1, nome_fantasia="Bar Teste", created_at=_dt.datetime.now(_dt.timezone.utc))
             db.add(tenant)
         else:
             tenant.nome_fantasia = "Bar Teste"
