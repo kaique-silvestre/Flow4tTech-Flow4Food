@@ -22,6 +22,7 @@ class Compra(Base):
     # tipo_compra: imediata | agendada | a_prazo
     tipo_compra: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default="imediata")
     data_prevista_recebimento: Mapped[Optional[datetime.date]] = mapped_column(sa.Date(), nullable=True)
+    hora_prevista_recebimento: Mapped[Optional[datetime.time]] = mapped_column(sa.Time(), nullable=True)
     data_real_recebimento: Mapped[Optional[datetime.date]] = mapped_column(sa.Date(), nullable=True)
     data_prevista_pagamento: Mapped[Optional[datetime.date]] = mapped_column(sa.Date(), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(

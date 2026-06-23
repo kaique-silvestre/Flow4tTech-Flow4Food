@@ -206,8 +206,9 @@ export function CardapioPage() {
           <tbody>
             {paginar(produtosOrdenados, pagina, POR_PAGINA).map((p) => {
               const custo = calcCusto(p);
+              const precoEfetivo = (p.preco_promocional != null ? p.preco_promocional : p.preco_venda);
               const lucro =
-                p.preco_venda !== null && custo !== null ? p.preco_venda - custo : null;
+                precoEfetivo !== null && custo !== null ? precoEfetivo - custo : null;
               const expandido = expandidos.has(p.id);
               const temFicha = p.ficha_tecnica && p.ficha_tecnica.length > 0;
 
@@ -232,13 +233,24 @@ export function CardapioPage() {
                       {p.categoria_id ? (catPathMap[p.categoria_id] ?? "—") : "—"}
                     </td>
                     <td className="py-2 pr-4 text-right">
-                      {p.preco_venda !== null ? `R$ ${Number(p.preco_venda).toFixed(2)}` : "—"}
+                      {p.preco_promocional != null ? (
+                        <span className="flex flex-col items-end gap-0.5">
+                          <span className="text-xs text-gray-400 line-through">
+                            R$ {Number(p.preco_venda).toFixed(2)}
+                          </span>
+                          <span className="font-semibold text-green-600">
+                            R$ {Number(p.preco_promocional).toFixed(2)}
+                          </span>
+                        </span>
+                      ) : p.preco_venda !== null ? (
+                        `R$ ${Number(p.preco_venda).toFixed(2)}`
+                      ) : "—"}
                     </td>
                     <td className="hidden sm:table-cell py-2 pr-4 text-right">
                       {custo !== null ? `R$ ${custo.toFixed(2)}` : "—"}
                     </td>
                     <td className="hidden sm:table-cell py-2 pr-4 text-right">
-                      <CmvBadge preco={p.preco_venda} custo={custo} />
+                      <CmvBadge preco={precoEfetivo} custo={custo} />
                     </td>
                     <td className="hidden sm:table-cell py-2 pr-4 text-right">
                       {lucro !== null ? (

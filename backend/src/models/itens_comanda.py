@@ -32,4 +32,5 @@ class ItemComanda(Base):
     cancelado: Mapped[bool] = mapped_column(nullable=False, default=False)
     motivo_cancelamento: Mapped[Optional[str]] = mapped_column(nullable=True)
     estornado: Mapped[bool] = mapped_column(nullable=False, default=False)
+    promocao_id: Mapped[Optional[int]] = mapped_column(sa.BigInteger(), sa.ForeignKey("promocoes.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(nullable=False, server_default=func.now())

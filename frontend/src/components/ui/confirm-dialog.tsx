@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -27,18 +27,37 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-[400px] p-6">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-100">
+              <AlertCircle className="h-6 w-6 text-red-600" />
+            </div>
+            <div className="flex-1 pt-0.5">
+              <DialogTitle className="text-base font-semibold leading-tight">
+                {title}
+              </DialogTitle>
+              {description && (
+                <p className="mt-1.5 text-sm text-gray-500">{description}</p>
+              )}
+            </div>
+          </div>
         </DialogHeader>
-        {description && <p className="text-sm text-gray-500">{description}</p>}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onCancel} disabled={isPending}>
+        <div className="flex justify-end gap-3 pt-4">
+          <button
+            onClick={onCancel}
+            disabled={isPending}
+            className="rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
             Cancelar
-          </Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isPending}
+            className="rounded-full bg-red-600 px-5 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+          >
             {isPending ? "Aguarde..." : confirmLabel}
-          </Button>
+          </button>
         </div>
       </DialogContent>
     </Dialog>

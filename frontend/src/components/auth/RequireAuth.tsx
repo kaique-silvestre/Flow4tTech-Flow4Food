@@ -1,10 +1,13 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
+import { IMPERSONATION_SESSION_KEY } from "@/App";
 
 export function RequireAuth() {
   const { token, user, clearToken } = useAuthStore();
-  if (!token) return <Navigate to="/login" replace />;
-  if (!user) {
+  const impersonationToken = sessionStorage.getItem(IMPERSONATION_SESSION_KEY);
+
+  if (!token && !impersonationToken) return <Navigate to="/login" replace />;
+  if (!user && !impersonationToken) {
     clearToken();
     return <Navigate to="/login" replace />;
   }

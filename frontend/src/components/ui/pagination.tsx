@@ -28,7 +28,7 @@ export function Pagination({ pagina, totalPaginas, total, label = "itens", onPag
   }
 
   return (
-    <div className="sticky bottom-0 bg-white border-t border-gray-100 mt-4 py-2 flex items-center justify-between text-sm">
+    <div className="border-t border-gray-100 mt-4 py-2 flex items-center justify-between text-sm">
       <span className="text-gray-400 text-xs">{total} {label}</span>
 
       <div className="flex items-center gap-1">

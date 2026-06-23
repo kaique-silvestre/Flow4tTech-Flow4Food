@@ -1,11 +1,16 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_tenant_db, require_permission
+from src.api.dependencies import (
+    get_current_user,
+    get_tenant_db,
+    require_feature,
+    require_permission,
+)
 from src.schemas.categorias import CategoriaCreateRequest, CategoriaResponse, CategoriaUpdateRequest
 from src.services import categorias_service
 
-router = APIRouter(dependencies=[Depends(require_permission("cadastros"))])
+router = APIRouter(dependencies=[Depends(require_feature("cadastros")), Depends(require_permission("cadastros"))])
 
 
 @router.get("", response_model=list[CategoriaResponse])

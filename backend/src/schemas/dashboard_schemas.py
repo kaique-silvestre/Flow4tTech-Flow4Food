@@ -47,6 +47,13 @@ class EntregaEsperadaItem(BaseModel):
     total: float
 
 
+class InsumoCriticoItem(BaseModel):
+    nome: str
+    estoque_atual: float
+    nivel_critico: float
+    unidade_base: str
+
+
 class DashboardResponse(BaseModel):
     faturamento_hoje: float
     ticket_medio_hoje: float
@@ -62,3 +69,9 @@ class DashboardResponse(BaseModel):
     contas_vencendo_7_dias_total: float = 0.0
     contas_vencendo_7_dias_qtd: int = 0
     entregas_esperadas_7_dias: list[EntregaEsperadaItem] = []
+    insumos_criticos: list[InsumoCriticoItem] = []
+    faturamento_ontem: float = 0.0
+    faturamento_7d: float = 0.0
+    faturamento_7d_anterior: float = 0.0
+    faturamento_mes_atual: float = 0.0
+    faturamento_mes_anterior: float = 0.0

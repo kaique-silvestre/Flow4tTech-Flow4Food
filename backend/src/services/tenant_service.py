@@ -90,7 +90,7 @@ def criar_tenant(db: Session, data: TenantCreate) -> TenantResponse:
                 http_status=409,
             )
 
-        # 5. Create admin user
+        # 5. Create admin user (is_owner=True — immutable, cannot be demoted or deleted)
         admin_user = SystemUser(
             tenant_id=tenant.id,
             profile_id=admin_profile.id,
@@ -99,6 +99,7 @@ def criar_tenant(db: Session, data: TenantCreate) -> TenantResponse:
             email=data.admin_email,
             password_hash=hash_password(data.admin_password),
             is_active=True,
+            is_owner=True,
             created_at=now,
             updated_at=now,
         )

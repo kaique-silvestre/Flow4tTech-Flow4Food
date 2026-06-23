@@ -6,7 +6,7 @@ from pydantic import BaseModel
 VALID_SCREENS = [
     "dashboard", "comandas", "compras", "estoque",
     "cadastros", "relatorios", "configuracoes", "gestao_usuarios",
-    "consumo_interno",
+    "consumo_interno", "calendario",
 ]
 
 
@@ -29,6 +29,7 @@ class ProfileResponse(BaseModel):
     description: Optional[str]
     is_system: bool
     is_active: bool
+    template_id: Optional[int]
     permissions: list[str]
     user_count: int
     created_at: datetime

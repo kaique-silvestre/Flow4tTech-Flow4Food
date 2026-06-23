@@ -28,9 +28,11 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onSuccess: (insumo: InsumoResponse) => void;
+  initialNome?: string;
+  initialUnidade?: "un" | "g" | "kg";
 }
 
-export function InsumoModal({ open, onClose, onSuccess }: Props) {
+export function InsumoModal({ open, onClose, onSuccess, initialNome, initialUnidade }: Props) {
   const qc = useQueryClient();
   const { data: categoriasTree = [] } = useCategorias();
   const categorias = flattenCategorias(categoriasTree);
@@ -45,6 +47,10 @@ export function InsumoModal({ open, onClose, onSuccess }: Props) {
     formState: { errors },
   } = useForm<InsumoRapidoFormValues>({
     resolver: zodResolver(insumoRapidoSchema),
+    defaultValues: {
+      nome: initialNome ?? "",
+      unidade_base: initialUnidade,
+    },
   });
 
   function handleCategoriaCreated(cat: Categoria) {

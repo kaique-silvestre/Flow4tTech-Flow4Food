@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RequireAuth } from "@/components/auth/RequireAuth";
@@ -41,20 +42,63 @@ import { ContasPagarPage } from "@/features/contas_pagar/ContasPagarPage";
 import { CaixaPage } from "@/features/caixa/CaixaPage";
 import { AssinaturaVencidaPage } from "@/features/assinatura/AssinaturaVencidaPage";
 import { ContaSuspensaPage } from "@/features/assinatura/ContaSuspensaPage";
+import { BlockedPage } from "@/features/assinatura/BlockedPage";
 import { queryClient } from "@/lib/queryClient";
 import { ConsumoInternoPage } from "@/features/consumo_interno/ConsumoInternoPage";
 import { ConsumoInternoDetalhePage } from "@/features/consumo_interno/ConsumoInternoDetalhePage";
+import { CalendarioPage } from "@/features/calendario/CalendarioPage";
+import { PromocoesPage } from "@/features/cadastros/promocoes/PromocoesPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
+import { RequirePlatformAuth } from "@/components/auth/RequirePlatformAuth";
+import { PlatformLoginPage } from "@/features/platform/PlatformLoginPage";
+import { PlatformLayout } from "@/features/platform/PlatformLayout";
+import { PlatformTenantsPage } from "@/features/platform/PlatformTenantsPage";
+import { PlatformTenantDetailPage } from "@/features/platform/PlatformTenantDetailPage";
+import { PlatformCockpitPage } from "@/features/platform/PlatformCockpitPage";
+import { PlatformAnnouncementsPage } from "@/features/platform/PlatformAnnouncementsPage";
+import { PlatformAuditPage } from "@/features/platform/PlatformAuditPage";
+
+export const IMPERSONATION_SESSION_KEY = "impersonation_token";
+
+function ImpersonationTokenHandler() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get("impersonation_token");
+    if (token) {
+      sessionStorage.setItem(IMPERSONATION_SESSION_KEY, token);
+      params.delete("impersonation_token");
+      const clean = params.toString() ? `?${params.toString()}` : "";
+      navigate(location.pathname + clean, { replace: true });
+    }
+  }, [location.search, location.pathname, navigate]);
+
+  return null;
+}
 
 export function App() {
   return (
     <Sentry.ErrorBoundary fallback={<p className="p-8 text-red-600">Erro inesperado. Recarregue a página.</p>}>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <ImpersonationTokenHandler />
         <Routes>
+          <Route path="/platform/login" element={<PlatformLoginPage />} />
+          <Route element={<RequirePlatformAuth />}>
+            <Route element={<PlatformLayout />}>
+              <Route path="/platform/tenants" element={<PlatformTenantsPage />} />
+              <Route path="/platform/tenants/:tenantId" element={<PlatformTenantDetailPage />} />
+              <Route path="/platform/cockpit" element={<PlatformCockpitPage />} />
+              <Route path="/platform/announcements" element={<PlatformAnnouncementsPage />} />
+              <Route path="/platform/audit" element={<PlatformAuditPage />} />
+            </Route>
+          </Route>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
           <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
+          <Route path="/blocked" element={<BlockedPage />} />
           <Route element={<RequireAuth />}>
             <Route path="/assinatura-vencida" element={<AssinaturaVencidaPage />} />
             <Route path="/conta-suspensa" element={<ContaSuspensaPage />} />
@@ -89,6 +133,7 @@ export function App() {
                 <Route path="/cadastros/garcons" element={<GarconsPage />} />
                 <Route path="/cadastros/metodos-pagamento" element={<MetodosPagamentoPage />} />
                 <Route path="/cadastros/insumos" element={<InsumosPage />} />
+                <Route path="/cadastros/promocoes" element={<PromocoesPage />} />
               </Route>
               <Route element={<RequirePermission screen="relatorios" />}>
                 <Route path="/relatorios" element={<Navigate to="/relatorios/vendas" replace />} />
@@ -108,6 +153,9 @@ export function App() {
               </Route>
               <Route element={<RequirePermission screen="caixa" />}>
                 <Route path="/caixa" element={<CaixaPage />} />
+              </Route>
+              <Route element={<RequirePermission screen="calendario" />}>
+                <Route path="/calendario" element={<CalendarioPage />} />
               </Route>
               <Route element={<RequirePermission screen="configuracoes" />}>
                 <Route path="/configuracoes/gerais" element={<ConfiguracoesPage />} />

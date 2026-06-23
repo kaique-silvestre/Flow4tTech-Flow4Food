@@ -2,12 +2,20 @@ from typing import Optional
 
 from sqlalchemy.orm import Session, joinedload
 
-from src.models.profiles import Profile
+from src.models.profiles import PermissionTemplate, Profile
 from src.models.system_users import SystemUser
+from src.models.user_permissions import UserPermission  # noqa: F401 — ensure table is registered
 
 
 def _with_profile(q):
-    return q.options(joinedload(SystemUser.profile).joinedload(Profile.permissions))
+    return q.options(
+        joinedload(SystemUser.profile)
+        .joinedload(Profile.permissions),
+        joinedload(SystemUser.profile)
+        .joinedload(Profile.template)
+        .joinedload(PermissionTemplate.permissions),
+        joinedload(SystemUser.user_permissions),
+    )
 
 
 def get_user_by_username(db: Session, tenant_id: int, username: str) -> Optional[SystemUser]:
@@ -49,6 +57,14 @@ def list_users(
     if profile_id is not None:
         q = q.filter(SystemUser.profile_id == profile_id)
     return q.order_by(SystemUser.name).all()
+
+
+def count_users(db: Session, tenant_id: int) -> int:
+    return (
+        db.query(SystemUser)
+        .filter(SystemUser.tenant_id == tenant_id)
+        .count()
+    )
 
 
 def count_active_admins(db: Session, tenant_id: int, admin_profile_id: int) -> int:

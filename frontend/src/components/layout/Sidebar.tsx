@@ -5,8 +5,10 @@ import { useComandasAbertasCount } from "@/features/comandas/useComandas";
 import { useInsumoCriticos } from "@/features/estoque/useEstoque";
 import { useContasPagarResumo } from "@/features/contas_pagar/useContasPagar";
 import { usePermissions } from "@/hooks/usePermission";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { ChevronRight, Menu } from "lucide-react";
 import { NAV_ITEMS, type SubNavItem } from "./navConfig";
+import { NavBadge } from "@/components/ui/nav-badge";
 
 /* ---------- component ---------- */
 
@@ -28,6 +30,13 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
   const { data: contasResumo } = useContasPagarResumo();
   const countContasUrgentes = (contasResumo?.vencido ?? 0) + (contasResumo?.pendente ?? 0);
   const permissions = usePermissions();
+  const featureFlags = useFeatureFlags();
+
+  const isFeatureEnabled = (feature?: string) => {
+    if (!feature) return true;
+    if (!(feature in featureFlags)) return true;
+    return featureFlags[feature];
+  };
 
   const toggleGroup = useCallback((label: string) => {
     setOpenGroup((prev) => {
@@ -66,7 +75,11 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
   }, [location.pathname]);
 
   function visibleChildren(children: SubNavItem[]) {
-    return children.filter((c) => !c.screen || permissions.includes(c.screen));
+    return children.filter(
+      (c) =>
+        (!c.screen || permissions.includes(c.screen)) &&
+        isFeatureEnabled(c.feature),
+    );
   }
 
   function getGroupBadge(label: string): { count: number; color: string } | null {
@@ -79,6 +92,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.screen && !permissions.includes(item.screen)) return false;
+    if (!isFeatureEnabled(item.feature)) return false;
     if (item.children) return visibleChildren(item.children).length > 0;
     return true;
   });
@@ -157,12 +171,10 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
                   )}
                   {!collapsed && <span className="flex-1 truncate text-left">{item.label}</span>}
                   {!collapsed && badge && (
-                    <span className={`rounded-full ${badge.color} px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white`}>
-                      {badge.count}
-                    </span>
+                    <NavBadge count={badge.count} color={badge.color} />
                   )}
                   {collapsed && badge && (
-                    <span className={`absolute top-0.5 right-0.5 h-2 w-2 rounded-full ${badge.color} ring-2 ring-white`} />
+                    <NavBadge count={badge.count} color={badge.color} dot />
                   )}
                   {!collapsed && (
                     <ChevronRight

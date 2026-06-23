@@ -33,6 +33,13 @@ export interface EntregaEsperadaItem {
   total: number;
 }
 
+export interface InsumoCriticoItem {
+  nome: string;
+  estoque_atual: number;
+  nivel_critico: number;
+  unidade_base: string;
+}
+
 export interface DashboardData {
   faturamento_hoje: number;
   ticket_medio_hoje: number;
@@ -48,6 +55,12 @@ export interface DashboardData {
   contas_vencendo_7_dias_total: number;
   contas_vencendo_7_dias_qtd: number;
   entregas_esperadas_7_dias: EntregaEsperadaItem[];
+  insumos_criticos: InsumoCriticoItem[];
+  faturamento_ontem: number;
+  faturamento_7d: number;
+  faturamento_7d_anterior: number;
+  faturamento_mes_atual: number;
+  faturamento_mes_anterior: number;
 }
 
 export function useDashboard() {

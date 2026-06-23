@@ -7,8 +7,11 @@ from sqlalchemy.orm import Session
 from src.core.errors import AppError, ErrorCode
 from src.models.system_users import SystemUser
 from src.repositories.profiles_repository import get_admin_profile, get_profile_by_id
+from src.repositories.tenant_repository import get_tenant_by_id
+from src.repositories.user_permissions_repository import list_by_user, replace_all
 from src.repositories.users_repository import (
     count_active_admins,
+    count_users,
     create_user,
     delete_user,
     get_user_by_email,
@@ -26,11 +29,12 @@ def _to_response(user: SystemUser) -> UserResponse:
         id=user.id,
         tenant_id=user.tenant_id,
         profile_id=user.profile_id,
-        profile_name=user.profile.name,
+        profile_name=user.profile.name if user.profile else None,
         name=user.name,
         username=user.username,
         email=user.email,
         is_active=user.is_active,
+        is_owner=user.is_owner,
         last_login=user.last_login,
         created_at=user.created_at,
     )
@@ -51,14 +55,25 @@ def get_user(db: Session, tenant_id: int, user_id: int) -> UserResponse:
 
 
 def create_new_user(db: Session, tenant_id: int, data: UserCreate) -> UserResponse:
+    tenant = get_tenant_by_id(db, tenant_id)
+    if tenant is not None:
+        current_count = count_users(db, tenant_id)
+        if current_count >= tenant.max_users:
+            raise AppError(
+                code=ErrorCode.CONFLICT,
+                message=f"Limite de {tenant.max_users} usuários atingido para este estabelecimento",
+                http_status=409,
+            )
     if get_user_by_username(db, tenant_id, data.username):
         raise AppError(code=ErrorCode.CONFLICT, message="Username já em uso", field="username", http_status=409)
     if data.email and get_user_by_email(db, data.email):
         raise AppError(code=ErrorCode.CONFLICT, message="Email já em uso", field="email", http_status=409)
-    profile = get_profile_by_id(db, data.profile_id)
-    if not profile or profile.tenant_id != tenant_id:
-        raise AppError(code=ErrorCode.NOT_FOUND, message="Perfil não encontrado", http_status=404)
+    if data.profile_id is not None:
+        profile = get_profile_by_id(db, data.profile_id)
+        if not profile or profile.tenant_id != tenant_id:
+            raise AppError(code=ErrorCode.NOT_FOUND, message="Perfil não encontrado", http_status=404)
 
+    now = datetime.now(timezone.utc)
     user = SystemUser(
         tenant_id=tenant_id,
         profile_id=data.profile_id,
@@ -67,6 +82,8 @@ def create_new_user(db: Session, tenant_id: int, data: UserCreate) -> UserRespon
         email=data.email,
         password_hash=hash_password(data.password),
         is_active=data.is_active,
+        created_at=now,
+        updated_at=now,
     )
     return _to_response(create_user(db, user))
 
@@ -77,6 +94,8 @@ def update_existing_user(
     user = get_user_by_id(db, user_id)
     if not user or user.tenant_id != tenant_id:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=404)
+    if user.is_owner and user_id != current_user_id:
+        raise AppError(code=ErrorCode.CONFLICT, message="Usuário proprietário não pode ser alterado por outros", http_status=409)
     if user_id == current_user_id and data.profile_id is not None:
         raise AppError(code=ErrorCode.CONFLICT, message="Não pode alterar o próprio perfil", http_status=409)
 
@@ -109,6 +128,8 @@ def toggle_user_active(db: Session, tenant_id: int, user_id: int, current_user_i
     user = get_user_by_id(db, user_id)
     if not user or user.tenant_id != tenant_id:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=404)
+    if user.is_owner:
+        raise AppError(code=ErrorCode.CONFLICT, message="Usuário proprietário não pode ser desativado", http_status=409)
     if user.is_active:
         _check_not_last_admin(db, tenant_id, user)
         user.is_active = False
@@ -124,6 +145,8 @@ def delete_existing_user(db: Session, tenant_id: int, user_id: int, current_user
     user = get_user_by_id(db, user_id)
     if not user or user.tenant_id != tenant_id:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=404)
+    if user.is_owner:
+        raise AppError(code=ErrorCode.CONFLICT, message="Usuário proprietário não pode ser excluído", http_status=409)
     _check_not_last_admin(db, tenant_id, user)
     delete_user(db, user)
 
@@ -146,6 +169,21 @@ def check_username_available(db: Session, tenant_id: int, username: str) -> bool
 
 def check_email_available(db: Session, email: str) -> bool:
     return get_user_by_email(db, email) is None
+
+
+def get_user_permissions(db: Session, tenant_id: int, user_id: int) -> list[str]:
+    user = get_user_by_id(db, user_id)
+    if not user or user.tenant_id != tenant_id:
+        raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=404)
+    return [p.screen for p in list_by_user(db, user_id)]
+
+
+def set_user_permissions(db: Session, tenant_id: int, user_id: int, screens: list[str]) -> list[str]:
+    user = get_user_by_id(db, user_id)
+    if not user or user.tenant_id != tenant_id:
+        raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=404)
+    perms = replace_all(db, user_id, tenant_id, screens)
+    return [p.screen for p in perms]
 
 
 def _check_not_last_admin(db: Session, tenant_id: int, user: SystemUser) -> None:

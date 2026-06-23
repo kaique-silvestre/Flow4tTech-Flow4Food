@@ -111,28 +111,27 @@ export function EstoquePage() {
                 );
               })}
             </tbody>
-            <tfoot className="border-t font-medium">
-              <tr>
-                <td colSpan={6} className="pt-2 text-gray-700">Total em estoque</td>
-                <td className="pt-2 text-right text-gray-900">
-                  {formatCurrency(
-                    itens.reduce((sum, item) => {
-                      if (item.custo_medio == null) return sum;
-                      return sum + Number(item.estoque_atual) * item.custo_medio;
-                    }, 0)
-                  )}
-                </td>
-              </tr>
-            </tfoot>
           </table>
-          <div className="flex-1" />
-          <Pagination
-            pagina={pagina}
-            totalPaginas={Math.ceil(itens.length / POR_PAGINA)}
-            total={itens.length}
-            label="itens"
-            onPageChange={setPagina}
-          />
+          <div className="border-t border-gray-100">
+            <div className="flex items-center justify-between py-2 text-sm font-medium text-gray-700">
+              <span>Total em estoque</span>
+              <span className="text-gray-900">
+                {formatCurrency(
+                  itens.reduce((sum, item) => {
+                    if (item.custo_medio == null) return sum;
+                    return sum + Number(item.estoque_atual) * item.custo_medio;
+                  }, 0)
+                )}
+              </span>
+            </div>
+            <Pagination
+              pagina={pagina}
+              totalPaginas={Math.ceil(itens.length / POR_PAGINA)}
+              total={itens.length}
+              label="itens"
+              onPageChange={setPagina}
+            />
+          </div>
         </div>
       )}
 

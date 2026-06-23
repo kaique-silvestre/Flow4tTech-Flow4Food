@@ -43,6 +43,8 @@ class ProdutoResponse(BaseModel):
     ativo: bool
     ficha_tecnica: Optional[list[FichaTecnicaItemResponse]] = None
     producao_possivel: Optional[int] = None
+    preco_promocional: Optional[Decimal] = None
+    nome_promocao: Optional[str] = None
 
 
 class ProdutoPageResponse(BaseModel):

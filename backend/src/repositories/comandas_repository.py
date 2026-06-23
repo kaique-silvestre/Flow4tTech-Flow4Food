@@ -95,6 +95,7 @@ def add_item(
     pessoa_associada: Optional[str],
     observacao: Optional[str],
     cortesia: bool,
+    promocao_id: Optional[int] = None,
 ) -> ItemComanda:
     item_comanda = ItemComanda(
         comanda_id=comanda_id,
@@ -106,6 +107,7 @@ def add_item(
         cortesia=cortesia,
         cancelado=False,
         estornado=False,
+        promocao_id=promocao_id,
     )
     db.add(item_comanda)
     db.flush()

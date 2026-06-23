@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from src.models.comandas import Comanda, StatusComanda
 from src.models.compras import Compra
+from src.models.insumos import Insumo
 from src.models.itens_comanda import ItemComanda
 from src.models.produtos import Produto
 from src.repositories.relatorio_repository import _day_utc_range, cmv_total
@@ -229,6 +230,45 @@ def resumo_anual(db: Session, ano: int) -> list[dict]:
             "total_compras": compras_map.get(m, Decimal("0")),
         }
         for m in range(1, 13)
+    ]
+
+
+def faturamento_mes(db: Session, ano: int, mes: int) -> Decimal:
+    primeiro = datetime.date(ano, mes, 1)
+    if mes == 12:
+        ultimo = datetime.date(ano + 1, 1, 1) - datetime.timedelta(days=1)
+    else:
+        ultimo = datetime.date(ano, mes + 1, 1) - datetime.timedelta(days=1)
+    start, _ = _day_utc_range(primeiro)
+    _, end = _day_utc_range(ultimo)
+    rows = db.execute(
+        select(Comanda.total).where(
+            Comanda.status == StatusComanda.FECHADA.value,
+            Comanda.data_fechamento >= start,
+            Comanda.data_fechamento <= end,
+        )
+    ).scalars().all()
+    return sum((r or Decimal("0") for r in rows), Decimal("0"))
+
+
+def insumos_abaixo_critico(db: Session) -> list[dict]:
+    rows = db.execute(
+        select(Insumo.nome, Insumo.estoque_atual, Insumo.nivel_critico, Insumo.unidade_base)
+        .where(
+            Insumo.ativo.is_(True),
+            Insumo.nivel_critico.isnot(None),
+            Insumo.estoque_atual <= Insumo.nivel_critico,
+        )
+        .order_by(Insumo.nome)
+    ).all()
+    return [
+        {
+            "nome": r.nome,
+            "estoque_atual": float(r.estoque_atual),
+            "nivel_critico": float(r.nivel_critico),
+            "unidade_base": r.unidade_base,
+        }
+        for r in rows
     ]
 
 

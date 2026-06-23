@@ -72,6 +72,7 @@ def test_rotate_refresh_token_reloads_subscription_status(monkeypatch):
 
     class _FakeProfile:
         name = "Admin"
+        template_id = None
         permissions = []
 
     class _FakeUser:

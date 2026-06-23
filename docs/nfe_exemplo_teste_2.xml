@@ -1,0 +1,45 @@
+rein<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe">
+  <NFe>
+    <infNFe>
+      <ide>
+        <nNF>2099</nNF>
+        <dhEmi>2026-06-11T14:00:00-03:00</dhEmi>
+      </ide>
+      <emit>
+        <CNPJ>98765432000188</CNPJ>
+        <xNome>Atacado Bom Preco Ltda</xNome>
+      </emit>
+      <det>
+        <prod>
+          <xProd>Farinha de Trigo 5kg</xProd>
+          <cEAN>7891111222333</cEAN>
+          <qCom>10</qCom>
+          <uCom>UN</uCom>
+          <vUnCom>12.90</vUnCom>
+          <vProd>129.00</vProd>
+        </prod>
+      </det>
+      <det>
+        <prod>
+          <xProd>Manteiga 200g</xProd>
+          <cEAN>SEM GTIN</cEAN>
+          <qCom>24</qCom>
+          <uCom>UN</uCom>
+          <vUnCom>8.50</vUnCom>
+          <vProd>204.00</vProd>
+        </prod>
+      </det>
+      <det>
+        <prod>
+          <xProd>Leite Integral 1L</xProd>
+          <cEAN>7892222333444</cEAN>
+          <qCom>48</qCom>
+          <uCom>UN</uCom>
+          <vUnCom>4.80</vUnCom>
+          <vProd>230.40</vProd>
+        </prod>
+      </det>
+    </infNFe>
+  </NFe>
+</nfeProc>

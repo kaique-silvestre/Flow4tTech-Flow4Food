@@ -18,6 +18,8 @@ export interface ProdutoResponse {
   ativo: boolean;
   ficha_tecnica: FichaTecnicaItem[] | null;
   producao_possivel: number | null;
+  preco_promocional: number | null;
+  nome_promocao: string | null;
 }
 
 export interface ProdutoPageResponse {

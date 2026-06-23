@@ -40,7 +40,7 @@ export function GestaoUsuariosPage() {
   });
 
   const currentUser = useAuthStore((s) => s.user);
-  const { data: allUsers = [], isLoading: loadingUsers } = useUsers(search || undefined, filterProfile);
+  const { data: allUsers = [], isLoading: loadingUsers, isError: usersError } = useUsers(search || undefined, filterProfile);
   const { data: allProfiles = [] } = useProfiles();
   const toggleActive = useToggleUserActive();
   const toggleProfileActive = useToggleProfileActive();
@@ -122,6 +122,10 @@ export function GestaoUsuariosPage() {
 
           {loadingUsers ? (
             <p className="text-sm text-gray-500">Carregando...</p>
+          ) : usersError ? (
+            <div className="py-12 text-center text-red-500 text-sm">
+              Erro ao carregar usuários. Verifique o console ou tente relogar.
+            </div>
           ) : users.length === 0 ? (
             <div className="py-12 text-center text-gray-500">
               <p>Nenhum usuário encontrado</p>
@@ -147,7 +151,14 @@ export function GestaoUsuariosPage() {
                     const isSelf = currentUser?.user_id === user.id;
                     return (
                       <tr key={user.id} className={`hover:bg-gray-50 ${!user.is_active ? "opacity-60" : ""}`}>
-                        <td className="px-4 py-3 font-medium">{user.name}</td>
+                        <td className="px-4 py-3 font-medium">
+                          <span>{user.name}</span>
+                          {user.is_owner && (
+                            <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                              Proprietário
+                            </span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-gray-600">{user.username}</td>
                         <td className="px-4 py-3 text-gray-600">{user.email ?? "—"}</td>
                         <td className="px-4 py-3">{user.profile_name}</td>
@@ -161,7 +172,7 @@ export function GestaoUsuariosPage() {
                             <Button variant="ghost" size="sm" onClick={() => openEditUser(user)}>
                               Editar
                             </Button>
-                            {!isSelf && (
+                            {!isSelf && !user.is_owner && (
                               <Button
                                 variant="ghost"
                                 size="sm"
