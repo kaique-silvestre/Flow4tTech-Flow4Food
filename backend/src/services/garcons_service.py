@@ -1,9 +1,11 @@
 import math
+from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
+from src.models.comissoes_garcom import ComissaoGarcom
 from src.models.garcons import Garcom
 from src.repositories import garcons_repository
 from src.schemas.garcons import (
@@ -56,3 +58,31 @@ def toggle_ativo_garcom(db: Session, garcom_id: int) -> Garcom:
     db.commit()
     db.refresh(obj)
     return obj
+
+
+def update_comissao(db: Session, comissao_id: int, valor: Decimal) -> ComissaoGarcom:
+    comissao = db.get(ComissaoGarcom, comissao_id)
+    if comissao is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Comissão não encontrada", http_status=404)
+    comissao.valor = valor
+    db.commit()
+    db.refresh(comissao)
+    return comissao
+
+
+def toggle_pago_comissao(db: Session, comissao_id: int) -> ComissaoGarcom:
+    comissao = db.get(ComissaoGarcom, comissao_id)
+    if comissao is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Comissão não encontrada", http_status=404)
+    comissao.pago = not comissao.pago
+    db.commit()
+    db.refresh(comissao)
+    return comissao
+
+
+def delete_comissao(db: Session, comissao_id: int) -> None:
+    comissao = db.get(ComissaoGarcom, comissao_id)
+    if comissao is None:
+        raise AppError(ErrorCode.NOT_FOUND, "Comissão não encontrada", http_status=404)
+    db.delete(comissao)
+    db.commit()

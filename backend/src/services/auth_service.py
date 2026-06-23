@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from typing import Optional
 
 import bcrypt
 import jwt
@@ -21,7 +22,7 @@ from src.repositories.password_reset_repository import (
     get_valid_reset,
     invalidate_user_resets,
 )
-from src.repositories.tenant_repository import get_assinatura_by_tenant
+from src.repositories.tenant_repository import get_assinatura_by_tenant, set_rls_tenant
 from src.repositories.users_repository import (
     get_user_by_email,
     get_user_by_id,
@@ -42,9 +43,12 @@ def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
-def create_access_token(payload: dict) -> str:
+def create_access_token(payload: dict, expires_delta: Optional[timedelta] = None) -> str:
     settings = get_settings()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRES_MINUTES)
+    if expires_delta is not None:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRES_MINUTES)
     return jwt.encode(
         {**payload, "jti": str(uuid.uuid4()), "exp": expire},
         settings.JWT_SECRET,
@@ -52,8 +56,17 @@ def create_access_token(payload: dict) -> str:
     )
 
 
+def resolve_permissions(user) -> list:
+    if user.profile_id is None:
+        return [p.screen for p in user.user_permissions if p.can_access]
+    profile = user.profile
+    if profile.template_id is not None:
+        return [p.screen for p in profile.template.permissions if p.can_access]
+    return [p.screen for p in profile.permissions if p.can_access]
+
+
 def _build_token_response(user, subscription_status: str) -> TokenResponse:
-    permissions = [p.screen for p in user.profile.permissions if p.can_access]
+    permissions = resolve_permissions(user)
     payload = {
         "sub": str(user.id),
         "user_id": user.id,
@@ -61,7 +74,7 @@ def _build_token_response(user, subscription_status: str) -> TokenResponse:
         "username": user.username,
         "name": user.name,
         "profile_id": user.profile_id,
-        "profile_name": user.profile.name,
+        "profile_name": user.profile.name if user.profile else None,
         "permissions": permissions,
         "subscription_status": subscription_status,
     }
@@ -101,8 +114,8 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str]:
         "username": user.username,
         "name": user.name,
         "profile_id": user.profile_id,
-        "profile_name": user.profile.name,
-        "permissions": [p.screen for p in user.profile.permissions if p.can_access],
+        "profile_name": user.profile.name if user.profile else None,
+        "permissions": resolve_permissions(user),
         "subscription_status": subscription_status,
     })
     new_refresh = create_refresh_token(db, user.id)
@@ -125,6 +138,7 @@ def login(db: Session, identifier: str, password: str) -> TokenResponse:
     if not verify_password(password, user.password_hash):
         raise AppError(code=ErrorCode.SENHA_INCORRETA, message=_INVALID_MSG, http_status=401)
 
+    set_rls_tenant(db, user.tenant_id)
     user.last_login = datetime.now(timezone.utc)
     db.commit()
 

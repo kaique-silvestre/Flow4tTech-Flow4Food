@@ -22,6 +22,7 @@ def _to_response(profile: Profile, user_count: int = 0) -> ProfileResponse:
         description=profile.description,
         is_system=profile.is_system,
         is_active=profile.is_active,
+        template_id=profile.template_id,
         permissions=[p.screen for p in profile.permissions if p.can_access],
         user_count=user_count,
         created_at=profile.created_at,

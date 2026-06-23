@@ -93,7 +93,7 @@ def test_baixa_sem_venda_atualiza_saldo(crud_client):
     assert data["movimento"]["tipo"] == "saida_perda"
     assert data["movimento"]["motivo"] == "perda"
 
-    saldo = crud_client.get("/api/estoque/saldo").json()
+    saldo = crud_client.get("/api/estoque/saldo").json()["itens"]
     item_saldo = next(s for s in saldo if s["id"] == item["id"])
     assert float(item_saldo["estoque_atual"]) == pytest.approx(90.0)
 
@@ -101,7 +101,7 @@ def test_baixa_sem_venda_atualiza_saldo(crud_client):
 def test_baixa_saldo_negativo_permitido(crud_client):
     item = _criar_item(crud_client, "Item Neg")
 
-    resp = _baixa(crud_client, item["id"], 5, "consumo_interno")
+    resp = _baixa(crud_client, item["id"], 5, "outro")
     assert resp.status_code == 201
     data = resp.json()
     assert data["saldo_negativo"] is True
@@ -149,7 +149,7 @@ def test_saldo_exclui_produtos(crud_client):
 
     resp = crud_client.get("/api/estoque/saldo")
     assert resp.status_code == 200
-    nomes = [s["nome"] for s in resp.json()]
+    nomes = [s["nome"] for s in resp.json()["itens"]]
     assert "Insumo Saldo" in nomes
     assert "Produto Saldo" not in nomes
 
@@ -160,6 +160,6 @@ def test_saldo_filtro_busca(crud_client):
 
     resp = crud_client.get("/api/estoque/saldo?busca=coca")
     assert resp.status_code == 200
-    nomes = [s["nome"] for s in resp.json()]
+    nomes = [s["nome"] for s in resp.json()["itens"]]
     assert "Coca Cola" in nomes
     assert "Fanta Laranja" not in nomes

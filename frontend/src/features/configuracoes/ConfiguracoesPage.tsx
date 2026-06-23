@@ -87,7 +87,7 @@ function TabEstabelecimento() {
 
   function onSubmit(d: EstForm) {
     update.mutate(
-      { nome: d.nome, cnpj: d.cnpj || undefined, endereco: d.endereco || undefined, telefone: d.telefone || undefined },
+      { endereco: d.endereco || undefined, telefone: d.telefone || undefined },
       {
         onSuccess: () => toast.success("Dados salvos"),
         onError: () => toast.error("Erro ao salvar"),
@@ -109,8 +109,8 @@ function TabEstabelecimento() {
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-md space-y-4">
       <div className="space-y-1">
         <Label htmlFor="nome">Nome Fantasia</Label>
-        <Input id="nome" {...register("nome")} />
-        {errors.nome && <p className="text-sm text-red-500">{errors.nome.message}</p>}
+        <Input id="nome" {...register("nome")} readOnly className="bg-gray-50 cursor-not-allowed" />
+        <p className="text-xs text-gray-400">Alterado somente pelo administrador da plataforma.</p>
       </div>
       <div className="space-y-1">
         <Label htmlFor="cnpj">CNPJ</Label>
@@ -123,10 +123,12 @@ function TabEstabelecimento() {
               placeholder="00.000.000/0000-00"
               value={field.value ?? ""}
               onChange={(e) => field.onChange(maskCnpj(e.target.value))}
+              readOnly
+              className="bg-gray-50 cursor-not-allowed"
             />
           )}
         />
-        {errors.cnpj && <p className="text-sm text-red-500">{errors.cnpj.message}</p>}
+        <p className="text-xs text-gray-400">Alterado somente pelo administrador da plataforma.</p>
       </div>
       <div className="space-y-1">
         <Label htmlFor="endereco">Endereço</Label>

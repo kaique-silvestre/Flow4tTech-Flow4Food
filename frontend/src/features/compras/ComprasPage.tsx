@@ -14,6 +14,7 @@ import {
   type CompraFilters,
   type CompraResponse,
 } from "./useCompras";
+import { ImportarNFeModal } from "./ImportarNFeModal";
 import { ChevronRight, ChevronDown } from "lucide-react";
 
 const STATUS_OPTS = [
@@ -63,6 +64,7 @@ export function ComprasPage() {
   const [cancelando, setCancelando] = useState<CompraResponse | null>(null);
   const [confirmandoEntrega, setConfirmandoEntrega] = useState<CompraResponse | null>(null);
   const [editando, setEditando] = useState<CompraResponse | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   function toggleExpandir(id: number) {
     setExpandidos((prev) => {
@@ -85,7 +87,10 @@ export function ComprasPage() {
     <div className="p-6 min-h-full flex flex-col">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Compras</h1>
-        <Button onClick={() => navigate("/compras/nova")}>+ Nova Compra</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowImportModal(true)}>Importar NF-e</Button>
+          <Button onClick={() => navigate("/compras/nova")}>+ Nova Compra</Button>
+        </div>
       </div>
 
       {/* Filtro status */}
@@ -370,6 +375,8 @@ export function ComprasPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ImportarNFeModal open={showImportModal} onClose={() => setShowImportModal(false)} />
     </div>
   );
 }

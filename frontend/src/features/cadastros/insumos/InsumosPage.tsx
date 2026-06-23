@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Pagination, paginar } from "@/components/ui/pagination";
 import { InsumoEditModal } from "./InsumoEditModal";
 import {
@@ -21,6 +22,7 @@ export function InsumosPage() {
   const [editing, setEditing] = useState<InsumoResponse | null>(null);
   const [filtro, setFiltro] = useState<Filtro>("ativos");
   const [pagina, setPagina] = useState(1);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
 
   const insumosFiltrados = insumos.filter((i) =>
     filtro === "todos" ? true : filtro === "ativos" ? i.ativo : !i.ativo,
@@ -108,7 +110,7 @@ export function InsumosPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => toggleAtivo.mutate(insumo.id)}
+                      onClick={() => insumo.ativo ? setConfirmId(insumo.id) : toggleAtivo.mutate(insumo.id)}
                       disabled={toggleAtivo.isPending}
                     >
                       {insumo.ativo ? "Desativar" : "Reativar"}
@@ -134,6 +136,18 @@ export function InsumosPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         editing={editing}
+      />
+
+      <ConfirmDialog
+        open={confirmId !== null}
+        title="Desativar insumo?"
+        confirmLabel="Desativar"
+        onConfirm={() => {
+          toggleAtivo.mutate(confirmId!);
+          setConfirmId(null);
+        }}
+        onCancel={() => setConfirmId(null)}
+        isPending={toggleAtivo.isPending}
       />
     </div>
   );

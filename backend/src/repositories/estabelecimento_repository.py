@@ -1,34 +1,34 @@
 from typing import Optional
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.models.estabelecimento import Estabelecimento
+from src.models.tenants import Tenant
+from src.repositories.tenant_repository import get_tenant_by_id
 
 
-def get_estabelecimento(db: Session) -> Optional[Estabelecimento]:
-    return db.execute(select(Estabelecimento)).scalars().first()
+def get_estabelecimento(db: Session, tenant_id: int) -> Optional[Tenant]:
+    return get_tenant_by_id(db, tenant_id)
 
 
 def upsert_estabelecimento(
     db: Session,
+    tenant_id: int,
     nome: Optional[str] = None,
     cnpj: Optional[str] = None,
     endereco: Optional[str] = None,
     telefone: Optional[str] = None,
-) -> Estabelecimento:
-    est = db.execute(select(Estabelecimento)).scalars().first()
-    if est is None:
-        est = Estabelecimento(nome=nome or "Estabelecimento")
-        db.add(est)
+) -> Tenant:
+    tenant = get_tenant_by_id(db, tenant_id)
+    if tenant is None:
+        raise ValueError(f"Tenant {tenant_id} não encontrado")
     if nome is not None:
-        est.nome = nome
+        tenant.nome_fantasia = nome
     if cnpj is not None:
-        est.cnpj = cnpj
+        tenant.cnpj = cnpj
     if endereco is not None:
-        est.endereco = endereco
+        tenant.endereco = endereco
     if telefone is not None:
-        est.telefone = telefone
+        tenant.telefone = telefone
     db.commit()
-    db.refresh(est)
-    return est
+    db.refresh(tenant)
+    return tenant

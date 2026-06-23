@@ -18,7 +18,7 @@ class Insumo(Base):
     __tablename__ = "insumos"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
     nome: Mapped[str] = mapped_column(sa.String(150), nullable=False)
     categoria_id: Mapped[Optional[int]] = mapped_column(sa.ForeignKey("categorias.id"), nullable=True)
     unidade_base: Mapped[str] = mapped_column(sa.Enum(UnidadeBase, native_enum=False), nullable=False)
@@ -28,3 +28,4 @@ class Insumo(Base):
     estoque_reservado: Mapped[Decimal] = mapped_column(sa.Numeric(12, 4), nullable=False, default=Decimal("0"), server_default="0")
     nivel_critico: Mapped[Optional[Decimal]] = mapped_column(sa.Numeric(12, 4), nullable=True)
     ativo: Mapped[bool] = mapped_column(nullable=False, default=True)
+    ean: Mapped[Optional[str]] = mapped_column(sa.String(14), nullable=True)

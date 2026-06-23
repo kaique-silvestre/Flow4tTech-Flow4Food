@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Pagination, paginar } from "@/components/ui/pagination";
 import { GarcomModal } from "./GarcomModal";
 import { GarcomComissoesModal } from "./GarcomComissoesModal";
@@ -17,6 +18,7 @@ export function GarconsPage() {
   const [filtro, setFiltro] = useState<"ativos" | "inativos" | "todos">("ativos");
   const [pagina, setPagina] = useState(1);
   const [comissoesGarcom, setComissoesGarcom] = useState<Garcom | null>(null);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
 
   const garconsFiltrados = garcons.filter((g) =>
     filtro === "todos" ? true : filtro === "ativos" ? g.ativo : !g.ativo
@@ -100,7 +102,7 @@ export function GarconsPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => toggle.mutate(g.id)}
+                    onClick={() => g.ativo ? setConfirmId(g.id) : toggle.mutate(g.id)}
                     className={g.ativo ? "text-yellow-600 hover:text-yellow-700" : "text-green-600 hover:text-green-700"}
                   >
                     {g.ativo ? "Desativar" : "Ativar"}
@@ -134,6 +136,18 @@ export function GarconsPage() {
           garcom={comissoesGarcom}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmId !== null}
+        title="Desativar garçom?"
+        confirmLabel="Desativar"
+        onConfirm={() => {
+          toggle.mutate(confirmId!);
+          setConfirmId(null);
+        }}
+        onCancel={() => setConfirmId(null)}
+        isPending={toggle.isPending}
+      />
     </div>
   );
 }

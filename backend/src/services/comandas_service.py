@@ -16,6 +16,7 @@ from src.models.itens_comanda import ItemComanda
 from src.models.metodos_pagamento import MetodoPagamento
 from src.models.movimentos_estoque import TipoMovimento
 from src.models.produtos import Produto
+from src.models.promocoes import Promocao, PromocaoProduto
 from src.repositories import (
     comandas_repository,
     estoque_repository,
@@ -46,10 +47,66 @@ def _parse_pessoas(pessoas_json: Optional[str]) -> list[str]:
         return []
 
 
+def resolve_promo(db: Session, produto_id: int) -> Optional[Promocao]:
+    hoje = datetime.date.today()
+    hora_agora = datetime.datetime.now().time()
+    promos = (
+        db.execute(
+            select(Promocao)
+            .join(PromocaoProduto, PromocaoProduto.promocao_id == Promocao.id)
+            .where(
+                PromocaoProduto.produto_id == produto_id,
+                Promocao.data_inicio <= hoje,
+                (Promocao.data_fim == None) | (Promocao.data_fim >= hoje),  # noqa: E711
+                Promocao.hora_inicio <= hora_agora,
+                Promocao.hora_fim >= hora_agora,
+            )
+            .order_by(Promocao.id)
+        )
+        .scalars()
+        .all()
+    )
+    # Python weekday: 0=Mon…6=Sun; issue spec: 0=Sun…6=Sat
+    _weekday_map = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 0}
+    dia_semana_spec = _weekday_map[hoje.weekday()]
+    dia_mes = hoje.day
+
+    for promo in promos:
+        if promo.recorrencia == "semanal":
+            dias = promo.dias_semana or []
+            if isinstance(dias, str):
+                import json as _json
+                dias = _json.loads(dias)
+            if dia_semana_spec not in dias:
+                continue
+        elif promo.recorrencia == "mensal":
+            dias = promo.dias_mes or []
+            if isinstance(dias, str):
+                import json as _json
+                dias = _json.loads(dias)
+            if dia_mes not in dias:
+                continue
+        return promo
+    return None
+
+
+def apply_discount(preco_venda: Decimal, promo: Promocao) -> Decimal:
+    valor = Decimal(str(promo.valor_desconto))
+    if promo.tipo_desconto == "porcentagem":
+        resultado = preco_venda * (1 - valor / Decimal("100"))
+    else:
+        resultado = preco_venda - valor
+    return max(Decimal("0"), resultado).quantize(Decimal("0.01"))
+
+
 def _build_item_response(db: Session, ic: ItemComanda) -> ItemComandaResponse:
     produto = db.execute(select(Produto).where(Produto.id == ic.produto_id)).scalar_one_or_none()
     item_nome = produto.nome if produto else f"Produto {ic.produto_id}"
     subtotal = ic.quantidade * ic.preco_unitario
+    promocao_nome: Optional[str] = None
+    if ic.promocao_id:
+        promo = db.execute(select(Promocao).where(Promocao.id == ic.promocao_id)).scalar_one_or_none()
+        promocao_nome = promo.nome if promo else None
     return ItemComandaResponse(
         id=ic.id,
         item_id=ic.produto_id,
@@ -64,6 +121,8 @@ def _build_item_response(db: Session, ic: ItemComanda) -> ItemComandaResponse:
         motivo_cancelamento=ic.motivo_cancelamento,
         estornado=ic.estornado,
         created_at=ic.created_at,
+        promocao_id=ic.promocao_id,
+        promocao_nome=promocao_nome,
     )
 
 
@@ -204,6 +263,12 @@ def lancar_item(db: Session, comanda_id: int, data: LancarItemRequest) -> Comand
         raise AppError(ErrorCode.NOT_FOUND, "Produto não encontrado ou inativo", http_status=404)
 
     preco_unitario = Decimal("0") if data.cortesia else (produto.preco_venda or Decimal("0"))
+    promocao_id: Optional[int] = None
+    if not data.cortesia:
+        promo = resolve_promo(db, produto.id)
+        if promo:
+            preco_unitario = apply_discount(preco_unitario, promo)
+            promocao_id = promo.id
 
     ok = comandas_repository.increment_version(db, comanda_id, data.version)
     if not ok:
@@ -222,6 +287,7 @@ def lancar_item(db: Session, comanda_id: int, data: LancarItemRequest) -> Comand
         data.pessoa_associada,
         data.observacao,
         data.cortesia,
+        promocao_id=promocao_id,
     )
     insuficientes = _reservar_estoque(db, data.item_id, data.quantidade)
     comandas_repository.add_evento(
@@ -233,6 +299,7 @@ def lancar_item(db: Session, comanda_id: int, data: LancarItemRequest) -> Comand
             "quantidade": str(data.quantidade),
             "cortesia": data.cortesia,
             "pessoa_associada": data.pessoa_associada,
+            "promocao_id": promocao_id,
         },
     )
     db.commit()

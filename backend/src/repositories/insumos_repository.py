@@ -55,6 +55,7 @@ def create(db: Session, data: InsumoCreateRequest) -> Insumo:
         categoria_id=data.categoria_id,
         unidade_base=data.unidade_base,
         quantidade_caixa=data.quantidade_caixa,
+        ean=data.ean,
     )
     db.add(obj)
     db.commit()
@@ -71,9 +72,14 @@ def update(db: Session, insumo_id: int, data: InsumoUpdateRequest) -> Optional[I
     obj.unidade_base = data.unidade_base
     obj.quantidade_caixa = data.quantidade_caixa
     obj.nivel_critico = data.nivel_critico
+    obj.ean = data.ean
     db.commit()
     db.refresh(obj)
     return obj
+
+
+def get_by_ean(db: Session, ean: str) -> Optional[Insumo]:
+    return db.execute(select(Insumo).where(Insumo.ean == ean, Insumo.ativo == True)).scalar_one_or_none()  # noqa: E712
 
 
 def toggle_ativo(db: Session, insumo_id: int) -> Optional[Insumo]:

@@ -148,8 +148,9 @@ def test_filtro_periodo_compras(crud_client):
 
     resp = crud_client.get("/api/compras?data_inicio=2026-02-01&data_fim=2026-04-01")
     assert resp.status_code == 200
-    assert len(resp.json()) == 1
-    assert resp.json()[0]["data_compra"] == "2026-03-01"
+    itens = resp.json()["itens"]
+    assert len(itens) == 1
+    assert itens[0]["data_compra"] == "2026-03-01"
 
 
 def test_compra_item_inexistente(crud_client):

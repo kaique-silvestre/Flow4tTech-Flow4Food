@@ -3,7 +3,12 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_tenant_db, require_permission
+from src.api.dependencies import (
+    get_current_user,
+    get_tenant_db,
+    require_feature,
+    require_permission,
+)
 from src.schemas.insumos import (
     InsumoCreateRequest,
     InsumoPageResponse,
@@ -12,7 +17,7 @@ from src.schemas.insumos import (
 )
 from src.services import insumos_service
 
-router = APIRouter(dependencies=[Depends(require_permission("estoque"))])
+router = APIRouter(dependencies=[Depends(require_feature("cadastros")), Depends(require_permission("estoque"))])
 
 
 @router.get("", response_model=InsumoPageResponse)

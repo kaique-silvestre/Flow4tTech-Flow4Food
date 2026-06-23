@@ -95,6 +95,7 @@ def add_item(
     pessoa_associada: Optional[str],
     observacao: Optional[str],
     cortesia: bool,
+    promocao_id: Optional[int] = None,
 ) -> ItemComanda:
     item_comanda = ItemComanda(
         comanda_id=comanda_id,
@@ -106,6 +107,7 @@ def add_item(
         cortesia=cortesia,
         cancelado=False,
         estornado=False,
+        promocao_id=promocao_id,
     )
     db.add(item_comanda)
     db.flush()
@@ -240,7 +242,7 @@ def top_itens(db: Session, dias: int, limit: int) -> list[tuple[int, int]]:
             "SELECT ic.produto_id, COUNT(*) as cnt "
             "FROM itens_comanda ic "
             "JOIN comandas c ON c.id = ic.comanda_id "
-            "WHERE ic.cancelado = 0 "
+            "WHERE ic.cancelado = false "
             "AND ic.created_at >= :since "
             "GROUP BY ic.produto_id "
             "ORDER BY cnt DESC "

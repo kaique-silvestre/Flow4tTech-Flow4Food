@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useComprovante } from "./useComprovante";
-import { formatQuantidade } from "@/lib/format";
+import { formatQuantidade, parseApiDate } from "@/lib/format";
 
 const brl = (value: number | null | undefined) =>
   value != null
@@ -9,7 +9,7 @@ const brl = (value: number | null | undefined) =>
 
 const fmtData = (iso: string | null | undefined) => {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("pt-BR", {
+  return parseApiDate(iso).toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -40,7 +40,7 @@ export function ComprovantePage() {
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 gap-4">
         <p className="text-red-600 font-medium">Comprovante não encontrado.</p>
         <button
-          onClick={() => navigate("/comandas")}
+          onClick={() => navigate("/vendas/comandas")}
           className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700"
         >
           Voltar às comandas
@@ -113,7 +113,7 @@ export function ComprovantePage() {
           Imprimir
         </button>
         <button
-          onClick={() => navigate("/comandas")}
+          onClick={() => navigate("/vendas/comandas")}
           className="flex-1 min-h-[44px] px-4 py-2 border border-gray-400 text-gray-700 rounded hover:bg-gray-50 font-medium"
         >
           Voltar às comandas

@@ -79,7 +79,7 @@ def _abrir_comanda(c, garcom_id, identificacao="Mesa 1", tipo="mesa"):
         "identificacao": identificacao,
         "tipo_identificacao": tipo,
         "garcom_id": garcom_id,
-        "pessoas": [],
+        "pessoas": ["Cliente 1"],
     })
     assert resp.status_code == 201, resp.text
     return resp.json()
@@ -121,7 +121,7 @@ def test_garcom_inativo_bloqueado(crud_client):
         "identificacao": "Mesa 1",
         "tipo_identificacao": "mesa",
         "garcom_id": garcom["id"],
-        "pessoas": [],
+        "pessoas": ["Cliente 1"],
     })
     assert resp.status_code == 400
     assert resp.json()["error"]["code"] == "GARCOM_INATIVO"

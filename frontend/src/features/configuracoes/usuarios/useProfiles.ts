@@ -9,6 +9,7 @@ export interface ProfileResponse {
   description: string | null;
   is_system: boolean;
   is_active: boolean;
+  template_id: number | null;
   permissions: string[];
   user_count: number;
   created_at: string;

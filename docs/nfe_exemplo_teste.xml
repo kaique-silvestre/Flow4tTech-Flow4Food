@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe">
+  <NFe>
+    <infNFe>
+      <ide>
+        <nNF>1042</nNF>
+        <dhEmi>2026-06-11T09:00:00-03:00</dhEmi>
+      </ide>
+      <emit>
+        <CNPJ>12345678000195</CNPJ>
+        <xNome>Distribuidora Flow Alimentos Ltda</xNome>
+      </emit>
+      <det>
+        <prod>
+          <xProd>Arroz Tipo 1 5kg</xProd>
+          <cEAN>7891234567890</cEAN>
+          <qCom>20</qCom>
+          <uCom>UN</uCom>
+          <vUnCom>18.50</vUnCom>
+          <vProd>370.00</vProd>
+        </prod>
+      </det>
+      <det>
+        <prod>
+          <xProd>Feijão Carioca 1kg</xProd>
+          <cEAN>SEM GTIN</cEAN>
+          <qCom>15</qCom>
+          <uCom>KG</uCom>
+          <vUnCom>9.80</vUnCom>
+          <vProd>147.00</vProd>
+        </prod>
+      </det>
+      <det>
+        <prod>
+          <xProd>Óleo de Soja 900ml</xProd>
+          <cEAN>7899999000001</cEAN>
+          <qCom>12</qCom>
+          <uCom>UN</uCom>
+          <vUnCom>7.20</vUnCom>
+          <vProd>86.40</vProd>
+        </prod>
+      </det>
+      <det>
+        <prod>
+          <xProd>Sal Refinado 1kg</xProd>
+          <cEAN>SEM GTIN</cEAN>
+          <qCom>10000</qCom>
+          <uCom>GR</uCom>
+          <vUnCom>0.00500</vUnCom>
+          <vProd>50.00</vProd>
+        </prod>
+      </det>
+      <det>
+        <prod>
+          <xProd>Açúcar Cristal 5kg</xProd>
+          <cEAN>0</cEAN>
+          <qCom>8</qCom>
+          <uCom>KG</uCom>
+          <vUnCom>4.50</vUnCom>
+          <vProd>36.00</vProd>
+        </prod>
+      </det>
+    </infNFe>
+  </NFe>
+</nfeProc>

@@ -25,9 +25,10 @@ def build_comprovante(db: Session, comanda_id: int) -> ComprovanteResponse:
     if comanda is None:
         raise AppError(ErrorCode.NOT_FOUND, "Comanda não encontrada", http_status=404)
 
-    estab = estabelecimento_repository.get_estabelecimento(db)
+    tenant_id = comanda.tenant_id
+    estab = estabelecimento_repository.get_estabelecimento(db, tenant_id)
     estab_info = EstabelecimentoInfo(
-        nome=estab.nome if estab else "Estabelecimento",
+        nome=estab.nome_fantasia if estab else "Estabelecimento",
         cnpj=estab.cnpj if estab else None,
         endereco=estab.endereco if estab else None,
         telefone=estab.telefone if estab else None,

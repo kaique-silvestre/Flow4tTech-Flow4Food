@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api } from "@/lib/api";
+import { api, type ApiErrorBody } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { resetPasswordSchema, type ResetPasswordValues } from "./authSchemas";
 
@@ -33,9 +33,10 @@ export function RedefinirSenhaPage() {
       toast.success("Senha redefinida com sucesso");
       navigate("/login", { replace: true });
     },
-    onError: (err: any) => {
+    onError: (err) => {
       const msg =
-        err?.response?.data?.error?.message ?? "Erro ao redefinir senha. Tente novamente.";
+        (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.message ??
+        "Erro ao redefinir senha. Tente novamente.";
       toast.error(msg);
     },
   });
@@ -62,7 +63,8 @@ export function RedefinirSenhaPage() {
 
   if (isError) {
     const msg =
-      (error as any)?.response?.data?.error?.message ?? "Link expirado. Solicite um novo.";
+      (error as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.message ??
+      "Link expirado. Solicite um novo.";
     return <InvalidLink reason={msg} />;
   }
 

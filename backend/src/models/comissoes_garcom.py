@@ -11,7 +11,7 @@ class ComissaoGarcom(Base):
     __tablename__ = "comissoes_garcom"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
     garcom_id: Mapped[int] = mapped_column(sa.ForeignKey("garcons.id"), nullable=False)
     comanda_id: Mapped[int] = mapped_column(sa.ForeignKey("comandas.id"), nullable=False)
     valor: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), nullable=False)

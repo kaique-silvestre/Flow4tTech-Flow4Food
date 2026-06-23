@@ -24,7 +24,7 @@ class CaixaSessao(Base):
     __tablename__ = "caixa_sessoes"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
     status: Mapped[str] = mapped_column(nullable=False, default=StatusCaixa.ABERTA.value)
     valor_abertura: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), nullable=False)
     valor_informado: Mapped[Optional[Decimal]] = mapped_column(sa.Numeric(10, 2), nullable=True)
@@ -42,7 +42,7 @@ class CaixaMovimento(Base):
     __tablename__ = "caixa_movimentos"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
     sessao_id: Mapped[int] = mapped_column(sa.ForeignKey("caixa_sessoes.id"), nullable=False)
     tipo: Mapped[str] = mapped_column(nullable=False)
     valor: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), nullable=False)

@@ -4,7 +4,12 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_current_user, get_tenant_db, require_permission
+from src.api.dependencies import (
+    get_current_user,
+    get_tenant_db,
+    require_feature,
+    require_permission,
+)
 from src.schemas.relatorio_schemas import (
     CMVPorProdutoResponse,
     DREResponse,
@@ -19,7 +24,7 @@ from src.schemas.relatorio_schemas import (
 )
 from src.services import relatorio_service
 
-router = APIRouter(dependencies=[Depends(require_permission("relatorios"))])
+router = APIRouter(dependencies=[Depends(require_feature("relatorios")), Depends(require_permission("relatorios"))])
 
 
 @router.get("/vendas-do-dia", response_model=VendasDoDiaResponse)

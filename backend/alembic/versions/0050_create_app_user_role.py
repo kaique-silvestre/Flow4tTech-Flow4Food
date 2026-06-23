@@ -69,18 +69,32 @@ _READONLY_TABLES = [
 ]
 
 
+def _role_exists(bind, role_name: str) -> bool:
+    row = bind.execute(
+        sa.text("SELECT 1 FROM pg_roles WHERE rolname = :r"),
+        {"r": role_name},
+    ).fetchone()
+    return row is not None
+
+
 def upgrade() -> None:
     bind = op.get_bind()
     if bind.dialect.name != "postgresql":
         return
 
-    # 1. Create role (idempotent)
+    # 1. Create role (idempotent — skip if already exists or if we lack CREATEROLE)
     bind.execute(sa.text(
         "DO $$ BEGIN "
         "  CREATE ROLE app_user NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT; "
-        "EXCEPTION WHEN duplicate_object THEN NULL; "
+        "EXCEPTION "
+        "  WHEN duplicate_object THEN NULL; "
+        "  WHEN insufficient_privilege THEN NULL; "
         "END $$"
     ))
+
+    # If role still doesn't exist (couldn't create, didn't exist before), skip grants
+    if not _role_exists(bind, "app_user"):
+        return
 
     # 2. Grant schema usage
     bind.execute(sa.text("GRANT USAGE ON SCHEMA public TO app_user"))

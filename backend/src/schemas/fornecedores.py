@@ -7,12 +7,14 @@ class FornecedorCreateRequest(BaseModel):
     nome: str = Field(..., min_length=1)
     telefone: Optional[str] = None
     email: Optional[str] = None
+    cnpj: Optional[str] = None
 
 
 class FornecedorUpdateRequest(BaseModel):
     nome: str = Field(..., min_length=1)
     telefone: Optional[str] = None
     email: Optional[str] = None
+    cnpj: Optional[str] = None
 
 
 class FornecedorResponse(BaseModel):
@@ -22,6 +24,7 @@ class FornecedorResponse(BaseModel):
     nome: str
     telefone: Optional[str]
     email: Optional[str]
+    cnpj: Optional[str] = None
     ativo: bool = True
 
 

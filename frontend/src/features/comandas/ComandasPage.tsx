@@ -4,7 +4,7 @@ import { useDebounce } from "use-debounce";
 import { LayoutList, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, parseApiDate } from "@/lib/format";
 import { NovaComandaModal } from "./NovaComandaModal";
 import { useComandas, useComandasFechadas } from "./useComandas";
 
@@ -22,7 +22,7 @@ function getInitialViewMode(): ViewMode {
 
 const fmtData = (iso: string | null | undefined) => {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("pt-BR", {
+  return parseApiDate(iso).toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -137,7 +137,7 @@ export function ComandasPage() {
             return (
               <button
                 key={c.id}
-                onClick={() => navigate(`/comandas/${c.id}`)}
+                onClick={() => navigate(`/vendas/comandas/${c.id}`)}
                 className="w-full rounded border p-4 text-left transition-colors hover:bg-gray-50"
               >
                 <div className="flex items-start justify-between">
@@ -176,7 +176,7 @@ export function ComandasPage() {
             return (
               <button
                 key={c.id}
-                onClick={() => navigate(`/comandas/${c.id}`)}
+                onClick={() => navigate(`/vendas/comandas/${c.id}`)}
                 className="flex flex-col gap-2 rounded border bg-white p-4 text-left shadow-sm transition-shadow hover:shadow-md"
               >
                 <div className="flex items-center justify-between">
@@ -238,7 +238,7 @@ export function ComandasPage() {
                 {fechadasHoje.map((c) => (
                   <button
                     key={c.id}
-                    onClick={() => navigate(`/comandas/${c.id}`)}
+                    onClick={() => navigate(`/vendas/comandas/${c.id}`)}
                     className="w-full rounded border border-gray-200 p-3 text-left transition-colors hover:bg-gray-50"
                   >
                     <div className="flex items-start justify-between">

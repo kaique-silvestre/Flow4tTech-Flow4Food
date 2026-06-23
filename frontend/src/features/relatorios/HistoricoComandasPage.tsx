@@ -107,7 +107,7 @@ export function HistoricoComandasPage() {
               {data.comandas.map((c) => (
                 <tr
                   key={c.id}
-                  onClick={() => navigate(`/comandas/${c.id}`)}
+                  onClick={() => navigate(`/vendas/comandas/${c.id}`)}
                   className="border-b hover:bg-gray-50 cursor-pointer"
                 >
                   <td className="py-2 text-gray-400">#{c.id}</td>

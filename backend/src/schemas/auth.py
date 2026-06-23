@@ -1,4 +1,6 @@
 
+from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -26,8 +28,8 @@ class UserInfo(BaseModel):
     tenant_id: int
     username: str
     name: str
-    profile_id: int
-    profile_name: str
+    profile_id: Optional[int]  # noqa: UP045
+    profile_name: Optional[str]  # noqa: UP045
     permissions: list[str]
 
 

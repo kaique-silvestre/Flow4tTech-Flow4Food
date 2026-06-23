@@ -1,6 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import * as Sentry from "@sentry/react";
 import { useAuthStore } from "@/stores/authStore";
+import { IMPERSONATION_SESSION_KEY } from "@/App";
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000",
@@ -9,7 +10,8 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
+  const impersonationToken = sessionStorage.getItem(IMPERSONATION_SESSION_KEY);
+  const token = impersonationToken ?? useAuthStore.getState().token;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -72,11 +74,15 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 402) {
-      const user = useAuthStore.getState().user;
-      const isAdmin = user?.profile_name === "Admin";
-      const target = isAdmin ? "/assinatura-vencida" : "/conta-suspensa";
-      if (window.location.pathname !== target) {
-        window.location.assign(target);
+      const detail = (error.response.data as { detail?: { code?: string; status?: string; contact?: string } })?.detail;
+      if (detail?.code === "SUBSCRIPTION_BLOCKED") {
+        const params = new URLSearchParams({
+          status: detail.status ?? "suspensa",
+          contact: detail.contact ?? "",
+        });
+        if (window.location.pathname !== "/blocked") {
+          window.location.assign(`/blocked?${params.toString()}`);
+        }
       }
       return Promise.reject(error);
     }

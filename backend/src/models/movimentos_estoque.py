@@ -13,12 +13,12 @@ class TipoMovimento(str, enum.Enum):
     ENTRADA = "entrada"
     SAIDA_VENDA = "saida_venda"
     SAIDA_PERDA = "saida_perda"
+    SAIDA_CONSUMO_INTERNO = "saida_consumo_interno"
     ENTRADA_ESTORNO = "entrada_estorno"
     ESTORNO_COMPRA = "estorno_compra"
 
 
 class MotivoPerda(str, enum.Enum):
-    CONSUMO_INTERNO = "consumo_interno"
     PERDA = "perda"
     QUEBRA = "quebra"
     CORTESIA = "cortesia"
@@ -29,7 +29,7 @@ class MovimentoEstoque(Base):
     __tablename__ = "movimentos_estoque"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default="1")
+    tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
     insumo_id: Mapped[int] = mapped_column(sa.ForeignKey("insumos.id"), nullable=False)
     tipo: Mapped[str] = mapped_column(
         sa.Enum(TipoMovimento, native_enum=False), nullable=False

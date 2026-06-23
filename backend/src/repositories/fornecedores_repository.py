@@ -28,7 +28,7 @@ def get_by_id(db: Session, fornecedor_id: int) -> Optional[Fornecedor]:
 
 
 def create(db: Session, data: FornecedorCreateRequest) -> Fornecedor:
-    obj = Fornecedor(nome=data.nome, telefone=data.telefone, email=data.email)
+    obj = Fornecedor(nome=data.nome, telefone=data.telefone, email=data.email, cnpj=data.cnpj)
     db.add(obj)
     db.commit()
     db.refresh(obj)
@@ -42,9 +42,14 @@ def update(db: Session, fornecedor_id: int, data: FornecedorUpdateRequest) -> Op
     obj.nome = data.nome
     obj.telefone = data.telefone
     obj.email = data.email
+    obj.cnpj = data.cnpj
     db.commit()
     db.refresh(obj)
     return obj
+
+
+def get_by_cnpj(db: Session, cnpj: str) -> Optional[Fornecedor]:
+    return db.execute(select(Fornecedor).where(Fornecedor.cnpj == cnpj)).scalar_one_or_none()
 
 
 def toggle_ativo(db: Session, fornecedor_id: int) -> Optional[Fornecedor]:

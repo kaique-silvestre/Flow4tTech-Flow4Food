@@ -10,8 +10,20 @@ export function formatCurrency(value: number | string): string {
   return currencyFormatter.format(Number(value));
 }
 
+/**
+ * Parse an ISO datetime string returned by the API.
+ * The backend stores UTC naive datetimes (no 'Z' suffix). Without 'Z',
+ * JavaScript interprets the string as local time — wrong.
+ * This function forces UTC parsing so the browser converts to local time correctly.
+ */
+export function parseApiDate(iso: string): Date {
+  if (!iso) return new Date(NaN);
+  const hasTimezone = iso.endsWith("Z") || /[+-]\d{2}:?\d{2}$/.test(iso);
+  return new Date(hasTimezone ? iso : iso + "Z");
+}
+
 export function formatDate(d: Date | string, fmt = "dd/MM/yyyy HH:mm"): string {
-  const date = typeof d === "string" ? new Date(d) : d;
+  const date = typeof d === "string" ? parseApiDate(d) : d;
   return fnsFormat(date, fmt, { locale: ptBR });
 }
 

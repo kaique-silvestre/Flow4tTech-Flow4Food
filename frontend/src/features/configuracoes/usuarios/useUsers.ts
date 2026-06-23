@@ -8,12 +8,13 @@ import { SenhaProvisoriaToast } from "./SenhaProvisoriaToast";
 export interface UserResponse {
   id: number;
   tenant_id: number;
-  profile_id: number;
-  profile_name: string;
+  profile_id: number | null;
+  profile_name: string | null;
   name: string;
   username: string;
   email: string | null;
   is_active: boolean;
+  is_owner: boolean;
   last_login: string | null;
   created_at: string;
 }
@@ -22,7 +23,7 @@ export interface UserCreate {
   name: string;
   username: string;
   email?: string;
-  profile_id: number;
+  profile_id?: number | null;
   password: string;
   is_active: boolean;
 }
@@ -129,5 +130,26 @@ export function useCheckEmail(email: string, skip = false) {
     queryFn: () =>
       api.get<{ available: boolean }>(`/api/users/check-email?email=${encodeURIComponent(email)}`).then((r) => r.data),
     enabled: !!email && !skip,
+  });
+}
+
+export function useUserPermissions(userId: number, enabled = true) {
+  return useQuery({
+    queryKey: ["user-permissions", userId],
+    queryFn: () => api.get<string[]>(`/api/users/${userId}/permissions`).then((r) => r.data),
+    enabled: enabled && userId > 0,
+  });
+}
+
+export function useSetUserPermissions(userId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (screens: string[]) =>
+      api.put<string[]>(`/api/users/${userId}/permissions`, { screens }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["user-permissions", userId] });
+      toast.success("Permissões salvas");
+    },
+    onError: (e: unknown) => toast.error(errMsg(e, "Erro ao salvar permissões")),
   });
 }
