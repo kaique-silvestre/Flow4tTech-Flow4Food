@@ -73,7 +73,7 @@ def upgrade() -> None:
     ).fetchall()
     for (template_id,) in template_rows:
         exists = conn.execute(
-            sa.text("SELECT id FROM template_permissions WHERE template_id = :tid AND screen = :screen"),
+            sa.text("SELECT template_id FROM template_permissions WHERE template_id = :tid AND screen = :screen"),
             {"tid": template_id, "screen": SCREEN},
         ).fetchone()
         if not exists:
