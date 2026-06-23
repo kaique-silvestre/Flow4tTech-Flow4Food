@@ -1,5 +1,6 @@
-import bcrypt
 from datetime import timedelta
+
+import bcrypt
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode

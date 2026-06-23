@@ -20,10 +20,7 @@ def _mes_range(mes: Optional[str]) -> tuple[datetime.date, datetime.date]:
         mes = f"{today.year}-{today.month:02d}"
     year, month = (int(x) for x in mes.split("-"))
     start = datetime.date(year, month, 1)
-    if month == 12:
-        end = datetime.date(year + 1, 1, 1)
-    else:
-        end = datetime.date(year, month + 1, 1)
+    end = datetime.date(year + 1, 1, 1) if month == 12 else datetime.date(year, month + 1, 1)
     end_inclusive = end - datetime.timedelta(days=1)
     return start, end_inclusive
 
