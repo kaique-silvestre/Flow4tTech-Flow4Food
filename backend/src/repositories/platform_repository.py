@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from sqlalchemy import func, select, text
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.orm import Session
 
 from src.models.assinaturas import Assinatura, AssinaturaHistory
@@ -503,7 +503,7 @@ def update_tenant_profile(
         profile.is_active = is_active
     if permissions is not None:
         db.execute(
-            ProfilePermission.__table__.delete().where(ProfilePermission.profile_id == profile_id)
+            delete(ProfilePermission).where(ProfilePermission.profile_id == profile_id)
         )
         now = datetime.now(timezone.utc)
         for screen in permissions:
