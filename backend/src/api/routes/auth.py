@@ -168,7 +168,8 @@ def do_forgot_password(
 
 
 @router.get("/reset-password/{token}", response_model=ResetTokenInfo)
-def get_reset_info(token: str, db: Session = Depends(get_db)) -> ResetTokenInfo:
+@limiter.limit("5/15minutes")
+def get_reset_info(request: Request, token: str, db: Session = Depends(get_db)) -> ResetTokenInfo:
     return get_reset_token_info(db, token)
 
 

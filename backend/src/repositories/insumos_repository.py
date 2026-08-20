@@ -79,7 +79,9 @@ def update(db: Session, insumo_id: int, data: InsumoUpdateRequest) -> Optional[I
 
 
 def get_by_ean(db: Session, ean: str) -> Optional[Insumo]:
-    return db.execute(select(Insumo).where(Insumo.ean == ean, Insumo.ativo == True)).scalar_one_or_none()  # noqa: E712
+    return db.execute(
+        select(Insumo).where(Insumo.ean == ean, Insumo.ativo == True).limit(1)  # noqa: E712
+    ).scalars().first()
 
 
 def toggle_ativo(db: Session, insumo_id: int) -> Optional[Insumo]:

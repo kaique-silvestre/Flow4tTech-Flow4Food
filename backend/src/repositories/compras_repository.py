@@ -105,7 +105,9 @@ def list_confirmadas_com_entrega_prevista(
 
 
 def find_by_numero_nota(db: Session, numero_nota: str) -> Optional[Compra]:
-    return db.execute(select(Compra).where(Compra.numero_nota == numero_nota)).scalar_one_or_none()
+    return db.execute(
+        select(Compra).where(Compra.numero_nota == numero_nota).limit(1)
+    ).scalars().first()
 
 
 def get_compra_by_id(db: Session, compra_id: int) -> Optional[Compra]:

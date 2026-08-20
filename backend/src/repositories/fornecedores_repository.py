@@ -49,7 +49,9 @@ def update(db: Session, fornecedor_id: int, data: FornecedorUpdateRequest) -> Op
 
 
 def get_by_cnpj(db: Session, cnpj: str) -> Optional[Fornecedor]:
-    return db.execute(select(Fornecedor).where(Fornecedor.cnpj == cnpj)).scalar_one_or_none()
+    return db.execute(
+        select(Fornecedor).where(Fornecedor.cnpj == cnpj).limit(1)
+    ).scalars().first()
 
 
 def toggle_ativo(db: Session, fornecedor_id: int) -> Optional[Fornecedor]:

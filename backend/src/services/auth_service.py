@@ -221,7 +221,7 @@ def forgot_password(db: Session, email: str) -> GenericMessage:
     invalidate_user_resets(db, user.id)
     token = str(uuid.uuid4())
     expires = datetime.now(timezone.utc) + timedelta(hours=1)
-    create_reset(db, PasswordReset(user_id=user.id, token=token, expires_at=expires))
+    create_reset(db, PasswordReset(user_id=user.id, token=_hash_token(token), expires_at=expires))
 
     settings = get_settings()
     reset_url = f"{settings.FRONTEND_URL}/redefinir-senha?token={token}"
@@ -230,9 +230,10 @@ def forgot_password(db: Session, email: str) -> GenericMessage:
 
 
 def get_reset_token_info(db: Session, token: str) -> ResetTokenInfo:
-    reset = get_valid_reset(db, token)
+    token_hash = _hash_token(token)
+    reset = get_valid_reset(db, token_hash)
     if reset is None:
-        existing = get_reset_by_token(db, token)
+        existing = get_reset_by_token(db, token_hash)
         if existing and existing.used_at:
             raise AppError(
                 code=ErrorCode.VALIDATION_ERROR,
@@ -254,9 +255,10 @@ def reset_password(db: Session, token: str, new_password: str) -> int:
             message="Nova senha deve ter no mínimo 6 caracteres",
             http_status=400,
         )
-    reset = get_valid_reset(db, token)
+    token_hash = _hash_token(token)
+    reset = get_valid_reset(db, token_hash)
     if reset is None:
-        existing = get_reset_by_token(db, token)
+        existing = get_reset_by_token(db, token_hash)
         if existing and existing.used_at:
             raise AppError(
                 code=ErrorCode.VALIDATION_ERROR,
