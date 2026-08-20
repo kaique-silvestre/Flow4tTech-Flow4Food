@@ -59,8 +59,17 @@ def get_db() -> Generator[Session, None, None]:
 
 
 # Platform engine — separate pool, no RLS, no tenant context listener.
-# Falls back to DATABASE_URL when DATABASE_URL_PLATFORM is empty (dev only).
-_platform_url = _settings.DATABASE_URL_PLATFORM or _settings.DATABASE_URL
+# DATABASE_URL_PLATFORM must be set explicitly: it is expected to point at a
+# connection/role isolated from the tenant-scoped DATABASE_URL, so silently
+# falling back would let platform-admin traffic run on the same role as
+# regular tenant traffic.
+if not _settings.DATABASE_URL_PLATFORM:
+    raise RuntimeError(
+        "DATABASE_URL_PLATFORM is not set. Set it explicitly to an isolated "
+        "connection string for the platform engine — it must not fall back "
+        "to DATABASE_URL."
+    )
+_platform_url = _settings.DATABASE_URL_PLATFORM
 _platform_connect_args: dict = {}
 if _platform_url.startswith("postgresql"):
     _platform_connect_args = {"options": "-c timezone=UTC"}

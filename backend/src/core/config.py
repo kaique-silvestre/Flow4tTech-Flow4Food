@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRES_DAYS: int = 7
     TZ: str = "America/Sao_Paulo"
     CORS_ORIGINS: str = "http://localhost:5173,https://flow4-tech-sistema-de-gestao.vercel.app"
-    ENV: str = "dev"
+    ENV: str = Field(..., description="Deployment environment: dev, staging, prod, or test")
     SENTRY_DSN_BACKEND: str = ""
     APP_VERSION: str = "0.1.0"
     SMTP_HOST: str = ""
@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     SMTP_FROM: str = ""
     FRONTEND_URL: str = "http://localhost:5173"
     SUPERADMIN_TOKEN: str = Field("", description="Static bearer token for /admin/ routes")
-    DATABASE_URL_PLATFORM: str = Field("", description="Separate DB URL for platform engine (falls back to DATABASE_URL if empty)")
+    DATABASE_URL_PLATFORM: str = Field(..., description="Separate DB URL for platform engine (isolated role, no RLS)")
 
     @property
     def cors_origins_list(self) -> list[str]:

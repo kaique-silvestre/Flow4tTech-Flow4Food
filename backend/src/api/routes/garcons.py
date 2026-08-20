@@ -2,7 +2,7 @@
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -21,7 +21,7 @@ from src.schemas.garcons import (
     GarcomResponse,
     GarcomUpdateRequest,
 )
-from src.services import garcons_service
+from src.services import audit_service, garcons_service
 
 router = APIRouter(dependencies=[Depends(require_feature("cadastros")), Depends(require_permission("cadastros"))])
 
@@ -105,10 +105,24 @@ def get_garcom_stats(
 def update_comissao(
     comissao_id: int,
     body: ComissaoUpdateRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
-    _user: dict = Depends(get_current_user),
+    payload: dict = Depends(get_current_user),
 ) -> ComissaoResponse:
+    valor_anterior = db.get(ComissaoGarcom, comissao_id)
+    valor_antes = valor_anterior.valor if valor_anterior is not None else None
     comissao = garcons_service.update_comissao(db, comissao_id, body.valor)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "comissao.valor.alterar",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="ComissaoGarcom",
+        entity_id=comissao_id,
+        before={"valor": str(valor_antes)} if valor_antes is not None else None,
+        after={"valor": str(comissao.valor)},
+        impersonated_by=payload.get("impersonated_by"),
+    )
     return ComissaoResponse.model_validate(comissao)
 
 

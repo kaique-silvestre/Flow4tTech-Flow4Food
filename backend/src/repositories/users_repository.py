@@ -25,15 +25,30 @@ def get_user_by_username(db: Session, tenant_id: int, username: str) -> Optional
 
 
 def get_user_by_username_global(db: Session, username: str) -> Optional[SystemUser]:
+    # KNOWN LIMITATION: username is only unique per tenant
+    # (uq_system_users_tenant_username, migration 0034), not globally. Two
+    # tenants can each have a user named e.g. "admin", and login-by-username
+    # (auth_service.login) has no tenant selector in the request to
+    # disambiguate between them. Without an explicit ORDER BY, Postgres may
+    # return either matching row nondeterministically across calls, so a
+    # colliding username could resolve to a different tenant's account from
+    # one login attempt to the next. Ordering by id makes the choice
+    # deterministic (always the oldest/lowest-id account), but does not fix
+    # the underlying ambiguity — that requires a product-level decision
+    # (e.g. a tenant selector at login) and is out of scope here.
     return _with_profile(
         db.query(SystemUser).filter(SystemUser.username == username)
-    ).first()
+    ).order_by(SystemUser.id).first()
 
 
 def get_user_by_email_global(db: Session, email: str) -> Optional[SystemUser]:
+    # Same known limitation as get_user_by_username_global above: since
+    # migration 0082, email is only unique per tenant
+    # (uq_system_users_tenant_email), not globally, so this can also match
+    # rows in multiple tenants. Ordering by id keeps resolution deterministic.
     return _with_profile(
         db.query(SystemUser).filter(SystemUser.email == email)
-    ).first()
+    ).order_by(SystemUser.id).first()
 
 
 def get_user_by_email(db: Session, tenant_id: int, email: str) -> Optional[SystemUser]:

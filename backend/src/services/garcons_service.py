@@ -64,6 +64,12 @@ def update_comissao(db: Session, comissao_id: int, valor: Decimal) -> ComissaoGa
     comissao = db.get(ComissaoGarcom, comissao_id)
     if comissao is None:
         raise AppError(ErrorCode.NOT_FOUND, "Comissão não encontrada", http_status=404)
+    if comissao.pago:
+        raise AppError(
+            ErrorCode.CONFLICT,
+            "Comissão já paga não pode ser alterada",
+            http_status=409,
+        )
     comissao.valor = valor
     db.commit()
     db.refresh(comissao)

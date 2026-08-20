@@ -34,6 +34,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://matchpoint:matchpoint@localhost:5432/matchpoint_test
+      DATABASE_URL_PLATFORM: postgresql://matchpoint:matchpoint@localhost:5432/matchpoint_test
       JWT_SECRET: test-secret-only-for-tests-32chars!!
       ENV: test
 
