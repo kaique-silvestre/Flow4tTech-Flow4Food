@@ -30,7 +30,7 @@ def _calcular_custo_medio(
         return custo_unitario_novo
     numerador = estoque_atual * custo_medio_atual + quantidade_nova * custo_unitario_novo
     denominador = estoque_atual + quantidade_nova
-    return numerador / denominador
+    return (numerador / denominador).quantize(Decimal("0.0001"))
 
 
 def _get_fornecedor_nome(db: Session, fornecedor_id: Optional[int]) -> Optional[str]:

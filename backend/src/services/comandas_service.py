@@ -1,6 +1,6 @@
 import datetime
 import json
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
 from sqlalchemy import select
@@ -97,7 +97,7 @@ def apply_discount(preco_venda: Decimal, promo: Promocao) -> Decimal:
         resultado = preco_venda * (1 - valor / Decimal("100"))
     else:
         resultado = preco_venda - valor
-    return max(Decimal("0"), resultado).quantize(Decimal("0.01"))
+    return max(Decimal("0"), resultado).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def _build_item_response(db: Session, ic: ItemComanda) -> ItemComandaResponse:
@@ -453,7 +453,7 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
 
     if comanda.desconto_percentual is not None:
         total_com_desconto: Decimal = subtotal * (Decimal("1") - comanda.desconto_percentual / Decimal("100"))
-        comanda.desconto_valor = (subtotal - total_com_desconto).quantize(Decimal("0.01"))
+        comanda.desconto_valor = (subtotal - total_com_desconto).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     elif comanda.desconto_valor is not None:
         total_com_desconto = subtotal - comanda.desconto_valor
     else:
@@ -469,7 +469,11 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
             )
     else:
         base_total: Decimal = comanda.saldo_pendente if comanda.saldo_pendente is not None else total_com_desconto
-        esperado: Decimal = (base_total * Decimal("1.10")).quantize(Decimal("0.01")) if data.taxa_servico else base_total
+        esperado: Decimal = (
+            (base_total * Decimal("1.10")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            if data.taxa_servico
+            else base_total
+        )
         if abs(total_pago - esperado) > Decimal("0.01"):
             raise AppError(
                 ErrorCode.PAGAMENTO_NAO_BATE,
@@ -491,7 +495,7 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
                     http_status=400,
                 )
             valor_nota = p.valor_nota
-            troco = (p.valor_nota - p.valor).quantize(Decimal("0.01"))
+            troco = (p.valor_nota - p.valor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         pagamentos_repository.create_pagamento(db, comanda_id, p.metodo_id, p.valor, valor_nota, troco)
 
     itens_negativos: list[str] = []
@@ -507,7 +511,7 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
         comandas_repository.fechar_comanda_repo(db, comanda_id, esperado)
 
     if not pagamento_parcial and data.taxa_servico and comanda.garcom_id is not None:
-        valor_comissao = (total_com_desconto * Decimal("0.10")).quantize(Decimal("0.01"))
+        valor_comissao = (total_com_desconto * Decimal("0.10")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         comissao = ComissaoGarcom(
             garcom_id=comanda.garcom_id,
             comanda_id=comanda_id,

@@ -1,5 +1,5 @@
 import datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -28,7 +28,7 @@ def dashboard(db: Session) -> DashboardResponse:
     faturamento_hoje = sum((c.total or Decimal("0") for c in fechadas_hoje), Decimal("0"))
     qtd_fechadas = len(fechadas_hoje)
     ticket_medio = (
-        (faturamento_hoje / qtd_fechadas).quantize(Decimal("0.01"))
+        (faturamento_hoje / qtd_fechadas).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         if qtd_fechadas > 0
         else Decimal("0")
     )

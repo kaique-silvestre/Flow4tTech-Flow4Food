@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -57,4 +57,6 @@ def mark_announcement_read(
 ) -> None:
     tenant_id = payload["tenant_id"]
     user_id = payload["user_id"]
+    if not announcements_repository.is_visible_to_tenant(db, announcement_id, tenant_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Announcement not found")
     announcements_repository.mark_read(db, announcement_id, user_id, tenant_id)

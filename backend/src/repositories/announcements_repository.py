@@ -102,6 +102,23 @@ def list_active_for_user(db: Session, tenant_id: int, user_id: int) -> list[Plat
     return list(db.execute(stmt).scalars().all())
 
 
+def is_visible_to_tenant(db: Session, announcement_id: int, tenant_id: int) -> bool:
+    targeted = select(AnnouncementTarget.announcement_id).where(
+        AnnouncementTarget.tenant_id == tenant_id
+    )
+    stmt = select(PlatformAnnouncement.id).where(
+        PlatformAnnouncement.id == announcement_id,
+        or_(
+            PlatformAnnouncement.target == "all",
+            and_(
+                PlatformAnnouncement.target == "specific",
+                PlatformAnnouncement.id.in_(targeted),
+            ),
+        ),
+    )
+    return db.execute(stmt).scalar_one_or_none() is not None
+
+
 def mark_read(db: Session, announcement_id: int, user_id: int, tenant_id: int) -> None:
     existing = db.execute(
         select(AnnouncementRead).where(

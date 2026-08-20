@@ -1,5 +1,5 @@
 import datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -301,7 +301,7 @@ def vendas_por_garcom(
     for r in rows:
         fat = r["faturamento"]
         qtd = r["qtd_comandas"]
-        ticket = (fat / qtd).quantize(Decimal("0.01")) if qtd > 0 else Decimal("0")
+        ticket = (fat / qtd).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if qtd > 0 else Decimal("0")
         garcons.append(
             VendasGarcomItem(
                 garcom_id=r["garcom_id"],
@@ -329,7 +329,7 @@ def vendas_por_produto(
     for r in rows:
         qtd = r["qtd_vendida"]
         fat = r["faturamento"]
-        ticket = (fat / qtd).quantize(Decimal("0.01")) if qtd > 0 else Decimal("0")
+        ticket = (fat / qtd).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if qtd > 0 else Decimal("0")
         itens.append(
             VendasPorProdutoItem(
                 produto_id=r["produto_id"],
