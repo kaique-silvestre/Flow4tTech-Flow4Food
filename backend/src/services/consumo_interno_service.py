@@ -60,10 +60,6 @@ def _calcular_custo_unitario(db: Session, produto: Produto) -> Decimal:
     if insumo_direto and insumo_direto.custo_medio:
         return insumo_direto.custo_medio
 
-    # Last fallback: preco_venda
-    if produto.preco_venda:
-        return Decimal(str(produto.preco_venda))
-
     return Decimal("0")
 
 

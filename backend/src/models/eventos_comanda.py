@@ -23,7 +23,7 @@ class EventoComanda(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
-    comanda_id: Mapped[int] = mapped_column(nullable=False)
+    comanda_id: Mapped[int] = mapped_column(nullable=False, index=True)
     tipo: Mapped[str] = mapped_column(nullable=False)
     payload: Mapped[Optional[str]] = mapped_column(nullable=True)
     garcom_id: Mapped[Optional[int]] = mapped_column(nullable=True)

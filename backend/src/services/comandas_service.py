@@ -460,7 +460,7 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
         total_com_desconto = subtotal
 
     if pagamento_parcial:
-        base_parcial: Decimal = comanda.saldo_pendente if comanda.saldo_pendente is not None else subtotal
+        base_parcial: Decimal = comanda.saldo_pendente if comanda.saldo_pendente is not None else total_com_desconto
         if total_pago >= base_parcial:
             raise AppError(
                 ErrorCode.PAGAMENTO_NAO_BATE,
