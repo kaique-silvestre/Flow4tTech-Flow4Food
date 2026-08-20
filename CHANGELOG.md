@@ -11,7 +11,7 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ### Fixed
 
-- Corrige anotações `Mapped[X | None]` incompatíveis com Python 3.9 em src/models — Claude, 2026-08-20
+- Corrige anotações `Mapped[X | None]` incompatíveis com Python 3.9 em src/models — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20
 
 ### Removed
 
