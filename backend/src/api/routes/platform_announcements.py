@@ -62,7 +62,7 @@ def create_announcement(
         expires_at=body.expires_at,
         target=body.target,
         tenant_ids=body.tenant_ids,
-        created_by=payload.get("admin_id"),
+        created_by=payload.get("platform_admin_id"),
     )
     rows = announcements_repository.list_with_read_counts(db)
     row = next((r for r in rows if r["id"] == ann.id), None)

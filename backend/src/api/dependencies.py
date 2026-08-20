@@ -26,7 +26,12 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token ausente")
     settings = get_settings()
     try:
-        payload = jwt.decode(credentials.credentials, settings.JWT_SECRET, algorithms=["HS256"])
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.JWT_SECRET,
+            algorithms=["HS256"],
+            options={"require": ["exp"]},
+        )
     except InvalidTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido"
@@ -165,7 +170,12 @@ def require_platform_admin(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token ausente")
     settings = get_settings()
     try:
-        payload = jwt.decode(credentials.credentials, settings.JWT_SECRET, algorithms=["HS256"])
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.JWT_SECRET,
+            algorithms=["HS256"],
+            options={"require": ["exp"]},
+        )
     except InvalidTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido"

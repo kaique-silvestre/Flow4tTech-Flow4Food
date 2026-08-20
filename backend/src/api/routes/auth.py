@@ -88,7 +88,9 @@ def _decode_token(access_token: str) -> Optional[dict]:
 
     try:
         settings = get_settings()
-        return _jwt.decode(access_token, settings.JWT_SECRET, algorithms=["HS256"])
+        return _jwt.decode(
+            access_token, settings.JWT_SECRET, algorithms=["HS256"], options={"require": ["exp"]}
+        )
     except Exception:
         return None
 

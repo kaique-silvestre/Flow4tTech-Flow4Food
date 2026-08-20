@@ -1,3 +1,4 @@
+import re
 import time
 import uuid
 
@@ -10,6 +11,11 @@ from src.core.logging import get_logger
 
 log = get_logger(__name__)
 
+# Accepts only safe, UUID-like request IDs (alphanumeric + hyphens, capped length).
+# Anything else is discarded and a fresh server-side id is generated instead,
+# preventing log injection / forged correlation ids from client-supplied headers.
+_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9-]{1,64}$")
+
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
     """Adds request_id to structlog context vars and response header."""
@@ -17,7 +23,11 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        client_request_id = request.headers.get("X-Request-ID")
+        if client_request_id and _REQUEST_ID_PATTERN.match(client_request_id):
+            request_id = client_request_id
+        else:
+            request_id = str(uuid.uuid4())
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(request_id=request_id)
 

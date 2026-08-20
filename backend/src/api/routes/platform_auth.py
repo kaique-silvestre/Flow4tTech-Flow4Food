@@ -105,7 +105,9 @@ def _decode_platform_admin_id(access_token: str) -> Optional[int]:
 
     try:
         settings = get_settings()
-        payload = _jwt.decode(access_token, settings.JWT_SECRET, algorithms=["HS256"])
+        payload = _jwt.decode(
+            access_token, settings.JWT_SECRET, algorithms=["HS256"], options={"require": ["exp"]}
+        )
         return payload.get("platform_admin_id")
     except Exception:
         return None
