@@ -45,3 +45,31 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
 
         response.headers["X-Request-ID"] = request_id
         return response
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Sets baseline security response headers on every response.
+
+    This is a pure JSON API (the only HTML-ish surface, /docs, is already
+    disabled outside non-prod envs), so a strict CSP is safe here. HSTS is
+    only sent in prod: Railway terminates TLS in front of the app, so prod
+    traffic is always HTTPS, but dev/staging/test may be plain HTTP and
+    sending HSTS there could force browsers to refuse http:// for a year.
+    """
+
+    def __init__(self, app, env: str) -> None:  # type: ignore[no-untyped-def]
+        super().__init__(app)
+        self._send_hsts = env == "prod"
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Content-Security-Policy"] = "default-src 'none'"
+        if self._send_hsts:
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
+        return response

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -10,12 +10,12 @@ class TenantCreate(BaseModel):
     admin_name: str = Field(..., min_length=1, max_length=200)
     admin_username: str = Field(..., min_length=3, max_length=100)
     admin_email: EmailStr
-    admin_password: str = Field(..., min_length=6)
+    admin_password: str = Field(..., min_length=6, max_length=72)
 
 
 class TenantUpdate(BaseModel):
     nome_fantasia: Optional[str] = Field(None, min_length=1, max_length=200)
-    status: Optional[str] = Field(None)
+    status: Optional[Literal["ativo", "inativo", "suspensa", "cancelada"]] = Field(None)
 
 
 class AssinaturaInfo(BaseModel):

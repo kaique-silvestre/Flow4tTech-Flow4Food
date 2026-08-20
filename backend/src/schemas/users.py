@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class UserCreate(BaseModel):
@@ -9,7 +9,7 @@ class UserCreate(BaseModel):
     username: str
     email: Optional[str] = None
     profile_id: Optional[int] = None  # noqa: UP045 — None = free user
-    password: str
+    password: str = Field(..., max_length=72)
     is_active: bool = True
 
     @field_validator("password")

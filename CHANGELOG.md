@@ -61,6 +61,9 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ### Security
 
+- Adiciona headers de segurança em toda resposta (main.py/core/middleware.py): `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy: default-src 'none'` (API pura JSON) e `Strict-Transport-Security` restrito a `ENV=prod` (Railway termina TLS na borda; enviar HSTS fora de prod arriscaria travar `http://` em dev/staging) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20
+- Adiciona `max_length=72` em todos os campos de senha (auth.py, tenants.py, users.py schemas): bcrypt trunca silenciosamente acima de 72 bytes, dando falsa sensação de entropia em senhas mais longas — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20
+- Restringe `TenantUpdate.status` a `Literal["ativo", "inativo", "suspensa", "cancelada"]` (schemas/tenants.py): aceitava string arbitrária, consumida depois por filtro do scheduler — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20
 - Valida `X-Request-ID` do cliente antes de refletir em header de resposta e logs (core/middleware.py): aceito só se casar com padrão alfanumérico+hífen até 64 chars, senão gera novo — evita injeção de log e forjar correlação — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20
 - Adiciona `options={"require": ["exp"]}` em todos os `jwt.decode` do backend (dependencies.py, auth.py, platform_auth.py): sem essa opção, PyJWT não exige a claim `exp` — um token forjado sem `exp` seria tratado como nunca expirando — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20
 - Corrige `created_by` sempre NULL em anúncios criados por platform admin (platform_announcements.py:65): lia `payload.get("admin_id")`, mas o token grava a claim como `platform_admin_id` — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20

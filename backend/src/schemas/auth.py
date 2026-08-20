@@ -1,12 +1,12 @@
 
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):
     identifier: str
-    password: str
+    password: str = Field(..., max_length=72)
 
 
 class TokenResponse(BaseModel):
@@ -19,8 +19,8 @@ class AccessTokenResponse(BaseModel):
 
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str
+    current_password: str = Field(..., max_length=72)
+    new_password: str = Field(..., max_length=72)
 
 
 class UserInfo(BaseModel):
@@ -39,7 +39,7 @@ class ForgotPasswordRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     token: str
-    new_password: str
+    new_password: str = Field(..., max_length=72)
 
 
 class GenericMessage(BaseModel):

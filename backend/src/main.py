@@ -40,7 +40,7 @@ from src.core.config import get_settings
 from src.core.errors import register_exception_handlers
 from src.core.limiter import limiter
 from src.core.logging import configure_logging, get_logger
-from src.core.middleware import RequestIdMiddleware
+from src.core.middleware import RequestIdMiddleware, SecurityHeadersMiddleware
 from src.core.scheduler import start as scheduler_start
 from src.core.scheduler import stop as scheduler_stop
 from src.core.sentry import init_sentry
@@ -73,6 +73,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware, env=settings.ENV)
 
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
