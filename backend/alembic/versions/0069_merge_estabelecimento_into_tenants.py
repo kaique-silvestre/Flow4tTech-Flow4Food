@@ -34,34 +34,35 @@ def upgrade() -> None:
         sa.Column("is_owner", sa.Boolean(), nullable=False, server_default="false"),
     )
 
-    # 3. Copy endereco/telefone from estabelecimento into tenants (if table exists)
-    tables = conn.execute(
-        sa.text("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename='estabelecimento'")
-    ).fetchall()
-    if tables:
+    if conn.dialect.name == "postgresql":
+        # 3. Copy endereco/telefone from estabelecimento into tenants (if table exists)
+        tables = conn.execute(
+            sa.text("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename='estabelecimento'")
+        ).fetchall()
+        if tables:
+            conn.execute(
+                sa.text("""
+                    UPDATE tenants t
+                    SET endereco = e.endereco,
+                        telefone = e.telefone
+                    FROM estabelecimento e
+                    WHERE e.tenant_id = t.id
+                """)
+            )
+
+        # 4. Mark owner users
         conn.execute(
             sa.text("""
-                UPDATE tenants t
-                SET endereco = e.endereco,
-                    telefone = e.telefone
-                FROM estabelecimento e
-                WHERE e.tenant_id = t.id
+                UPDATE system_users su
+                SET is_owner = TRUE
+                FROM tenants t
+                WHERE su.id = t.admin_user_id
             """)
         )
 
-    # 4. Mark owner users
-    conn.execute(
-        sa.text("""
-            UPDATE system_users su
-            SET is_owner = TRUE
-            FROM tenants t
-            WHERE su.id = t.admin_user_id
-        """)
-    )
-
-    # 5. Drop estabelecimento (if exists)
-    if tables:
-        op.drop_table("estabelecimento")
+        # 5. Drop estabelecimento (if exists)
+        if tables:
+            op.drop_table("estabelecimento")
 
     # 6. Grant app_user SELECT on tenants (already has it, but enforce)
     # UPDATE on tenants is intentionally NOT granted to app_user —
