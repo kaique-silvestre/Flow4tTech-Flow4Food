@@ -1,5 +1,5 @@
 import datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
 from sqlalchemy import func, select
@@ -59,13 +59,19 @@ def list_contas(
 
     total = db.execute(count_stmt).scalar_one()
 
-    total_pendente = db.execute(
-        select(func.sum(ContaPagar.valor)).where(ContaPagar.status == "pendente")
-    ).scalar_one() or Decimal("0")
+    total_pendente_stmt = select(func.sum(ContaPagar.valor)).where(ContaPagar.status == "pendente")
+    total_vencido_stmt = select(func.sum(ContaPagar.valor)).where(ContaPagar.status == "vencido")
+    for f in filters:
+        total_pendente_stmt = total_pendente_stmt.where(f)
+        total_vencido_stmt = total_vencido_stmt.where(f)
 
-    total_vencido = db.execute(
-        select(func.sum(ContaPagar.valor)).where(ContaPagar.status == "vencido")
-    ).scalar_one() or Decimal("0")
+    total_pendente = (
+        db.execute(total_pendente_stmt).scalar_one() or Decimal("0")
+    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    total_vencido = (
+        db.execute(total_vencido_stmt).scalar_one() or Decimal("0")
+    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     offset = (pagina - 1) * por_pagina
     contas = list(db.execute(stmt.offset(offset).limit(por_pagina)).scalars().all())
@@ -85,12 +91,23 @@ def cancelar_por_compra(db: Session, compra_id: int) -> None:
         conta.status = "cancelado"
 
 
+def _is_vencido(hoje: datetime.date):
+    """Predicado canônico de 'vencido': vencimento estritamente anterior a hoje.
+
+    Uma conta que vence hoje ainda não está vencida (o dia não terminou), por isso
+    o corte é `data_vencimento < hoje`. Este predicado é a única definição de
+    'vencido' usada no repositório — reutilizado por `get_pendentes_vencidos` e
+    `resumo` para que os dois nunca divirjam para contas no limite da data.
+    """
+    return ContaPagar.data_vencimento < hoje
+
+
 def get_pendentes_vencidos(db: Session, hoje: datetime.date) -> list[ContaPagar]:
     return list(
         db.execute(
             select(ContaPagar).where(
                 ContaPagar.status == "pendente",
-                ContaPagar.data_vencimento < hoje,
+                _is_vencido(hoje),
             )
         ).scalars().all()
     )
@@ -100,7 +117,7 @@ def resumo(db: Session, hoje: datetime.date) -> dict:
     pendente = db.execute(
         select(func.count()).select_from(ContaPagar).where(
             ContaPagar.status.in_(["pendente", "vencido"]),
-            ContaPagar.data_vencimento <= hoje,
+            _is_vencido(hoje),
         )
     ).scalar_one()
 
@@ -108,8 +125,11 @@ def resumo(db: Session, hoje: datetime.date) -> dict:
         select(func.count()).select_from(ContaPagar).where(ContaPagar.status == "vencido")
     ).scalar_one()
 
-    total_vencido = db.execute(
-        select(func.sum(ContaPagar.valor)).where(ContaPagar.status == "vencido")
-    ).scalar_one() or Decimal("0")
+    total_vencido = (
+        db.execute(
+            select(func.sum(ContaPagar.valor)).where(ContaPagar.status == "vencido")
+        ).scalar_one()
+        or Decimal("0")
+    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     return {"pendente": pendente, "vencido": vencido, "total_vencido": total_vencido}

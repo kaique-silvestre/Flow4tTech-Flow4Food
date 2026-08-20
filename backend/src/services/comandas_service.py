@@ -423,7 +423,26 @@ def aplicar_desconto(db: Session, comanda_id: int, data: AplicarDescontoRequest)
     if not ok:
         raise AppError(ErrorCode.COMANDA_DESATUALIZADA, "Versão desatualizada", http_status=409)
 
+    if data.desconto_valor is not None:
+        itens = comandas_repository.get_itens_para_fechar(db, comanda_id)
+        subtotal: Decimal = sum((ic.preco_unitario * ic.quantidade for ic in itens), Decimal("0"))
+        if data.desconto_valor > subtotal:
+            raise AppError(
+                ErrorCode.VALIDATION_ERROR,
+                f"Desconto (R$ {data.desconto_valor}) não pode ser maior que o subtotal (R$ {subtotal})",
+                http_status=400,
+            )
+
     comandas_repository.atualizar_desconto(db, comanda_id, data.desconto_percentual, data.desconto_valor)
+    comandas_repository.add_evento(
+        db,
+        comanda_id,
+        TipoEvento.DESCONTO_APLICADO,
+        {
+            "desconto_percentual": str(data.desconto_percentual) if data.desconto_percentual is not None else None,
+            "desconto_valor": str(data.desconto_valor) if data.desconto_valor is not None else None,
+        },
+    )
     db.commit()
     db.refresh(comanda)
     return _build_response(db, comanda)

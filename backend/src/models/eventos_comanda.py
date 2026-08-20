@@ -16,6 +16,7 @@ class TipoEvento(str, enum.Enum):
     ITEM_EDITADO = "item_editado"
     ITEM_CANCELADO = "item_cancelado"
     COMANDA_REABERTA = "comanda_reaberta"
+    DESCONTO_APLICADO = "desconto_aplicado"
 
 
 class EventoComanda(Base):

@@ -90,7 +90,11 @@ def delete_insumo(db: Session, insumo_id: int) -> None:
     obj = insumos_repository.get_by_id(db, insumo_id)
     if obj is None:
         raise AppError(ErrorCode.NOT_FOUND, "Insumo não encontrado", http_status=404)
-    if insumos_repository.is_referenced_in_ficha(db, insumo_id):
+    if (
+        insumos_repository.is_referenced_in_ficha(db, insumo_id)
+        or insumos_repository.is_referenced_in_movimentos(db, insumo_id)
+        or insumos_repository.is_referenced_in_compras(db, insumo_id)
+    ):
         insumos_repository.soft_delete(db, insumo_id)
     else:
         insumos_repository.hard_delete(db, insumo_id)

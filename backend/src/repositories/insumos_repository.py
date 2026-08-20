@@ -118,3 +118,19 @@ def is_referenced_in_ficha(db: Session, insumo_id: int) -> bool:
         select(FichaTecnica).where(FichaTecnica.insumo_id == insumo_id).limit(1)
     ).scalar_one_or_none()
     return result is not None
+
+
+def is_referenced_in_movimentos(db: Session, insumo_id: int) -> bool:
+    from src.models.movimentos_estoque import MovimentoEstoque
+    result = db.execute(
+        select(MovimentoEstoque).where(MovimentoEstoque.insumo_id == insumo_id).limit(1)
+    ).scalar_one_or_none()
+    return result is not None
+
+
+def is_referenced_in_compras(db: Session, insumo_id: int) -> bool:
+    from src.models.compras import ItemCompra
+    result = db.execute(
+        select(ItemCompra).where(ItemCompra.insumo_id == insumo_id).limit(1)
+    ).scalar_one_or_none()
+    return result is not None
