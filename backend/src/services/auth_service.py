@@ -57,8 +57,17 @@ def create_access_token(payload: dict, expires_delta: Optional[timedelta] = None
 
 
 def resolve_permissions(user) -> list:
+    # Per-user overrides (set via PUT /users/{id}/permissions) always take
+    # precedence over the profile's permissions when present — the write
+    # path replaces the user's entire override set on every call, so a
+    # non-empty override list represents the admin's explicit, complete
+    # decision for that user (including restricting screens the profile
+    # would otherwise grant).
+    overrides = [p.screen for p in user.user_permissions if p.can_access]
+    if overrides:
+        return overrides
     if user.profile_id is None:
-        return [p.screen for p in user.user_permissions if p.can_access]
+        return []
     profile = user.profile
     if profile.template_id is not None:
         return [p.screen for p in profile.template.permissions if p.can_access]

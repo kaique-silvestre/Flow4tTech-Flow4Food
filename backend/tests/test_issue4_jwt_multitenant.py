@@ -83,6 +83,7 @@ def test_rotate_refresh_token_reloads_subscription_status(monkeypatch):
         profile_id = 1
         profile = _FakeProfile()
         is_active = True
+        user_permissions = []
 
     monkeypatch.setattr(rt_repo, "get_by_hash", lambda db, h: _FakeRecord())
     monkeypatch.setattr(rt_repo, "revoke", lambda db, id: None)

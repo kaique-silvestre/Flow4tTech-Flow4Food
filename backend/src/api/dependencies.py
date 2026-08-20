@@ -128,6 +128,17 @@ def require_feature(feature_key: str):
                 TenantFeature.feature == feature_key,
             )
         ).scalar_one_or_none()
+        # Intentional opt-out semantics: tenant_features.enabled defaults to
+        # TRUE at the DB level (see models/tenant_features.py) and
+        # criar_tenant() does NOT seed rows for new tenants — every module
+        # gated by require_feature() (comandas, financeiro, estoque, users,
+        # dashboard, etc.) must work out of the box for a freshly created
+        # tenant. A missing row therefore means "not explicitly restricted",
+        # i.e. enabled. Only an explicit row with enabled=False (written via
+        # upsert_tenant_features, e.g. to enforce a plan restriction) denies
+        # access. Do not flip this to fail-closed: that would lock every new
+        # tenant out of the entire application until a platform admin
+        # manually seeds a row per feature.
         if row is not None and not row.enabled:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Módulo desabilitado: {feature_key}")
         return payload
