@@ -1,4 +1,3 @@
-import datetime
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -6,18 +5,11 @@ from sqlalchemy.orm import Session
 from src.core.errors import AppError, ErrorCode
 from src.repositories import eventos_repository
 from src.schemas.eventos import EventoCreate, EventoPatch, EventoResponse
+from src.services.shared import parse_mes_ano
 
 
 def list_by_month(db: Session, mes: Optional[str]) -> list[EventoResponse]:  # noqa: UP045
-    if mes:
-        try:
-            dt = datetime.datetime.strptime(mes, "%Y-%m")
-        except ValueError as exc:
-            raise AppError(code=ErrorCode.VALIDATION_ERROR, message="Formato de mês inválido. Use YYYY-MM.", http_status=400) from exc
-        year, month = dt.year, dt.month
-    else:
-        now = datetime.datetime.now()
-        year, month = now.year, now.month
+    year, month = parse_mes_ano(mes)
     eventos = eventos_repository.list_by_month(db, year, month)
     return [EventoResponse.model_validate(e) for e in eventos]
 

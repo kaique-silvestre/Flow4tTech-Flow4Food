@@ -11,7 +11,6 @@ from src.core.logging import get_logger
 from src.models.comandas import Comanda, StatusComanda
 from src.models.comissoes_garcom import ComissaoGarcom
 from src.models.eventos_comanda import TipoEvento
-from src.models.ficha_tecnica import FichaTecnica
 from src.models.insumos import Insumo
 from src.models.itens_comanda import ItemComanda
 from src.models.metodos_pagamento import MetodoPagamento
@@ -550,33 +549,21 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
 
 
 def _reservar_estoque(db: Session, produto_id: int, quantidade: Decimal) -> list[str]:
-    componentes = db.execute(
-        select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)
-    ).scalars().all()
-    if not componentes:
-        return []
-    insuficientes: list[str] = []
-    for comp in componentes:
-        insumo = estoque_repository.get_insumo_for_update(db, comp.insumo_id)
-        if insumo:
-            insumo.estoque_reservado = insumo.estoque_reservado + comp.quantidade * quantidade
-            db.flush()
-            disponivel = insumo.estoque_atual - insumo.estoque_reservado
-            if disponivel < 0:
-                insuficientes.append(insumo.nome)
-    return insuficientes
+    def ajustar(insumo: Insumo, qty: Decimal) -> Optional[str]:
+        insumo.estoque_reservado = insumo.estoque_reservado + qty
+        disponivel = insumo.estoque_atual - insumo.estoque_reservado
+        return insumo.nome if disponivel < 0 else None
+
+    return estoque_repository.ajustar_estoque_ficha_tecnica(db, produto_id, quantidade, ajustar)
 
 
 def _liberar_reserva_estoque(db: Session, produto_id: int, quantidade: Decimal) -> None:
-    componentes = db.execute(
-        select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)
-    ).scalars().all()
-    for comp in componentes:
-        insumo = estoque_repository.get_insumo_for_update(db, comp.insumo_id)
-        if insumo:
-            novo = insumo.estoque_reservado - comp.quantidade * quantidade
-            insumo.estoque_reservado = novo if novo > Decimal("0") else Decimal("0")
-            db.flush()
+    def ajustar(insumo: Insumo, qty: Decimal) -> None:
+        novo = insumo.estoque_reservado - qty
+        insumo.estoque_reservado = novo if novo > Decimal("0") else Decimal("0")
+        return None
+
+    estoque_repository.ajustar_estoque_ficha_tecnica(db, produto_id, quantidade, ajustar)
 
 
 def cancelar_comanda(db: Session, comanda_id: int, data: CancelarComandaRequest) -> ComandaResponse:
@@ -602,17 +589,16 @@ def cancelar_comanda(db: Session, comanda_id: int, data: CancelarComandaRequest)
 
 
 def _dar_baixa_estoque(db: Session, produto_id: int, quantidade: Decimal) -> list[str]:
-    componentes = db.execute(
-        select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)
-    ).scalars().all()
-    if not componentes:
-        return []
-    negativos: list[str] = []
-    for comp in componentes:
-        insumo = estoque_repository.get_insumo_for_update(db, comp.insumo_id)
-        if insumo:
-            negativos.extend(_baixar_insumo(db, insumo, comp.quantidade * quantidade))
-    return negativos
+    def ajustar(insumo: Insumo, qty: Decimal) -> Optional[str]:
+        negativos = _baixar_insumo(db, insumo, qty)
+        return negativos[0] if negativos else None
+
+    # flush_each=False: _baixar_insumo já dá flush internamente (via
+    # estoque_repository.registrar_movimento), então não é preciso flush
+    # duplicado aqui.
+    return estoque_repository.ajustar_estoque_ficha_tecnica(
+        db, produto_id, quantidade, ajustar, flush_each=False
+    )
 
 
 def _baixar_insumo(db: Session, insumo: Insumo, quantidade: Decimal) -> list[str]:
@@ -660,13 +646,16 @@ def reabrir_comanda(db: Session, comanda_id: int) -> ComandaResponse:
 
 
 def _estornar_estoque(db: Session, produto_id: int, quantidade: Decimal) -> None:
-    componentes = db.execute(
-        select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)
-    ).scalars().all()
-    for comp in componentes:
-        insumo = estoque_repository.get_insumo_for_update(db, comp.insumo_id)
-        if insumo is not None:
-            _estornar_insumo(db, insumo, comp.quantidade * quantidade)
+    def ajustar(insumo: Insumo, qty: Decimal) -> None:
+        _estornar_insumo(db, insumo, qty)
+        return None
+
+    # flush_each=False: _estornar_insumo já dá flush internamente (via
+    # estoque_repository.registrar_movimento), então não é preciso flush
+    # duplicado aqui.
+    estoque_repository.ajustar_estoque_ficha_tecnica(
+        db, produto_id, quantidade, ajustar, flush_each=False
+    )
 
 
 def _estornar_insumo(db: Session, insumo: Insumo, quantidade: Decimal) -> None:

@@ -65,17 +65,8 @@ def _calcular_custo_unitario(db: Session, produto: Produto) -> Decimal:
 
 def _dar_baixa_estoque_consumo(db: Session, produto_id: int, quantidade: Decimal) -> None:
     """Debit stock immediately for each insumo in ficha técnica."""
-    componentes = list(
-        db.execute(select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)).scalars().all()
-    )
-    if not componentes:
-        return
 
-    for comp in componentes:
-        insumo = estoque_repository.get_insumo_for_update(db, comp.insumo_id)
-        if insumo is None:
-            continue
-        qty = comp.quantidade * quantidade
+    def ajustar(insumo: Insumo, qty: Decimal) -> None:
         novo_saldo = insumo.estoque_atual - qty
         insumo.estoque_atual = novo_saldo
         estoque_repository.registrar_movimento(
@@ -86,22 +77,20 @@ def _dar_baixa_estoque_consumo(db: Session, produto_id: int, quantidade: Decimal
             custo_unitario=insumo.custo_medio,
             saldo_apos=novo_saldo,
         )
+        return None
+
+    # flush_each=False: mantém o comportamento original de um único
+    # db.flush() ao final do laço, em vez de um flush por insumo.
+    estoque_repository.ajustar_estoque_ficha_tecnica(
+        db, produto_id, quantidade, ajustar, flush_each=False
+    )
     db.flush()
 
 
 def _devolver_estoque_consumo(db: Session, produto_id: int, quantidade: Decimal) -> None:
     """Reverse stock debit on estorno."""
-    componentes = list(
-        db.execute(select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)).scalars().all()
-    )
-    if not componentes:
-        return
 
-    for comp in componentes:
-        insumo = estoque_repository.get_insumo_for_update(db, comp.insumo_id)
-        if insumo is None:
-            continue
-        qty = comp.quantidade * quantidade
+    def ajustar(insumo: Insumo, qty: Decimal) -> None:
         novo_saldo = insumo.estoque_atual + qty
         insumo.estoque_atual = novo_saldo
         estoque_repository.registrar_movimento(
@@ -113,6 +102,13 @@ def _devolver_estoque_consumo(db: Session, produto_id: int, quantidade: Decimal)
             saldo_apos=novo_saldo,
             observacao="Estorno consumo interno",
         )
+        return None
+
+    # flush_each=False: mantém o comportamento original de um único
+    # db.flush() ao final do laço, em vez de um flush por insumo.
+    estoque_repository.ajustar_estoque_ficha_tecnica(
+        db, produto_id, quantidade, ajustar, flush_each=False
+    )
     db.flush()
 
 

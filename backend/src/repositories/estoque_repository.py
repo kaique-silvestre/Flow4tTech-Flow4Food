@@ -1,18 +1,63 @@
 import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Callable, Optional, TypeVar
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from src.models.ficha_tecnica import FichaTecnica
 from src.models.insumos import Insumo
 from src.models.movimentos_estoque import MovimentoEstoque, TipoMovimento
+
+T = TypeVar("T")
 
 
 def get_insumo_for_update(db: Session, insumo_id: int) -> Optional[Insumo]:
     return db.execute(
         select(Insumo).where(Insumo.id == insumo_id).with_for_update()
     ).scalar_one_or_none()
+
+
+def ajustar_estoque_ficha_tecnica(
+    db: Session,
+    produto_id: int,
+    quantidade: Decimal,
+    ajustar_insumo: Callable[[Insumo, Decimal], Optional[T]],
+    *,
+    flush_each: bool = True,
+) -> list[T]:
+    """Itera os componentes da ficha técnica de um produto, travando (row
+    lock via `get_insumo_for_update`) cada insumo referenciado, e aplica
+    `ajustar_insumo` a cada um, na ordem dos componentes.
+
+    `ajustar_insumo(insumo, quantidade_componente)` recebe o insumo já
+    travado e a quantidade já multiplicada pela quantidade do produto
+    (`comp.quantidade * quantidade`). Deve mutar o insumo e/ou registrar
+    o movimento de estoque necessário; pode devolver um valor (ex.: nome
+    do insumo) a ser coletado no resultado, ou `None` para não coletar
+    nada nessa iteração.
+
+    Componentes cujo insumo não é encontrado são ignorados (o mesmo
+    comportamento que cada call site tinha antes da extração). Quando
+    `flush_each` é True (padrão), o helper dá `db.flush()` após cada
+    ajuste; quando False, cabe ao chamador (ou ao próprio
+    `ajustar_insumo`) decidir quando dar flush — usado pelos call sites
+    que já flushavam dentro de sua própria lógica de ajuste.
+    """
+    componentes = db.execute(
+        select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)
+    ).scalars().all()
+    resultados: list[T] = []
+    for comp in componentes:
+        insumo = get_insumo_for_update(db, comp.insumo_id)
+        if insumo is None:
+            continue
+        resultado = ajustar_insumo(insumo, comp.quantidade * quantidade)
+        if flush_each:
+            db.flush()
+        if resultado is not None:
+            resultados.append(resultado)
+    return resultados
 
 
 def update_estoque_e_custo(

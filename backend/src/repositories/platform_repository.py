@@ -201,19 +201,36 @@ LEFT JOIN assinaturas a ON a.tenant_id = t.id
 def get_cockpit_metrics(
     db: Session, status_filter: Optional[str] = None  # noqa: UP045
 ) -> list[dict]:
-    sql = _COCKPIT_SQL
+    # _COCKPIT_SQL stays raw SQL: it relies on correlated subqueries and
+    # Postgres-specific functions (EXTRACT, DATE_TRUNC, INTERVAL) that are
+    # awkward to express via the SQLAlchemy query builder. To keep future
+    # edits (e.g. adding another optional filter) safe, WHERE conditions
+    # are collected as explicit fragments and joined with " AND " instead
+    # of being concatenated ad hoc, and ORDER BY is always appended last.
+    where_clauses: list[str] = []
+    params: dict[str, object] = {}
     if status_filter:
-        sql = text(str(sql.text) + " WHERE a.status = :status_filter ORDER BY t.id")
-        rows = db.execute(sql, {"status_filter": status_filter}).all()
-    else:
-        sql = text(str(sql.text) + " ORDER BY t.id")
-        rows = db.execute(sql).all()
+        where_clauses.append("a.status = :status_filter")
+        params["status_filter"] = status_filter
+
+    query = _COCKPIT_SQL.text
+    if where_clauses:
+        query += " WHERE " + " AND ".join(where_clauses)
+    query += " ORDER BY t.id"
+
+    rows = db.execute(text(query), params).all()
     return [_row_to_cockpit_dict(r) for r in rows]
 
 
 def get_tenant_cockpit_metrics(db: Session, tenant_id: int) -> Optional[dict]:  # noqa: UP045
-    sql = text(str(_COCKPIT_SQL.text) + " WHERE t.id = :tenant_id")
-    row = db.execute(sql, {"tenant_id": tenant_id}).first()
+    # Same rationale as get_cockpit_metrics: raw SQL with explicit,
+    # joined WHERE fragments rather than ad-hoc string concatenation.
+    where_clauses = ["t.id = :tenant_id"]
+    params: dict[str, object] = {"tenant_id": tenant_id}
+
+    query = _COCKPIT_SQL.text + " WHERE " + " AND ".join(where_clauses)
+
+    row = db.execute(text(query), params).first()
     if row is None:
         return None
     return _row_to_cockpit_dict(row)

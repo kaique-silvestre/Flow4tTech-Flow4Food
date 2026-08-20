@@ -7,7 +7,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
-from src.models.fornecedores import Fornecedor
 from src.models.insumos import Insumo
 from src.models.movimentos_estoque import TipoMovimento
 from src.repositories import compras_repository, contas_pagar_repository, estoque_repository
@@ -18,6 +17,7 @@ from src.schemas.compras import (
     ComprasPageResponse,
     ItemCompraResponse,
 )
+from src.services.shared import get_fornecedor_nome as _get_fornecedor_nome
 
 
 def _calcular_custo_medio(
@@ -46,13 +46,6 @@ def _reverter_custo_medio(
         return custo_medio_atual
     numerador = estoque_atual * custo_medio_atual - quantidade_removida * custo_unitario_removido
     return (numerador / novo_estoque).quantize(Decimal("0.0001"))
-
-
-def _get_fornecedor_nome(db: Session, fornecedor_id: Optional[int]) -> Optional[str]:
-    if fornecedor_id is None:
-        return None
-    f = db.execute(select(Fornecedor).where(Fornecedor.id == fornecedor_id)).scalar_one_or_none()
-    return f.nome if f else None
 
 
 def _mover_estoque_itens(db: Session, compra_id: int) -> list[ItemCompraResponse]:

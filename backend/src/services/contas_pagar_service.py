@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
 from src.models.caixa import TipoMovimentoCaixa
-from src.models.fornecedores import Fornecedor
 from src.models.metodos_pagamento import MetodoPagamento
 from src.repositories import caixa_repository, contas_pagar_repository, notificacoes_repository
 from src.schemas.contas_pagar_schemas import (
@@ -17,13 +16,7 @@ from src.schemas.contas_pagar_schemas import (
     NotificacaoResponse,
     PagarContaRequest,
 )
-
-
-def _fornecedor_nome(db: Session, fornecedor_id: Optional[int]) -> Optional[str]:
-    if not fornecedor_id:
-        return None
-    f = db.execute(select(Fornecedor).where(Fornecedor.id == fornecedor_id)).scalar_one_or_none()
-    return f.nome if f else None
+from src.services.shared import get_fornecedor_nome as _fornecedor_nome
 
 
 def _to_response(db: Session, conta: object) -> ContaPagarResponse:
