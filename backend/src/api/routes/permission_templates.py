@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_tenant_db, require_permission
@@ -7,6 +7,7 @@ from src.schemas.permission_templates import (
     TemplateResponse,
     TemplateUpdate,
 )
+from src.services import audit_service
 from src.services.templates_service import (
     create_new_template,
     delete_existing_template,
@@ -47,7 +48,17 @@ def update_permission_template(
 @router.delete("/{template_id}", status_code=204)
 def delete_permission_template(
     template_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
     payload: dict = Depends(require_permission("gestao_usuarios")),
 ) -> None:
     delete_existing_template(db, payload["tenant_id"], template_id)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "template.delete",
+        tenant_id=payload["tenant_id"],
+        user_id=payload.get("user_id"),
+        entity="PermissionTemplate",
+        entity_id=template_id,
+        impersonated_by=payload.get("impersonated_by"),
+    )

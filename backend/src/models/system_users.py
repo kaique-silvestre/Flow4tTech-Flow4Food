@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 class SystemUser(Base):
     __tablename__ = "system_users"
+    __table_args__ = (sa.UniqueConstraint("tenant_id", "email", name="uq_system_users_tenant_email"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))

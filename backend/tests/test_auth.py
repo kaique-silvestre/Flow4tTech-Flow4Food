@@ -16,7 +16,8 @@ from src.api.dependencies import get_current_user, get_db, require_permission
 from src.core.database import Base
 from src.models.profiles import PermissionTemplate, Profile, ProfilePermission, TemplatePermission
 from src.models.system_users import SystemUser
-from src.repositories import revoked_tokens_repository
+from src.core.errors import AppError
+from src.repositories import refresh_tokens_repository, revoked_tokens_repository
 from src.services.auth_service import create_access_token, create_refresh_token, hash_password, resolve_permissions, rotate_refresh_token
 
 _JWT_SECRET = "test-secret-only-for-tests-32chars!!"
@@ -231,6 +232,42 @@ def test_rotate_refresh_token_recomputes_permissions(monkeypatch):
         payload = jwt.decode(new_access, _JWT_SECRET, algorithms=["HS256"])
         assert set(payload["permissions"]) == {"vendas", "cozinha"}
         assert new_raw_refresh != raw_refresh
+    finally:
+        db.close()
+
+
+def test_rotate_refresh_token_reuse_revokes_all_user_tokens(monkeypatch):
+    import src.services.auth_service as auth_svc
+    monkeypatch.setattr(auth_svc, "get_assinatura_by_tenant", lambda db, tid: None)
+
+    db = _Session()
+    try:
+        now = datetime.now(timezone.utc)
+        profile = Profile(id=1, tenant_id=1, name="Gerente", created_at=now, updated_at=now)
+        user = SystemUser(
+            id=1, tenant_id=1, profile_id=1,
+            name="Test User", username="testuser",
+            password_hash=hash_password("pass"),
+            is_active=True, created_at=now, updated_at=now,
+        )
+        db.add_all([profile, user])
+        db.commit()
+
+        raw_refresh = create_refresh_token(db, user.id)
+        # first rotation succeeds, revoking the original token and issuing a new one
+        _, second_raw_refresh = rotate_refresh_token(db, raw_refresh)
+
+        # attacker (or the legitimate client after a race) reuses the stale, already-revoked token
+        with pytest.raises(AppError):
+            rotate_refresh_token(db, raw_refresh)
+
+        # reuse of a revoked token must revoke ALL of the user's refresh tokens,
+        # including the freshly-rotated one from the first call
+        remaining = refresh_tokens_repository.get_by_hash(
+            db, auth_svc._hash_token(second_raw_refresh)
+        )
+        assert remaining is not None
+        assert remaining.revoked_at is not None
     finally:
         db.close()
 

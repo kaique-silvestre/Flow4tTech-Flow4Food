@@ -4,7 +4,10 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from src.core.logging import get_logger
 from src.models.audit_logs import AuditLog
+
+logger = get_logger(__name__)
 
 
 def log(
@@ -61,6 +64,11 @@ def log_background(
             impersonated_by=impersonated_by,
         )
     except Exception:
-        pass
+        logger.exception(
+            "audit_log_background_failed",
+            action=action,
+            entity=entity,
+            entity_id=entity_id,
+        )
     finally:
         db.close()

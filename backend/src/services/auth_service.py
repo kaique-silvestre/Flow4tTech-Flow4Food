@@ -97,7 +97,11 @@ def create_refresh_token(db: Session, user_id: int) -> str:
 def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str]:
     token_hash = _hash_token(raw_token)
     record = refresh_tokens_repository.get_by_hash(db, token_hash)
-    if record is None or record.revoked_at is not None:
+    if record is None:
+        raise AppError(code=ErrorCode.VALIDATION_ERROR, message="Refresh token inválido", http_status=401)
+    if record.revoked_at is not None:
+        log.warning("refresh_token_reuse_detected", user_id=record.user_id, token_id=record.id)
+        refresh_tokens_repository.revoke_all_for_user(db, record.user_id)
         raise AppError(code=ErrorCode.VALIDATION_ERROR, message="Refresh token inválido", http_status=401)
     if record.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         raise AppError(code=ErrorCode.VALIDATION_ERROR, message="Refresh token expirado", http_status=401)

@@ -161,7 +161,19 @@ def get_permissions(
 def set_permissions(
     user_id: int,
     body: UserPermissionsUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
     payload: dict = Depends(require_permission("gestao_usuarios")),
 ) -> list[str]:
-    return set_user_permissions(db, payload["tenant_id"], user_id, body.screens, payload["user_id"])
+    result = set_user_permissions(db, payload["tenant_id"], user_id, body.screens, payload["user_id"])
+    background_tasks.add_task(
+        audit_service.log_background,
+        "user.permissions.update",
+        tenant_id=payload["tenant_id"],
+        user_id=payload["user_id"],
+        entity="SystemUser",
+        entity_id=user_id,
+        after={"screens": body.screens},
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result

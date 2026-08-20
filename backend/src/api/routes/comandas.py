@@ -1,9 +1,9 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_tenant_db, require_feature, require_permission
+from src.api.dependencies import get_current_user, get_tenant_db, require_feature, require_permission
 from src.repositories import comandas_repository as _cr
 from src.schemas.comandas import (
     CancelarComandaRequest,
@@ -16,7 +16,7 @@ from src.schemas.comandas import (
 )
 from src.schemas.comprovante import ComprovanteResponse
 from src.schemas.fechamento import AplicarDescontoRequest, FecharComandaRequest
-from src.services import comandas_service, comprovante_service
+from src.services import audit_service, comandas_service, comprovante_service
 from src.services.comandas_service import _build_response
 
 router = APIRouter(dependencies=[Depends(require_feature("comandas")), Depends(require_permission("comandas"))])
@@ -108,18 +108,48 @@ def cancelar_item(
     comanda_id: int,
     item_id: int,
     body: CancelarItemRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
+    payload: dict = Depends(get_current_user),
 ) -> ComandaResponse:
-    return comandas_service.cancelar_item(db, comanda_id, item_id, body)  # type: ignore[return-value]
+    result = comandas_service.cancelar_item(db, comanda_id, item_id, body)  # type: ignore[return-value]
+    background_tasks.add_task(
+        audit_service.log_background,
+        "comanda.item.cancelar",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="ComandaItem",
+        entity_id=item_id,
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.post("/{comanda_id}/desconto", response_model=ComandaResponse)
 def aplicar_desconto(
     comanda_id: int,
     body: AplicarDescontoRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
+    payload: dict = Depends(get_current_user),
 ) -> ComandaResponse:
-    return comandas_service.aplicar_desconto(db, comanda_id, body)  # type: ignore[return-value]
+    result = comandas_service.aplicar_desconto(db, comanda_id, body)  # type: ignore[return-value]
+    background_tasks.add_task(
+        audit_service.log_background,
+        "comanda.desconto",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="Comanda",
+        entity_id=comanda_id,
+        after={
+            "desconto_valor": str(body.desconto_valor) if body.desconto_valor is not None else None,
+            "desconto_percentual": str(body.desconto_percentual)
+            if body.desconto_percentual is not None
+            else None,
+        },
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.post("/{comanda_id}/fechar", response_model=ComandaResponse)
@@ -134,9 +164,21 @@ def fechar_comanda(
 @router.post("/{comanda_id}/reabrir", response_model=ComandaResponse)
 def reabrir_comanda(
     comanda_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
+    payload: dict = Depends(get_current_user),
 ) -> ComandaResponse:
-    return comandas_service.reabrir_comanda(db, comanda_id)  # type: ignore[return-value]
+    result = comandas_service.reabrir_comanda(db, comanda_id)  # type: ignore[return-value]
+    background_tasks.add_task(
+        audit_service.log_background,
+        "comanda.reabrir",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="Comanda",
+        entity_id=comanda_id,
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.post("/{comanda_id}/cancelar", response_model=ComandaResponse)

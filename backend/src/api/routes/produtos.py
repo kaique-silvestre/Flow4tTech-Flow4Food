@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_current_user, get_tenant_db, require_permission
@@ -10,7 +10,7 @@ from src.schemas.produtos import (
     ProdutoResponse,
     ProdutoUpdateRequest,
 )
-from src.services import produtos_service
+from src.services import audit_service, produtos_service
 
 router = APIRouter(dependencies=[Depends(require_permission("cadastros"))])
 
@@ -87,7 +87,17 @@ def reativar_produto(
 @router.delete("/{produto_id}", status_code=204)
 def delete_produto(
     produto_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> None:
     produtos_service.delete_produto(db, produto_id)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "produto.delete",
+        tenant_id=_user.get("tenant_id"),
+        user_id=_user.get("user_id"),
+        entity="Produto",
+        entity_id=produto_id,
+        impersonated_by=_user.get("impersonated_by"),
+    )
