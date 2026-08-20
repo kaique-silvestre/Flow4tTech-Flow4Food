@@ -126,13 +126,13 @@ def test_list_users_includes_email_and_profile(client, tenant_with_profile):
     pid = tenant_with_profile["profile_id"]
     client.post(
         f"/api/platform/tenants/{tid}/users",
-        json={"name": "Ana", "username": "ana", "email": "ana@x.com", "password": "pw", "profile_id": pid},
+        json={"name": "Ana", "username": "ana", "email": "ana@x.com", "password": "senha123", "profile_id": pid},
         headers=_headers(),
     )
     # User without profile
     client.post(
         f"/api/platform/tenants/{tid}/users",
-        json={"name": "Bob", "username": "bob", "password": "pw"},
+        json={"name": "Bob", "username": "bob", "password": "senha123"},
         headers=_headers(),
     )
     resp = client.get(f"/api/platform/tenants/{tid}/users", headers=_headers())
@@ -154,7 +154,7 @@ def test_update_user_full_fields(client, tenant_with_profile):
     pid = tenant_with_profile["profile_id"]
     create_resp = client.post(
         f"/api/platform/tenants/{tid}/users",
-        json={"name": "Old Name", "username": "olduser", "password": "pw"},
+        json={"name": "Old Name", "username": "olduser", "password": "senha123"},
         headers=_headers(),
     )
     uid = create_resp.json()["id"]
@@ -204,7 +204,7 @@ def test_toggle_active(client, tenant_with_profile):
     tid = tenant_with_profile["tenant_id"]
     create_resp = client.post(
         f"/api/platform/tenants/{tid}/users",
-        json={"name": "User", "username": "u2", "password": "pw", "is_active": True},
+        json={"name": "User", "username": "u2", "password": "senha123", "is_active": True},
         headers=_headers(),
     )
     uid = create_resp.json()["id"]

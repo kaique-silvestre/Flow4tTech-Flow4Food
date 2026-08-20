@@ -7,7 +7,7 @@ os.environ.setdefault("ENV", "test")
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import StaticPool, create_engine
+from sqlalchemy import StaticPool, create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from src.api.dependencies import get_db
@@ -15,7 +15,7 @@ from src.core.database import Base, get_platform_db
 from src.main import app
 from src.models.assinaturas import Assinatura
 from src.models.platform_admin import PlatformAdmin
-from src.models.profiles import Profile
+from src.models.profiles import Profile, ProfilePermission
 from src.models.system_users import SystemUser
 from src.models.tenants import Tenant
 from src.services.auth_service import create_access_token, hash_password
@@ -230,3 +230,33 @@ def test_no_token_returns_401_users(client):
 def test_no_token_returns_401_patch(client):
     resp = client.patch("/api/platform/tenants/1/assinatura", json={"status": "ativa"})
     assert resp.status_code == 401
+
+
+# ── D7: PATCH /platform/tenants/{id}/profiles/{profile_id} atualiza permissões ──
+
+def test_patch_tenant_profile_updates_permissions(client):
+    # tenant_id=2 (not 1) so the assertion below can't be masked by
+    # conftest's sqlite patch of tenant_id's server_default to literal 1.
+    _seed_tenants(2)
+    _seed_user_with_profile(tenant_id=2)
+    db = _Session()
+    profile_id = db.execute(select(Profile.id).where(Profile.tenant_id == 2)).scalar_one()
+    db.close()
+    resp = client.patch(
+        f"/api/platform/tenants/2/profiles/{profile_id}",
+        json={"permissions": ["dashboard", "financeiro"], "is_active": True},
+        headers={"Authorization": f"Bearer {_platform_token()}"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["id"] == profile_id
+    assert set(data["permissions"]) == {"dashboard", "financeiro"}
+
+    db = _Session()
+    rows = db.execute(
+        select(ProfilePermission).where(ProfilePermission.profile_id == profile_id)
+    ).scalars().all()
+    db.close()
+    assert len(rows) == 2
+    assert all(r.tenant_id == 2 for r in rows)
+    assert all(r.can_access is True for r in rows)

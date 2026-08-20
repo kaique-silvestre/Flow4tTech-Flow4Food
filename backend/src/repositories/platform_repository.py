@@ -507,7 +507,15 @@ def update_tenant_profile(
         )
         now = datetime.now(timezone.utc)
         for screen in permissions:
-            db.add(ProfilePermission(profile_id=profile_id, screen=screen, created_at=now))
+            db.add(
+                ProfilePermission(
+                    tenant_id=tenant_id,
+                    profile_id=profile_id,
+                    screen=screen,
+                    can_access=True,
+                    created_at=now,
+                )
+            )
     db.commit()
     all_profiles = get_tenant_profiles(db, tenant_id)
     for p in all_profiles:

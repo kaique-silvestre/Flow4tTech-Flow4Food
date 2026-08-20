@@ -112,6 +112,8 @@ def update_existing_user(
         profile = get_profile_by_id(db, data.profile_id)
         if not profile or profile.tenant_id != tenant_id:
             raise AppError(code=ErrorCode.NOT_FOUND, message="Perfil não encontrado", http_status=404)
+        if data.profile_id != user.profile_id:
+            _check_not_last_admin(db, tenant_id, user)
         user.profile_id = data.profile_id
     if data.is_active is not None:
         if not data.is_active:

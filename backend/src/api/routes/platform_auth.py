@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import require_platform_admin
@@ -240,6 +240,13 @@ class PlatformUserCreate(BaseModel):
     profile_id: Optional[int] = None  # noqa: UP045
     is_active: bool = True
 
+    @field_validator("password")
+    @classmethod
+    def password_min_length(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError("Senha deve ter no mínimo 6 caracteres")
+        return v
+
 
 class PlatformUserUpdate(BaseModel):
     name: Optional[str] = None  # noqa: UP045
@@ -248,6 +255,13 @@ class PlatformUserUpdate(BaseModel):
     password: Optional[str] = None  # noqa: UP045
     profile_id: Optional[int] = None  # noqa: UP045
     is_active: Optional[bool] = None  # noqa: UP045
+
+    @field_validator("password")
+    @classmethod
+    def password_min_length(cls, v: Optional[str]) -> Optional[str]:  # noqa: UP045
+        if v is not None and len(v) < 6:
+            raise ValueError("Senha deve ter no mínimo 6 caracteres")
+        return v
 
 
 class PlatformUserResponse(BaseModel):
