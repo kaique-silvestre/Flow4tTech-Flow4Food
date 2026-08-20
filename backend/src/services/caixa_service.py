@@ -1,5 +1,6 @@
 import datetime
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
@@ -41,8 +42,16 @@ def abrir_caixa(db: Session, body: AbrirCaixaRequest, user_id: int) -> CaixaSess
             message="Já existe uma sessão de caixa aberta",
             http_status=409,
         )
-    sessao = caixa_repository.criar_sessao(db, body.valor_abertura, user_id)
-    db.commit()
+    try:
+        sessao = caixa_repository.criar_sessao(db, body.valor_abertura, user_id)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise AppError(
+            code=ErrorCode.CONFLICT,
+            message="Já existe uma sessão de caixa aberta",
+            http_status=409,
+        ) from None
     db.refresh(sessao)
     return _build_sessao_response(db, sessao)
 

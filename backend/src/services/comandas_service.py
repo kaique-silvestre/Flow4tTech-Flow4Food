@@ -546,7 +546,7 @@ def _liberar_reserva_estoque(db: Session, produto_id: int, quantidade: Decimal) 
         select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)
     ).scalars().all()
     for comp in componentes:
-        insumo = db.execute(select(Insumo).where(Insumo.id == comp.insumo_id)).scalar_one_or_none()
+        insumo = estoque_repository.get_insumo_for_update(db, comp.insumo_id)
         if insumo:
             novo = insumo.estoque_reservado - comp.quantidade * quantidade
             insumo.estoque_reservado = novo if novo > Decimal("0") else Decimal("0")
@@ -638,7 +638,7 @@ def _estornar_estoque(db: Session, produto_id: int, quantidade: Decimal) -> None
         select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)
     ).scalars().all()
     for comp in componentes:
-        insumo = db.execute(select(Insumo).where(Insumo.id == comp.insumo_id)).scalar_one_or_none()
+        insumo = estoque_repository.get_insumo_for_update(db, comp.insumo_id)
         if insumo is not None:
             _estornar_insumo(db, insumo, comp.quantidade * quantidade)
 

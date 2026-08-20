@@ -12,8 +12,10 @@ from src.models.pagamentos import Pagamento
 
 def get_sessao_aberta(db: Session) -> Optional[CaixaSessao]:
     return db.execute(
-        select(CaixaSessao).where(CaixaSessao.status == StatusCaixa.ABERTA.value)
-    ).scalar_one_or_none()
+        select(CaixaSessao)
+        .where(CaixaSessao.status == StatusCaixa.ABERTA.value)
+        .limit(1)
+    ).scalars().first()
 
 
 def criar_sessao(db: Session, valor_abertura: Decimal, user_id: int) -> CaixaSessao:
