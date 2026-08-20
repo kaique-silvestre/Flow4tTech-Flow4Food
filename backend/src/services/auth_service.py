@@ -172,6 +172,7 @@ def change_password(db: Session, user_id: int, current_password: str, new_passwo
     if not verify_password(current_password, user.password_hash):
         raise AppError(code=ErrorCode.SENHA_INCORRETA, message="Senha atual incorreta", http_status=401)
     user.password_hash = hash_password(new_password)
+    revoke_all_refresh_tokens(db, user.id)
     db.commit()
 
 
@@ -263,6 +264,7 @@ def reset_password(db: Session, token: str, new_password: str) -> None:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=404)
     user.password_hash = hash_password(new_password)
     reset.used_at = datetime.now(timezone.utc)
+    revoke_all_refresh_tokens(db, user.id)
     db.commit()
 
 

@@ -21,7 +21,7 @@ from src.repositories.users_repository import (
     update_user,
 )
 from src.schemas.users import UserCreate, UserResponse, UserUpdate
-from src.services.auth_service import hash_password
+from src.services.auth_service import hash_password, revoke_all_refresh_tokens
 
 
 def _to_response(user: SystemUser) -> UserResponse:
@@ -160,6 +160,7 @@ def reset_password(db: Session, tenant_id: int, user_id: int) -> str:
     user.password_hash = hash_password(temp)
     user.updated_at = datetime.now(timezone.utc)
     update_user(db, user)
+    revoke_all_refresh_tokens(db, user.id)
     return temp
 
 

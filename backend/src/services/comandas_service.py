@@ -504,7 +504,7 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
             negativos = _dar_baixa_estoque(db, ic.produto_id, ic.quantidade)
             itens_negativos.extend(negativos)
             _liberar_reserva_estoque(db, ic.produto_id, ic.quantidade)
-        comandas_repository.fechar_comanda_repo(db, comanda_id, total_com_desconto)
+        comandas_repository.fechar_comanda_repo(db, comanda_id, esperado)
 
     if not pagamento_parcial and data.taxa_servico and comanda.garcom_id is not None:
         valor_comissao = (total_com_desconto * Decimal("0.10")).quantize(Decimal("0.01"))
@@ -618,6 +618,7 @@ def reabrir_comanda(db: Session, comanda_id: int) -> ComandaResponse:
     itens = comandas_repository.get_itens_para_fechar(db, comanda_id)
     for ic in itens:
         _estornar_estoque(db, ic.produto_id, ic.quantidade)
+        _reservar_estoque(db, ic.produto_id, ic.quantidade)
 
     db.query(Pagamento).filter(Pagamento.comanda_id == comanda_id).delete()
     db.query(ComissaoGarcom).filter(ComissaoGarcom.comanda_id == comanda_id).delete()
