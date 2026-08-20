@@ -489,10 +489,8 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
     else:
         base_total: Decimal = comanda.saldo_pendente if comanda.saldo_pendente is not None else total_com_desconto
         esperado: Decimal = (
-            (base_total * Decimal("1.10")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-            if data.taxa_servico
-            else base_total
-        )
+            (base_total * Decimal("1.10")) if data.taxa_servico else base_total
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         if abs(total_pago - esperado) > Decimal("0.01"):
             raise AppError(
                 ErrorCode.PAGAMENTO_NAO_BATE,

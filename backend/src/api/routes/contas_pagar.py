@@ -50,9 +50,9 @@ def pagar_conta(
     conta_id: int,
     data: PagarContaRequest,
     db: Session = Depends(get_tenant_db),
-    _user: dict = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ) -> ContaPagarResponse:
-    return contas_pagar_service.pagar_conta(db, conta_id, data)
+    return contas_pagar_service.pagar_conta(db, conta_id, data, user_id=user.get("user_id"))
 
 
 @router.get("/notificacoes", response_model=list[NotificacaoResponse])

@@ -6,8 +6,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
+from src.models.caixa import TipoMovimentoCaixa
 from src.models.fornecedores import Fornecedor
-from src.repositories import contas_pagar_repository, notificacoes_repository
+from src.models.metodos_pagamento import MetodoPagamento
+from src.repositories import caixa_repository, contas_pagar_repository, notificacoes_repository
 from src.schemas.contas_pagar_schemas import (
     ContaPagarResponse,
     ContasPagarPageResponse,
@@ -66,7 +68,12 @@ def list_contas(
     )
 
 
-def pagar_conta(db: Session, conta_id: int, data: PagarContaRequest) -> ContaPagarResponse:
+def pagar_conta(
+    db: Session,
+    conta_id: int,
+    data: PagarContaRequest,
+    user_id: Optional[int] = None,
+) -> ContaPagarResponse:
     conta = contas_pagar_repository.get_by_id(db, conta_id)
     if conta is None:
         raise AppError(ErrorCode.NOT_FOUND, "Conta não encontrada", http_status=404)
@@ -76,11 +83,54 @@ def pagar_conta(db: Session, conta_id: int, data: PagarContaRequest) -> ContaPag
             f"Conta com status '{conta.status}' não pode ser paga",
             http_status=409,
         )
+    if data.data_pagamento > datetime.date.today():
+        raise AppError(
+            ErrorCode.VALIDATION_ERROR,
+            "Data de pagamento não pode ser no futuro",
+            http_status=400,
+        )
+
+    metodo: Optional[MetodoPagamento] = None
+    if data.metodo_pagamento_id is not None:
+        metodo = db.execute(
+            select(MetodoPagamento).where(MetodoPagamento.id == data.metodo_pagamento_id)
+        ).scalar_one_or_none()
+        if metodo is None:
+            raise AppError(
+                ErrorCode.NOT_FOUND,
+                "Método de pagamento não encontrado",
+                http_status=404,
+            )
+        if not metodo.ativo:
+            raise AppError(
+                ErrorCode.VALIDATION_ERROR,
+                "Método de pagamento inativo",
+                http_status=400,
+            )
+
     try:
         conta.status = "pago"
         conta.data_pagamento = data.data_pagamento
         conta.metodo_pagamento_id = data.metodo_pagamento_id
         conta.observacao = data.observacao
+        db.flush()
+
+        if metodo is not None and metodo.tipo == "dinheiro":
+            sessao = caixa_repository.get_sessao_aberta(db)
+            if sessao is not None and user_id is not None:
+                fornecedor_nome = _fornecedor_nome(db, conta.fornecedor_id)
+                motivo = f"Pagamento de conta a pagar #{conta.id}"
+                if fornecedor_nome:
+                    motivo = f"{motivo} - {fornecedor_nome}"
+                caixa_repository.criar_movimento(
+                    db,
+                    sessao_id=sessao.id,
+                    tipo=TipoMovimentoCaixa.SANGRIA.value,
+                    valor=conta.valor,
+                    motivo=motivo,
+                    user_id=user_id,
+                )
+
         db.commit()
     except Exception:
         db.rollback()

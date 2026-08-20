@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_tenant_db, require_permission
@@ -9,7 +9,7 @@ from src.schemas.caixa import (
     FecharCaixaRequest,
     MovimentoCaixaRequest,
 )
-from src.services import caixa_service
+from src.services import audit_service, caixa_service
 
 router = APIRouter(dependencies=[Depends(require_permission("caixa"))])
 
@@ -17,31 +17,71 @@ router = APIRouter(dependencies=[Depends(require_permission("caixa"))])
 @router.post("/abrir", response_model=CaixaSessaoResponse, status_code=201)
 def abrir_caixa(
     body: AbrirCaixaRequest,
+    background_tasks: BackgroundTasks,
     payload: dict = Depends(require_permission("caixa")),
     db: Session = Depends(get_tenant_db),
 ) -> CaixaSessaoResponse:
     user_id: int = payload["user_id"]
-    return caixa_service.abrir_caixa(db, body, user_id)
+    result = caixa_service.abrir_caixa(db, body, user_id)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "caixa.sessao.abrir",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="CaixaSessao",
+        entity_id=result.id,
+        after={"valor_abertura": str(body.valor_abertura)},
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.post("/fechar", response_model=CaixaSessaoResponse)
 def fechar_caixa(
     body: FecharCaixaRequest,
+    background_tasks: BackgroundTasks,
     payload: dict = Depends(require_permission("caixa")),
     db: Session = Depends(get_tenant_db),
 ) -> CaixaSessaoResponse:
     user_id: int = payload["user_id"]
-    return caixa_service.fechar_caixa(db, body, user_id)
+    result = caixa_service.fechar_caixa(db, body, user_id)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "caixa.sessao.fechar",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="CaixaSessao",
+        entity_id=result.id,
+        after={
+            "valor_informado": str(body.valor_informado),
+            "valor_esperado": str(result.valor_esperado) if result.valor_esperado is not None else None,
+            "diferenca": str(result.diferenca) if result.diferenca is not None else None,
+        },
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.post("/movimentos", response_model=CaixaMovimentoResponse, status_code=201)
 def registrar_movimento(
     body: MovimentoCaixaRequest,
+    background_tasks: BackgroundTasks,
     payload: dict = Depends(require_permission("caixa")),
     db: Session = Depends(get_tenant_db),
 ) -> CaixaMovimentoResponse:
     user_id: int = payload["user_id"]
-    return caixa_service.registrar_movimento(db, body, user_id)
+    result = caixa_service.registrar_movimento(db, body, user_id)
+    background_tasks.add_task(
+        audit_service.log_background,
+        f"caixa.movimento.{body.tipo}",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="CaixaMovimento",
+        entity_id=result.id,
+        after={"valor": str(body.valor), "motivo": body.motivo},
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.get("/sessao", response_model=CaixaSessaoResponse)

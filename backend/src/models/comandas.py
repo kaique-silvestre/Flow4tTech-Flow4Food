@@ -31,7 +31,7 @@ class Comanda(Base):
     pessoas: Mapped[Optional[str]] = mapped_column(nullable=True)
     desconto_percentual: Mapped[Optional[Decimal]] = mapped_column(nullable=True)
     desconto_valor: Mapped[Optional[Decimal]] = mapped_column(nullable=True)
-    total: Mapped[Optional[Decimal]] = mapped_column(nullable=True)
+    total: Mapped[Optional[Decimal]] = mapped_column(sa.Numeric(10, 2), nullable=True)
     saldo_pendente: Mapped[Optional[Decimal]] = mapped_column(nullable=True)
     data_fechamento: Mapped[Optional[datetime.datetime]] = mapped_column(nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(nullable=False, server_default=func.now())
