@@ -9,13 +9,12 @@ import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { useEstabelecimento, useUpdateEstabelecimento } from "./useEstabelecimento";
 
-type Tab = "estabelecimento" | "senha" | "impressora" | "backup";
+type Tab = "estabelecimento" | "senha" | "impressora";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "estabelecimento", label: "Estabelecimento" },
   { id: "senha", label: "Senha" },
   { id: "impressora", label: "Impressora" },
-  { id: "backup", label: "Backup" },
 ];
 
 function maskCnpj(v: string): string {
@@ -234,47 +233,6 @@ function TabImpressora() {
   );
 }
 
-function TabBackup() {
-  const [loadingJson, setLoadingJson] = useState(false);
-  const [loadingXlsx, setLoadingXlsx] = useState(false);
-
-  async function download(formato: "json" | "xlsx") {
-    const setLoading = formato === "json" ? setLoadingJson : setLoadingXlsx;
-    setLoading(true);
-    try {
-      const r = await api.get(`/api/backup?formato=${formato}`, { responseType: "blob" });
-      const ext = formato === "json" ? "json" : "xlsx";
-      const url = URL.createObjectURL(new Blob([r.data as BlobPart]));
-      const a = document.createElement("a");
-      a.href = url;
-      const today = new Date().toISOString().slice(0, 10);
-      a.download = `backup_${today}.${ext}`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast.error("Erro ao gerar backup");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="max-w-md space-y-4">
-      <p className="text-sm text-gray-600">
-        Exporte todos os dados do sistema para um arquivo. Operação manual sob demanda.
-      </p>
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={() => download("json")} disabled={loadingJson}>
-          {loadingJson ? "Gerando..." : "Exportar JSON"}
-        </Button>
-        <Button variant="outline" onClick={() => download("xlsx")} disabled={loadingXlsx}>
-          {loadingXlsx ? "Gerando..." : "Exportar Excel"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export function ConfiguracoesPage() {
   const [activeTab, setActiveTab] = useState<Tab>("estabelecimento");
 
@@ -301,7 +259,6 @@ export function ConfiguracoesPage() {
       {activeTab === "estabelecimento" && <TabEstabelecimento />}
       {activeTab === "senha" && <TabSenha />}
       {activeTab === "impressora" && <TabImpressora />}
-      {activeTab === "backup" && <TabBackup />}
     </div>
   );
 }

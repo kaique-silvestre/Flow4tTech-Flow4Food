@@ -30,9 +30,15 @@ def get_user_by_username_global(db: Session, username: str) -> Optional[SystemUs
     ).first()
 
 
-def get_user_by_email(db: Session, email: str) -> Optional[SystemUser]:
+def get_user_by_email_global(db: Session, email: str) -> Optional[SystemUser]:
     return _with_profile(
         db.query(SystemUser).filter(SystemUser.email == email)
+    ).first()
+
+
+def get_user_by_email(db: Session, tenant_id: int, email: str) -> Optional[SystemUser]:
+    return _with_profile(
+        db.query(SystemUser).filter(SystemUser.tenant_id == tenant_id, SystemUser.email == email)
     ).first()
 
 

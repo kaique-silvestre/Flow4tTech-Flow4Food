@@ -9,7 +9,6 @@ from slowapi.errors import RateLimitExceeded
 from src.api.routes import admin as admin_routes
 from src.api.routes import announcements as announcements_routes
 from src.api.routes import auth as auth_routes
-from src.api.routes import backup as backup_routes
 from src.api.routes import caixa as caixa_routes
 from src.api.routes import categorias as categorias_routes
 from src.api.routes import cockpit as cockpit_routes
@@ -92,7 +91,6 @@ def create_app() -> FastAPI:
     app.include_router(users_routes.router, prefix="/api/users", tags=["users"])
     app.include_router(profiles_routes.router, prefix="/api/profiles", tags=["profiles"])
     app.include_router(permission_templates_routes.router, prefix="/api/permission-templates", tags=["permission_templates"])
-    app.include_router(backup_routes.router, prefix="/api/backup", tags=["backup"])
     app.include_router(categorias_routes.router, prefix="/api/categorias", tags=["categorias"])
     app.include_router(config_routes.router, prefix="/api/config", tags=["config"])
     app.include_router(fornecedores_routes.router, prefix="/api/fornecedores", tags=["fornecedores"])

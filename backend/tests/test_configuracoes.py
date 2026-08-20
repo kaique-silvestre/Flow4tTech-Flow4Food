@@ -110,16 +110,3 @@ def test_alterar_senha_sucesso(c: TestClient) -> None:
     db2.close()
 
 
-def test_backup_json(c: TestClient) -> None:
-    r = c.get("/api/backup?formato=json")
-    assert r.status_code == 200
-    assert "application/json" in r.headers["content-type"]
-    data = r.json()
-    assert "tenants" in data
-
-
-def test_backup_xlsx(c: TestClient) -> None:
-    r = c.get("/api/backup?formato=xlsx")
-    assert r.status_code == 200
-    assert "spreadsheetml" in r.headers["content-type"]
-    assert len(r.content) > 0

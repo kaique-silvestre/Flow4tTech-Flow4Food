@@ -18,7 +18,7 @@ from src.repositories.tenant_repository import (
     set_rls_tenant,
     update_tenant,
 )
-from src.repositories.users_repository import get_user_by_email, get_user_by_username
+from src.repositories.users_repository import get_user_by_email_global, get_user_by_username
 from src.schemas.tenants import AssinaturaInfo, TenantCreate, TenantResponse, TenantUpdate
 from src.services.auth_service import hash_password
 
@@ -47,7 +47,7 @@ def _to_response(tenant: Tenant, assinatura: Optional[Assinatura] = None) -> Ten
 
 
 def criar_tenant(db: Session, data: TenantCreate) -> TenantResponse:
-    if get_user_by_email(db, data.admin_email):
+    if get_user_by_email_global(db, data.admin_email):
         raise AppError(
             code=ErrorCode.CONFLICT,
             message="Email já em uso",

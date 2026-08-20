@@ -66,7 +66,7 @@ def create_new_user(db: Session, tenant_id: int, data: UserCreate) -> UserRespon
             )
     if get_user_by_username(db, tenant_id, data.username):
         raise AppError(code=ErrorCode.CONFLICT, message="Username já em uso", field="username", http_status=409)
-    if data.email and get_user_by_email(db, data.email):
+    if data.email and get_user_by_email(db, tenant_id, data.email):
         raise AppError(code=ErrorCode.CONFLICT, message="Email já em uso", field="email", http_status=409)
     if data.profile_id is not None:
         profile = get_profile_by_id(db, data.profile_id)
@@ -100,7 +100,7 @@ def update_existing_user(
         raise AppError(code=ErrorCode.CONFLICT, message="Não pode alterar o próprio perfil", http_status=409)
 
     if data.email is not None and data.email != user.email:
-        existing = get_user_by_email(db, data.email)
+        existing = get_user_by_email(db, tenant_id, data.email)
         if existing and existing.id != user_id:
             raise AppError(code=ErrorCode.CONFLICT, message="Email já em uso", field="email", http_status=409)
 
@@ -167,8 +167,8 @@ def check_username_available(db: Session, tenant_id: int, username: str) -> bool
     return get_user_by_username(db, tenant_id, username) is None
 
 
-def check_email_available(db: Session, email: str) -> bool:
-    return get_user_by_email(db, email) is None
+def check_email_available(db: Session, tenant_id: int, email: str) -> bool:
+    return get_user_by_email(db, tenant_id, email) is None
 
 
 def get_user_permissions(db: Session, tenant_id: int, user_id: int) -> list[str]:
@@ -178,7 +178,11 @@ def get_user_permissions(db: Session, tenant_id: int, user_id: int) -> list[str]
     return [p.screen for p in list_by_user(db, user_id)]
 
 
-def set_user_permissions(db: Session, tenant_id: int, user_id: int, screens: list[str]) -> list[str]:
+def set_user_permissions(
+    db: Session, tenant_id: int, user_id: int, screens: list[str], current_user_id: int
+) -> list[str]:
+    if user_id == current_user_id:
+        raise AppError(code=ErrorCode.CONFLICT, message="Não pode alterar as próprias permissões", http_status=409)
     user = get_user_by_id(db, user_id)
     if not user or user.tenant_id != tenant_id:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=404)

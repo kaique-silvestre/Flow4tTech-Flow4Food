@@ -72,8 +72,12 @@ def check_username(
 
 
 @router.get("/check-email", response_model=UsernameCheckResponse)
-def check_email(email: str = Query(...), db: Session = Depends(get_db)) -> UsernameCheckResponse:
-    return UsernameCheckResponse(available=check_email_available(db, email))
+def check_email(
+    email: str = Query(...),
+    db: Session = Depends(get_tenant_db),
+    payload: dict = Depends(require_permission("gestao_usuarios")),
+) -> UsernameCheckResponse:
+    return UsernameCheckResponse(available=check_email_available(db, payload["tenant_id"], email))
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -160,4 +164,4 @@ def set_permissions(
     db: Session = Depends(get_tenant_db),
     payload: dict = Depends(require_permission("gestao_usuarios")),
 ) -> list[str]:
-    return set_user_permissions(db, payload["tenant_id"], user_id, body.screens)
+    return set_user_permissions(db, payload["tenant_id"], user_id, body.screens, payload["user_id"])

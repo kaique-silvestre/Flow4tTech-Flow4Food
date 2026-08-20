@@ -24,7 +24,7 @@ from src.repositories.password_reset_repository import (
 )
 from src.repositories.tenant_repository import get_assinatura_by_tenant, set_rls_tenant
 from src.repositories.users_repository import (
-    get_user_by_email,
+    get_user_by_email_global,
     get_user_by_id,
     get_user_by_username_global,
 )
@@ -128,7 +128,7 @@ def revoke_all_refresh_tokens(db: Session, user_id: int) -> None:
 
 def login(db: Session, identifier: str, password: str) -> TokenResponse:
     if "@" in identifier:
-        user = get_user_by_email(db, identifier)
+        user = get_user_by_email_global(db, identifier)
     else:
         user = get_user_by_username_global(db, identifier)
 
@@ -200,7 +200,7 @@ def _send_reset_email(to_email: str, name: str, reset_url: str) -> None:
 
 def forgot_password(db: Session, email: str) -> GenericMessage:
     _SUCCESS = "Se o email estiver cadastrado, você receberá um link de redefinição em instantes."
-    user = get_user_by_email(db, email)
+    user = get_user_by_email_global(db, email)
     if user is None or not user.is_active:
         return GenericMessage(message=_SUCCESS)
 
