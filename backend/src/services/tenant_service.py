@@ -1,10 +1,10 @@
-import contextlib
 from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
+from src.core.logging import get_logger
 from src.models.assinaturas import Assinatura
 from src.models.system_users import SystemUser
 from src.models.tenants import Tenant
@@ -21,6 +21,8 @@ from src.repositories.tenant_repository import (
 from src.repositories.users_repository import get_user_by_email_global, get_user_by_username
 from src.schemas.tenants import AssinaturaInfo, TenantCreate, TenantResponse, TenantUpdate
 from src.services.auth_service import hash_password
+
+logger = get_logger(__name__)
 
 
 def _assinatura_info(assinatura: Optional[Assinatura]) -> Optional[AssinaturaInfo]:
@@ -119,9 +121,11 @@ def criar_tenant(db: Session, data: TenantCreate) -> TenantResponse:
         # Clean up RLS context so the connection returns clean to the pool.
         # tenants and assinaturas tables have no RLS, so refresh works without context.
         from sqlalchemy import text as _text
-        with contextlib.suppress(Exception):
+        try:
             db.execute(_text("RESET ROLE"))
             db.execute(_text("SET app.tenant_id = ''"))
+        except Exception:
+            logger.warning("tenant_rls_cleanup_failed", tenant_id=tenant.id, exc_info=True)
         db.refresh(tenant)
         db.refresh(assinatura)
     except AppError:

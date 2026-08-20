@@ -238,7 +238,7 @@ def get_reset_token_info(db: Session, token: str) -> ResetTokenInfo:
     return ResetTokenInfo(name=reset.user.name)
 
 
-def reset_password(db: Session, token: str, new_password: str) -> None:
+def reset_password(db: Session, token: str, new_password: str) -> int:
     if len(new_password) < 6:
         raise AppError(
             code=ErrorCode.VALIDATION_ERROR,
@@ -266,6 +266,7 @@ def reset_password(db: Session, token: str, new_password: str) -> None:
     reset.used_at = datetime.now(timezone.utc)
     revoke_all_refresh_tokens(db, user.id)
     db.commit()
+    return user.id
 
 
 # kept for backward compat — old single-password flow no longer used

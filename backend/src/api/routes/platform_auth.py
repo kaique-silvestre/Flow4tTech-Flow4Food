@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from src.api.dependencies import require_platform_admin
 from src.core.database import get_platform_db
+from src.core.errors import AppError
 from src.repositories import platform_repository, revoked_tokens_repository
 from src.services import audit_service, platform_auth_service
 from src.services.auth_service import create_access_token, hash_password
@@ -76,10 +77,38 @@ router = APIRouter(dependencies=[Depends(require_platform_admin)])
 )
 def platform_login(
     body: PlatformLoginRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_platform_db),
 ) -> PlatformLoginResponse:
-    token = platform_auth_service.login(db, body.email, body.password)
+    try:
+        token = platform_auth_service.login(db, body.email, body.password)
+    except AppError:
+        background_tasks.add_task(
+            audit_service.log_background,
+            "platform.login_failed",
+            after={"email": body.email},
+        )
+        raise
+    platform_admin_id = _decode_platform_admin_id(token)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "platform.login_success",
+        user_id=platform_admin_id,
+    )
     return PlatformLoginResponse(access_token=token)
+
+
+def _decode_platform_admin_id(access_token: str) -> Optional[int]:
+    import jwt as _jwt
+
+    from src.core.config import get_settings
+
+    try:
+        settings = get_settings()
+        payload = _jwt.decode(access_token, settings.JWT_SECRET, algorithms=["HS256"])
+        return payload.get("platform_admin_id")
+    except Exception:
+        return None
 
 
 @router.post(
@@ -88,6 +117,7 @@ def platform_login(
     tags=["platform"],
 )
 def platform_logout(
+    background_tasks: BackgroundTasks,
     payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> None:
@@ -96,6 +126,11 @@ def platform_logout(
     if jti and exp_ts:
         expires_at = datetime.fromtimestamp(exp_ts, tz=timezone.utc)
         revoked_tokens_repository.revoke(db, jti, expires_at)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "platform.logout",
+        user_id=payload.get("platform_admin_id"),
+    )
     return None
 
 
