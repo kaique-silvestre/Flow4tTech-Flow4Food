@@ -151,13 +151,30 @@ def cmv_total(db: Session, comanda_ids: list[int]) -> Decimal:
         select(ItemComanda)
         .where(ItemComanda.comanda_id.in_(comanda_ids), ItemComanda.cancelado.is_(False))
     ).scalars().all()
+    if not ics:
+        return Decimal("0")
+
+    produto_ids = {ic.produto_id for ic in ics}
+    componentes = db.execute(
+        select(FichaTecnica).where(FichaTecnica.produto_id.in_(produto_ids))
+    ).scalars().all()
+
+    insumo_ids = {comp.insumo_id for comp in componentes}
+    insumos_by_id = {
+        insumo.id: insumo
+        for insumo in db.execute(
+            select(Insumo).where(Insumo.id.in_(insumo_ids))
+        ).scalars().all()
+    }
+
+    componentes_by_produto: dict[int, list[FichaTecnica]] = {}
+    for comp in componentes:
+        componentes_by_produto.setdefault(comp.produto_id, []).append(comp)
+
     total = Decimal("0")
     for ic in ics:
-        componentes = db.execute(
-            select(FichaTecnica).where(FichaTecnica.produto_id == ic.produto_id)
-        ).scalars().all()
-        for comp in componentes:
-            insumo = db.execute(select(Insumo).where(Insumo.id == comp.insumo_id)).scalar_one_or_none()
+        for comp in componentes_by_produto.get(ic.produto_id, []):
+            insumo = insumos_by_id.get(comp.insumo_id)
             if insumo and insumo.custo_medio is not None:
                 total += ic.quantidade * comp.quantidade * insumo.custo_medio
     return total

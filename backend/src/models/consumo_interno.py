@@ -18,6 +18,8 @@ class ItemConsumoInterno(Base):
     quantidade: Mapped[Decimal] = mapped_column(sa.Numeric(10, 4), nullable=False)
     custo_unitario: Mapped[Decimal] = mapped_column(sa.Numeric(10, 4), nullable=False)
     observacao: Mapped[Optional[str]] = mapped_column(sa.Text(), nullable=True)
+    estornado: Mapped[bool] = mapped_column(nullable=False, default=False, server_default=sa.false())
+    estornado_em: Mapped[Optional[datetime.datetime]] = mapped_column(sa.DateTime(), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime(), nullable=False, server_default=sa.func.now()
     )

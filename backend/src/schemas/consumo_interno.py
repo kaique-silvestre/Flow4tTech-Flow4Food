@@ -33,6 +33,7 @@ class ItemConsumoInternoResponse(BaseModel):
     custo_unitario: Decimal
     subtotal: Decimal
     observacao: Optional[str]
+    estornado: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}

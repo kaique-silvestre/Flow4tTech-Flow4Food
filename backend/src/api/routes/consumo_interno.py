@@ -1,7 +1,7 @@
 import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import (
@@ -17,7 +17,7 @@ from src.schemas.consumo_interno import (
     LancarConsumoRequest,
     ResumoConsumidorResponse,
 )
-from src.services import consumo_interno_service
+from src.services import audit_service, consumo_interno_service
 
 router = APIRouter(dependencies=[Depends(require_feature("consumo_interno")), Depends(require_permission("consumo_interno"))])
 
@@ -69,7 +69,18 @@ def resumo_mensal(
 @router.delete("/{item_id}")
 def estornar_item(
     item_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
-    _user: dict = Depends(get_current_user),
+    payload: dict = Depends(get_current_user),
 ) -> dict:
-    return consumo_interno_service.estornar_item(db, item_id)
+    result = consumo_interno_service.estornar_item(db, item_id)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "consumo_interno.item.estornar",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="ItemConsumoInterno",
+        entity_id=item_id,
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result

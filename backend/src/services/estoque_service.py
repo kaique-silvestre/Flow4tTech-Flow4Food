@@ -25,19 +25,27 @@ from src.schemas.estoque import (
 )
 
 
-def _get_categoria_nome(db: Session, categoria_id: Optional[int]) -> Optional[str]:
-    if categoria_id is None:
-        return None
-    cat = db.execute(select(Categoria).where(Categoria.id == categoria_id)).scalar_one_or_none()
-    return cat.nome if cat else None
+def _get_categorias_nomes(db: Session, categoria_ids: set[int]) -> dict[int, str]:
+    if not categoria_ids:
+        return {}
+    categorias = db.execute(select(Categoria).where(Categoria.id.in_(categoria_ids))).scalars().all()
+    return {c.id: c.nome for c in categorias}
+
+
+def _get_insumos_map(db: Session, insumo_ids: set[int]) -> dict[int, Insumo]:
+    if not insumo_ids:
+        return {}
+    insumos = db.execute(select(Insumo).where(Insumo.id.in_(insumo_ids))).scalars().all()
+    return {i.id: i for i in insumos}
 
 
 def _get_insumo(db: Session, insumo_id: int) -> Optional[Insumo]:
     return db.execute(select(Insumo).where(Insumo.id == insumo_id)).scalar_one_or_none()
 
 
-def _build_movimento_response(db: Session, mov: MovimentoEstoque) -> MovimentoResponse:
-    insumo = _get_insumo(db, mov.insumo_id)
+def _build_movimento_response_from_insumo(
+    mov: MovimentoEstoque, insumo: Optional[Insumo]
+) -> MovimentoResponse:
     return MovimentoResponse(
         id=mov.id,
         item_id=mov.insumo_id,
@@ -54,6 +62,22 @@ def _build_movimento_response(db: Session, mov: MovimentoEstoque) -> MovimentoRe
     )
 
 
+def _build_movimento_response(db: Session, mov: MovimentoEstoque) -> MovimentoResponse:
+    insumo = _get_insumo(db, mov.insumo_id)
+    return _build_movimento_response_from_insumo(mov, insumo)
+
+
+def _build_movimentos_response_list(
+    db: Session, movimentos: list[MovimentoEstoque]
+) -> list[MovimentoResponse]:
+    insumo_ids = {m.insumo_id for m in movimentos}
+    insumo_map = _get_insumos_map(db, insumo_ids)
+    return [
+        _build_movimento_response_from_insumo(m, insumo_map.get(m.insumo_id))
+        for m in movimentos
+    ]
+
+
 def get_saldo_list(
     db: Session,
     categoria_id: Optional[int] = None,
@@ -63,6 +87,8 @@ def get_saldo_list(
 ) -> SaldoPageResponse:
     import math
     insumos, total = estoque_repository.list_saldo(db, categoria_id, busca, pagina=pagina, por_pagina=por_pagina)
+    categoria_ids = {i.categoria_id for i in insumos if i.categoria_id is not None}
+    categoria_nomes = _get_categorias_nomes(db, categoria_ids)
     result = []
     for insumo in insumos:
         result.append(
@@ -70,7 +96,7 @@ def get_saldo_list(
                 id=insumo.id,
                 nome=insumo.nome,
                 categoria_id=insumo.categoria_id,
-                categoria_nome=_get_categoria_nome(db, insumo.categoria_id),
+                categoria_nome=categoria_nomes.get(insumo.categoria_id) if insumo.categoria_id is not None else None,
                 unidade_base=insumo.unidade_base,
                 estoque_atual=insumo.estoque_atual,
                 estoque_reservado=insumo.estoque_reservado,
@@ -147,7 +173,7 @@ def get_historico(
     )
 
     return MovimentoListResponse(
-        itens=[_build_movimento_response(db, m) for m in movimentos],
+        itens=_build_movimentos_response_list(db, movimentos),
         total=total,
         pagina=pagina,
         por_pagina=por_pagina,

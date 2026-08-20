@@ -129,6 +129,7 @@ def _build_response(db: Session, item: ItemConsumoInterno) -> ItemConsumoInterno
         custo_unitario=item.custo_unitario,
         subtotal=item.quantidade * item.custo_unitario,
         observacao=item.observacao,
+        estornado=item.estornado,
         created_at=item.created_at,
     )
 
@@ -185,15 +186,22 @@ def lancar_batch(db: Session, data: LancarConsumoBatchRequest) -> list[ItemConsu
 
 
 def estornar_item(db: Session, item_id: int) -> dict:
-    """Reverse a consumo interno entry: restore stock and delete record."""
+    """Reverse a consumo interno entry: restore stock and soft-delete record.
+
+    The item is kept (flagged as estornado) rather than hard-deleted so cost
+    and consumer history remains recoverable/auditable.
+    """
     item = db.execute(
         select(ItemConsumoInterno).where(ItemConsumoInterno.id == item_id)
     ).scalar_one_or_none()
     if item is None:
         raise AppError(ErrorCode.NOT_FOUND, "Item de consumo interno não encontrado", http_status=404)
+    if item.estornado:
+        raise AppError(ErrorCode.NOT_FOUND, "Item já estornado", http_status=400)
 
     _devolver_estoque_consumo(db, item.produto_id, item.quantidade)
-    db.delete(item)
+    item.estornado = True
+    item.estornado_em = datetime.datetime.now()
     db.commit()
     return {"ok": True}
 
@@ -207,7 +215,11 @@ def listar_items(
     data_fim: Optional[datetime.date] = None,
 ) -> list[ItemConsumoInternoResponse]:
     """List consumo interno items with optional filters."""
-    stmt = select(ItemConsumoInterno).order_by(ItemConsumoInterno.created_at.desc())
+    stmt = (
+        select(ItemConsumoInterno)
+        .where(ItemConsumoInterno.estornado.is_(False))
+        .order_by(ItemConsumoInterno.created_at.desc())
+    )
 
     if consumidor_id is not None:
         stmt = stmt.where(ItemConsumoInterno.consumidor_id == consumidor_id)
@@ -240,7 +252,7 @@ def resumo_mensal(
         func.count(ItemConsumoInterno.id).label("itens_no_mes"),
         func.sum(ItemConsumoInterno.quantidade * ItemConsumoInterno.custo_unitario).label("total"),
         func.max(ItemConsumoInterno.created_at).label("ultima_atividade"),
-    )
+    ).where(ItemConsumoInterno.estornado.is_(False))
 
     if data_inicio and data_fim:
         stmt = stmt.where(
