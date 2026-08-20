@@ -278,8 +278,3 @@ def reset_password(db: Session, token: str, new_password: str) -> int:
     revoke_all_refresh_tokens(db, user.id)
     db.commit()
     return user.id
-
-
-# kept for backward compat — old single-password flow no longer used
-def authenticate(db: Session, senha: str) -> str:
-    raise AppError(code=ErrorCode.SENHA_INCORRETA, message="Use o novo endpoint de login", http_status=410)

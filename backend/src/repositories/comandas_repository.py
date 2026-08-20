@@ -236,21 +236,3 @@ def cancelar_comanda_repo(db: Session, comanda_id: int) -> None:
     db.flush()
 
 
-def top_itens(db: Session, dias: int, limit: int) -> list[tuple[int, int]]:
-    result = db.execute(
-        text(
-            "SELECT ic.produto_id, COUNT(*) as cnt "
-            "FROM itens_comanda ic "
-            "JOIN comandas c ON c.id = ic.comanda_id "
-            "WHERE ic.cancelado = false "
-            "AND ic.created_at >= :since "
-            "GROUP BY ic.produto_id "
-            "ORDER BY cnt DESC "
-            "LIMIT :limit"
-        ),
-        {
-            "since": datetime.datetime.utcnow() - datetime.timedelta(days=dias),
-            "limit": limit,
-        },
-    )
-    return [(row[0], row[1]) for row in result.fetchall()]

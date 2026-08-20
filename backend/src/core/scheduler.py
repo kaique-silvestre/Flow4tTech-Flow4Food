@@ -39,21 +39,33 @@ def _verificar_entregas_previstas() -> None:
     try:
         hoje = datetime.date.today()
         total_compras = 0
-        for tid in _tenant_ids(db):
-            _set_tenant_context(db, tid)
-            compras = compras_repository.list_confirmadas_com_entrega_prevista(db, hoje)
-            for compra in compras:
-                if notificacoes_repository.notificacao_existe(db, "entrega_prevista", compra.id):
-                    continue
-                notificacoes_repository.criar_notificacao(
-                    db=db,
-                    tipo="entrega_prevista",
-                    mensagem=f"Compra #{str(compra.id).zfill(4)} com entrega prevista para {compra.data_prevista_recebimento} aguarda confirmação de recebimento.",
-                    referencia_id=compra.id,
-                )
-            total_compras += len(compras)
-            db.commit()
-        _clear_tenant_context(db)
+        try:
+            for tid in _tenant_ids(db):
+                _set_tenant_context(db, tid)
+                compras = compras_repository.list_confirmadas_com_entrega_prevista(db, hoje)
+                for compra in compras:
+                    if notificacoes_repository.notificacao_existe(db, "entrega_prevista", compra.id):
+                        continue
+                    notificacoes_repository.criar_notificacao(
+                        db=db,
+                        tipo="entrega_prevista",
+                        mensagem=f"Compra #{str(compra.id).zfill(4)} com entrega prevista para {compra.data_prevista_recebimento} aguarda confirmação de recebimento.",
+                        referencia_id=compra.id,
+                    )
+                total_compras += len(compras)
+                db.commit()
+        finally:
+            # Guarantee RLS context cleanup even if the loop above raises partway
+            # through, so a failed job never leaves the session's role/tenant_id
+            # set for whoever reuses this connection from the pool.
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            try:
+                _clear_tenant_context(db)
+            except Exception:
+                log.warning("scheduler_entregas_rls_cleanup_failed", exc_info=True)
         log.info("scheduler_entregas_verificadas", total=total_compras)
     except Exception as e:
         log.error("scheduler_entregas_erro", error=str(e))
@@ -66,10 +78,22 @@ def _atualizar_contas_vencidas() -> None:
     db = SessionLocal()
     try:
         total = 0
-        for tid in _tenant_ids(db):
-            _set_tenant_context(db, tid)
-            total += contas_pagar_service.atualizar_vencidos(db)
-        _clear_tenant_context(db)
+        try:
+            for tid in _tenant_ids(db):
+                _set_tenant_context(db, tid)
+                total += contas_pagar_service.atualizar_vencidos(db)
+        finally:
+            # Guarantee RLS context cleanup even if the loop above raises partway
+            # through, so a failed job never leaves the session's role/tenant_id
+            # set for whoever reuses this connection from the pool.
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            try:
+                _clear_tenant_context(db)
+            except Exception:
+                log.warning("scheduler_contas_vencidas_rls_cleanup_failed", exc_info=True)
         log.info("scheduler_contas_vencidas_atualizadas", total=total)
     except Exception as e:
         log.error("scheduler_contas_vencidas_erro", error=str(e))

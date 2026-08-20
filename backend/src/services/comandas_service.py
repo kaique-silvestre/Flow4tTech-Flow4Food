@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
+from src.core.logging import get_logger
 from src.models.comandas import Comanda, StatusComanda
 from src.models.comissoes_garcom import ComissaoGarcom
 from src.models.eventos_comanda import TipoEvento
@@ -38,13 +39,16 @@ from src.schemas.fechamento import AplicarDescontoRequest, FecharComandaRequest,
 from src.schemas.produtos import ProdutoResponse
 from src.services import produtos_service
 
+logger = get_logger(__name__)
+
 
 def _parse_pessoas(pessoas_json: Optional[str]) -> list[str]:
     if not pessoas_json:
         return []
     try:
         return json.loads(pessoas_json)
-    except Exception:
+    except (json.JSONDecodeError, TypeError):
+        logger.warning("comanda_pessoas_parse_failed", pessoas_json=pessoas_json, exc_info=True)
         return []
 
 

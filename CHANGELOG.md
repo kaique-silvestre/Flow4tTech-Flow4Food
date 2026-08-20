@@ -11,6 +11,8 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ### Fixed
 
+- Corrige limpeza de contexto RLS só no caminho de sucesso em `scheduler.py` (`_verificar_entregas_previstas`, `_atualizar_contas_vencidas`): envolve em `try/finally` com log em falha, mesma postura defensiva já aplicada em `tenant_service.criar_tenant` — inofensivo hoje (listener de checkout já reseta sempre), mas deixa de esconder a dependência — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20
+- Estreita `except Exception` em `json.loads(pessoas)` (comandas_service.py) pra `(JSONDecodeError, TypeError)` com log de warning: dado malformado no banco passava disfarçado de "sem divisão de conta" em vez de erro visível — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20
 - Corrige `_decimal` em `nfe_parser.py`: campo numérico malformado (`qCom`/`vUnCom`/`vProd`) em qualquer item da NFe virava `Decimal("0")` silenciosamente — item malformado era importado como grátis/quantidade zero/custo zero em vez de rejeitar a importação; agora levanta `AppError(VALIDATION_ERROR)` com o nome do campo e produto, mesmo padrão já usado pro resto do parser — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20
 - Corrige docstring da migration 0078 (`Revises: 0077` → `0076`, alinhando com `down_revision` real): resquício de duplicata já removida — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20
 - Adiciona log de auditoria em `reset_password` de usuário por admin (routes/users.py): ação não gerava nenhuma trilha de auditoria, apesar de resetar credencial de outro usuário; adiciona `audit_service.log_background` sem logar o valor da senha. Flag de "troca obrigatória no próximo login" não implementada — exigiria coluna nova + mudanças no fluxo de login/frontend, decisão de produto maior, fora de escopo — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20
@@ -60,6 +62,7 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ### Removed
 
+- Remove código morto: `services/itens_service.py` (arquivo só com comentário, sem referência), `auth_service.authenticate` (410 incondicional, inatingível), `comandas_repository.top_itens` (query duplicada, já reimplementada em ORM em `produtos_service.get_top_produtos`) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20
 - Remove funcionalidade de backup (rota, serviço e aba na UI) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20
 - Remove tabela global config_seguranca e o endpoint PATCH /api/config/senha (rota, serviço, repositório, model, schema e aba "Senha" na UI) — código morto que compartilhava uma "senha de segurança" entre todos os tenants, sem tenant_id nem RLS (migration 0080) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-08-20
 
