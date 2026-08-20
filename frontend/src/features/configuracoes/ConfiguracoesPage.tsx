@@ -6,14 +6,12 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api } from "@/lib/api";
 import { useEstabelecimento, useUpdateEstabelecimento } from "./useEstabelecimento";
 
-type Tab = "estabelecimento" | "senha" | "impressora";
+type Tab = "estabelecimento" | "impressora";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "estabelecimento", label: "Estabelecimento" },
-  { id: "senha", label: "Senha" },
   { id: "impressora", label: "Impressora" },
 ];
 
@@ -51,19 +49,7 @@ const estSchema = z.object({
   ),
 });
 
-const senhaSchema = z
-  .object({
-    senha_atual: z.string().min(1, "Obrigatório"),
-    nova_senha: z.string().min(4, "Mínimo 4 caracteres"),
-    confirmar: z.string().min(1, "Obrigatório"),
-  })
-  .refine((d) => d.nova_senha === d.confirmar, {
-    message: "Senhas não conferem",
-    path: ["confirmar"],
-  });
-
 type EstForm = z.infer<typeof estSchema>;
-type SenhaForm = z.infer<typeof senhaSchema>;
 
 function TabEstabelecimento() {
   const { data, isLoading } = useEstabelecimento();
@@ -156,51 +142,6 @@ function TabEstabelecimento() {
   );
 }
 
-function TabSenha() {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<SenhaForm>({ resolver: zodResolver(senhaSchema) });
-
-  async function onSubmit(d: SenhaForm) {
-    try {
-      await api.patch("/api/config/senha", {
-        senha_atual: d.senha_atual,
-        nova_senha: d.nova_senha,
-      });
-      toast.success("Senha alterada com sucesso");
-      reset();
-    } catch {
-      toast.error("Senha atual incorreta");
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="max-w-md space-y-4">
-      <div className="space-y-1">
-        <Label htmlFor="senha_atual">Senha Atual</Label>
-        <Input id="senha_atual" type="password" {...register("senha_atual")} />
-        {errors.senha_atual && <p className="text-sm text-red-500">{errors.senha_atual.message}</p>}
-      </div>
-      <div className="space-y-1">
-        <Label htmlFor="nova_senha">Nova Senha</Label>
-        <Input id="nova_senha" type="password" {...register("nova_senha")} />
-        {errors.nova_senha && <p className="text-sm text-red-500">{errors.nova_senha.message}</p>}
-      </div>
-      <div className="space-y-1">
-        <Label htmlFor="confirmar">Confirmar Nova Senha</Label>
-        <Input id="confirmar" type="password" {...register("confirmar")} />
-        {errors.confirmar && <p className="text-sm text-red-500">{errors.confirmar.message}</p>}
-      </div>
-      <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Alterando..." : "Alterar Senha"}
-      </Button>
-    </form>
-  );
-}
-
 function TabImpressora() {
   return (
     <div className="max-w-md space-y-4">
@@ -257,7 +198,6 @@ export function ConfiguracoesPage() {
       </div>
 
       {activeTab === "estabelecimento" && <TabEstabelecimento />}
-      {activeTab === "senha" && <TabSenha />}
       {activeTab === "impressora" && <TabImpressora />}
     </div>
   );

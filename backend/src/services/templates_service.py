@@ -31,7 +31,7 @@ def _to_response(template: PermissionTemplate) -> TemplateResponse:
 
 
 def _get_owned(db: Session, tenant_id: int, template_id: int) -> PermissionTemplate:
-    template = get_template_by_id(db, template_id)
+    template = get_template_by_id(db, template_id, tenant_id)
     visible = template and (template.is_system or template.tenant_id == tenant_id)
     if not template or not visible:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Template não encontrado", http_status=404)

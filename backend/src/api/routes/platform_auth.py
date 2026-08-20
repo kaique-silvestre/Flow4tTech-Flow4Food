@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from src.api.dependencies import require_platform_admin
 from src.core.database import get_platform_db
-from src.repositories import platform_repository
+from src.repositories import platform_repository, revoked_tokens_repository
 from src.services import audit_service, platform_auth_service
 from src.services.auth_service import create_access_token, hash_password
 
@@ -80,6 +80,23 @@ def platform_login(
 ) -> PlatformLoginResponse:
     token = platform_auth_service.login(db, body.email, body.password)
     return PlatformLoginResponse(access_token=token)
+
+
+@router.post(
+    "/auth/logout",
+    status_code=204,
+    tags=["platform"],
+)
+def platform_logout(
+    payload: dict = Depends(require_platform_admin),
+    db: Session = Depends(get_platform_db),
+) -> None:
+    jti = payload.get("jti")
+    exp_ts = payload.get("exp")
+    if jti and exp_ts:
+        expires_at = datetime.fromtimestamp(exp_ts, tz=timezone.utc)
+        revoked_tokens_repository.revoke(db, jti, expires_at)
+    return None
 
 
 @router.get(

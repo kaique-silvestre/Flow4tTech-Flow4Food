@@ -9,7 +9,6 @@ from src.api.dependencies import (
     require_permission,
 )
 from src.schemas.config_schemas import (
-    AlterarSenhaRequest,
     EstabelecimentoResponse,
     EstabelecimentoUpdate,
 )
@@ -35,12 +34,3 @@ def update_estabelecimento(
     # Uses superuser connection (get_db) because app_user has only SELECT on tenants.
     # tenant_id from JWT ensures the user can only update their own tenant.
     return config_service.update_estabelecimento(db, payload["tenant_id"], body)
-
-
-@router.patch("/senha", status_code=204)
-def alterar_senha(
-    body: AlterarSenhaRequest,
-    db: Session = Depends(get_db),
-    _user: dict = Depends(get_current_user),
-) -> None:
-    config_service.alterar_senha(db, body)

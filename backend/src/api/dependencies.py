@@ -13,7 +13,7 @@ from src.core.config import get_settings
 from src.core.database import _tenant_ctx, get_db, get_platform_db  # noqa: F401
 from src.models.assinaturas import Assinatura
 from src.models.platform_settings import PlatformSettings
-from src.repositories import revoked_tokens_repository
+from src.repositories import platform_admins_repository, revoked_tokens_repository
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -144,6 +144,7 @@ def require_active_subscription(payload: dict = Depends(get_current_user)) -> di
 
 def require_platform_admin(
     credentials: Annotated[Optional[HTTPAuthorizationCredentials], Depends(_bearer)],
+    db: Session = Depends(get_platform_db),
 ) -> dict:
     if credentials is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token ausente")
@@ -158,6 +159,14 @@ def require_platform_admin(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso restrito a platform admins")
     if "tenant_id" in payload:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token de tenant não permitido aqui")
+    jti = payload.get("jti")
+    if jti and revoked_tokens_repository.is_revoked(db, jti):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token revogado")
+    admin_id = payload.get("platform_admin_id")
+    if admin_id is not None:
+        admin = platform_admins_repository.get_by_id(db, admin_id)
+        if admin is None or not admin.is_active:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Conta desativada")
     return payload
 
 

@@ -25,9 +25,17 @@ def list_templates(db: Session, tenant_id: int) -> list[PermissionTemplate]:
     )
 
 
-def get_template_by_id(db: Session, template_id: int) -> Optional[PermissionTemplate]:
+def get_template_by_id(
+    db: Session, template_id: int, tenant_id: int
+) -> Optional[PermissionTemplate]:
     return _with_perms(
-        db.query(PermissionTemplate).filter(PermissionTemplate.id == template_id)
+        db.query(PermissionTemplate).filter(
+            PermissionTemplate.id == template_id,
+            or_(
+                PermissionTemplate.is_system.is_(True),
+                PermissionTemplate.tenant_id == tenant_id,
+            ),
+        )
     ).first()
 
 
@@ -42,7 +50,7 @@ def create_template(
     for screen in screens:
         db.add(TemplatePermission(template_id=template.id, screen=screen, can_access=True))
     db.commit()
-    return get_template_by_id(db, template.id)  # type: ignore[return-value]
+    return get_template_by_id(db, template.id, tenant_id)  # type: ignore[return-value]
 
 
 def update_template(
@@ -63,7 +71,7 @@ def update_template(
         for screen in screens:
             db.add(TemplatePermission(template_id=template.id, screen=screen, can_access=True))
     db.commit()
-    return get_template_by_id(db, template.id)  # type: ignore[return-value]
+    return get_template_by_id(db, template.id, template.tenant_id)  # type: ignore[return-value,arg-type]
 
 
 def delete_template(db: Session, template: PermissionTemplate) -> None:

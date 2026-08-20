@@ -18,8 +18,3 @@ class EstabelecimentoUpdate(BaseModel):
     cnpj: Optional[str] = None
     endereco: Optional[str] = None
     telefone: Optional[str] = None
-
-
-class AlterarSenhaRequest(BaseModel):
-    senha_atual: str
-    nova_senha: str

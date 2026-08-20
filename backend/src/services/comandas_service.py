@@ -15,6 +15,7 @@ from src.models.insumos import Insumo
 from src.models.itens_comanda import ItemComanda
 from src.models.metodos_pagamento import MetodoPagamento
 from src.models.movimentos_estoque import TipoMovimento
+from src.models.pagamentos import Pagamento
 from src.models.produtos import Produto
 from src.models.promocoes import Promocao, PromocaoProduto
 from src.repositories import (
@@ -452,6 +453,7 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
 
     if comanda.desconto_percentual is not None:
         total_com_desconto: Decimal = subtotal * (Decimal("1") - comanda.desconto_percentual / Decimal("100"))
+        comanda.desconto_valor = (subtotal - total_com_desconto).quantize(Decimal("0.01"))
     elif comanda.desconto_valor is not None:
         total_com_desconto = subtotal - comanda.desconto_valor
     else:
@@ -616,6 +618,9 @@ def reabrir_comanda(db: Session, comanda_id: int) -> ComandaResponse:
     itens = comandas_repository.get_itens_para_fechar(db, comanda_id)
     for ic in itens:
         _estornar_estoque(db, ic.produto_id, ic.quantidade)
+
+    db.query(Pagamento).filter(Pagamento.comanda_id == comanda_id).delete()
+    db.query(ComissaoGarcom).filter(ComissaoGarcom.comanda_id == comanda_id).delete()
 
     comandas_repository.reabrir_comanda_repo(db, comanda_id)
     comandas_repository.add_evento(

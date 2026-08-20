@@ -12,9 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from src.api.dependencies import get_current_user, get_db
 from src.core.database import Base
 from src.main import app
-from src.models.auth import ConfigSeguranca
 from src.models.tenants import Tenant
-from src.services.auth_service import hash_password, verify_password
 
 _SQLITE_URL = "sqlite:///:memory:"
 _engine = create_engine(
@@ -79,34 +77,5 @@ def test_patch_estabelecimento(c: TestClient) -> None:
     assert data["nome"] == "Bar do Ze"
     assert data["telefone"] == "11999998888"
     assert data["cnpj"] is None
-
-
-def test_alterar_senha_senha_incorreta(c: TestClient) -> None:
-    db = _TestingSession()
-    config = ConfigSeguranca(senha_hash=hash_password("senha123"))
-    db.add(config)
-    db.commit()
-    db.close()
-
-    r = c.patch("/api/config/senha", json={"senha_atual": "errada", "nova_senha": "nova456"})
-    assert r.status_code == 401
-
-
-def test_alterar_senha_sucesso(c: TestClient) -> None:
-    db = _TestingSession()
-    config = ConfigSeguranca(senha_hash=hash_password("senha123"))
-    db.add(config)
-    db.commit()
-    db.close()
-
-    r = c.patch("/api/config/senha", json={"senha_atual": "senha123", "nova_senha": "nova456"})
-    assert r.status_code == 204
-
-    db2 = _TestingSession()
-    from src.repositories.auth_repository import get_config
-    updated = get_config(db2)
-    assert updated is not None
-    assert verify_password("nova456", updated.senha_hash)
-    db2.close()
 
 

@@ -72,7 +72,7 @@ def vendas_do_dia(db: Session, data: Optional[datetime.date] = None) -> VendasDo
     garcom_names, cortesias_map, pagamentos_map, por_metodo = _aggregate(db, comandas)
 
     ids = [c.id for c in comandas]
-    bruto = sum((c.total or Decimal("0") for c in comandas), Decimal("0"))
+    net = sum((c.total or Decimal("0") for c in comandas), Decimal("0"))
     descontos = sum((c.desconto_valor or Decimal("0") for c in comandas), Decimal("0"))
     cortesias_total = sum(cortesias_map.values(), Decimal("0"))
     comissoes = rr.comissoes_total_por_comanda_ids(db, ids)
@@ -80,11 +80,11 @@ def vendas_do_dia(db: Session, data: Optional[datetime.date] = None) -> VendasDo
     return VendasDoDiaResponse(
         data=hoje,
         qtd_comandas=len(comandas),
-        faturamento_bruto=bruto,
+        faturamento_bruto=net + descontos,
         total_descontos=descontos,
         total_cortesias=cortesias_total,
         total_comissoes=comissoes,
-        faturamento_liquido=bruto - descontos,
+        faturamento_liquido=net,
         por_metodo=[PagamentoResumo(**p) for p in por_metodo],
         comandas=_build_comanda_items(comandas, garcom_names, cortesias_map, pagamentos_map),
     )
@@ -113,7 +113,7 @@ def fechamento_caixa(db: Session, data: datetime.date) -> FechamentoCaixaRespons
     garcom_names, cortesias_map, pagamentos_map, por_metodo = _aggregate(db, comandas)
 
     ids = [c.id for c in comandas]
-    bruto = sum((c.total or Decimal("0") for c in comandas), Decimal("0"))
+    net = sum((c.total or Decimal("0") for c in comandas), Decimal("0"))
     descontos = sum((c.desconto_valor or Decimal("0") for c in comandas), Decimal("0"))
     cortesias_total = sum(cortesias_map.values(), Decimal("0"))
     comissoes = rr.comissoes_total_por_comanda_ids(db, ids)
@@ -121,11 +121,11 @@ def fechamento_caixa(db: Session, data: datetime.date) -> FechamentoCaixaRespons
     return FechamentoCaixaResponse(
         data=data,
         qtd_comandas=len(comandas),
-        faturamento_bruto=bruto,
+        faturamento_bruto=net + descontos,
         descontos=descontos,
         cortesias=cortesias_total,
         total_comissoes=comissoes,
-        faturamento_liquido=bruto - descontos,
+        faturamento_liquido=net,
         por_metodo=[PagamentoResumo(**p) for p in por_metodo],
     )
 

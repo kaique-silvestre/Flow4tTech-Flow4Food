@@ -112,9 +112,13 @@ def test_tenant_token_rejected_on_platform_route(client):
     from src.api.dependencies import require_platform_admin
     import pytest as pt
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=tenant_token)
-    with pt.raises(HTTPException) as exc_info:
-        require_platform_admin(creds)
-    assert exc_info.value.status_code == 403
+    db = _Session()
+    try:
+        with pt.raises(HTTPException) as exc_info:
+            require_platform_admin(creds, db)
+        assert exc_info.value.status_code == 403
+    finally:
+        db.close()
 
 
 # G3 — request sem token → 401
@@ -122,9 +126,13 @@ def test_no_token_returns_401(client):
     from fastapi import HTTPException
     from src.api.dependencies import require_platform_admin
     import pytest as pt
-    with pt.raises(HTTPException) as exc_info:
-        require_platform_admin(None)
-    assert exc_info.value.status_code == 401
+    db = _Session()
+    try:
+        with pt.raises(HTTPException) as exc_info:
+            require_platform_admin(None, db)
+        assert exc_info.value.status_code == 401
+    finally:
+        db.close()
 
 
 # G4 — senha errada → 401

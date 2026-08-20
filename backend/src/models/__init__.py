@@ -1,6 +1,5 @@
 from src.models.assinaturas import Assinatura, AssinaturaHistory  # noqa: F401
 from src.models.audit_logs import AuditLog  # noqa: F401
-from src.models.auth import ConfigSeguranca  # noqa: F401
 from src.models.billing import PagamentoAssinatura, Plano  # noqa: F401
 from src.models.caixa import CaixaMovimento, CaixaSessao  # noqa: F401
 from src.models.categorias import Categoria  # noqa: F401

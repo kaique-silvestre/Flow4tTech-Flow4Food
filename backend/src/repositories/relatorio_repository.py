@@ -55,12 +55,15 @@ def _cortesias_por_comanda(db: Session, comanda_ids: list[int]) -> dict[int, Dec
     rows = db.execute(
         select(
             ItemComanda.comanda_id,
-            func.sum(ItemComanda.preco_unitario * ItemComanda.quantidade).label("total"),
+            func.sum(Produto.preco_venda * ItemComanda.quantidade).label("total"),
         )
+        .select_from(ItemComanda)
+        .join(Produto, ItemComanda.produto_id == Produto.id)
         .where(
             ItemComanda.comanda_id.in_(comanda_ids),
             ItemComanda.cortesia.is_(True),
             ItemComanda.cancelado.is_(False),
+            Produto.preco_venda.isnot(None),
         )
         .group_by(ItemComanda.comanda_id)
     ).all()
