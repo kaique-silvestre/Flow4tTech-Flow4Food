@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 from typing import Optional
 
 import sqlalchemy as sa
@@ -19,7 +20,7 @@ class Promocao(Base):
     nome: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     descricao: Mapped[Optional[str]] = mapped_column(sa.Text(), nullable=True)  # noqa: UP045
     tipo_desconto: Mapped[str] = mapped_column(sa.String(20), nullable=False)
-    valor_desconto: Mapped[float] = mapped_column(sa.Numeric(10, 2), nullable=False)
+    valor_desconto: Mapped[Decimal] = mapped_column(sa.Numeric(10, 2), nullable=False)
     data_inicio: Mapped[datetime.date] = mapped_column(sa.Date(), nullable=False)
     data_fim: Mapped[Optional[datetime.date]] = mapped_column(sa.Date(), nullable=True)  # noqa: UP045
     hora_inicio: Mapped[Optional[datetime.time]] = mapped_column(sa.Time(), nullable=False, server_default="00:00:00")  # noqa: UP045
@@ -36,6 +37,7 @@ class Promocao(Base):
     created_at: Mapped[Optional[datetime.datetime]] = mapped_column(  # noqa: UP045
         sa.DateTime(timezone=True), server_default=sa.text("NOW()")
     )
+    ativo: Mapped[bool] = mapped_column(sa.Boolean(), nullable=False, server_default=sa.true())
 
 
 class PromocaoProduto(Base):

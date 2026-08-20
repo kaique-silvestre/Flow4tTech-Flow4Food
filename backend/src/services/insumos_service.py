@@ -56,24 +56,60 @@ def get_insumo(db: Session, insumo_id: int) -> InsumoResponse:
     return InsumoResponse.model_validate(obj)
 
 
+def _is_categoria_fk_violation(error: IntegrityError) -> bool:
+    """Detecta se o IntegrityError foi causado pela FK insumos.categoria_id -> categorias.id.
+
+    Postgres (psycopg2): usa o pgcode padronizado '23503' (foreign_key_violation),
+    que é estável independente do texto/idioma da mensagem de erro.
+    SQLite (testes): não expõe pgcode, então cai para inspeção textual da mensagem
+    (ex.: "FOREIGN KEY constraint failed" ou o nome da coluna/constraint).
+    """
+    pgcode = getattr(error.orig, "pgcode", None)
+    if pgcode is not None:
+        return pgcode == "23503"
+    msg = str(error.orig).lower()
+    return "foreign key" in msg or "categoria_id" in msg
+
+
+def _is_nome_unique_violation(error: IntegrityError) -> bool:
+    """Detecta se o IntegrityError foi causado pela unique constraint uq_insumos_tenant_nome.
+
+    Postgres (psycopg2): usa o pgcode '23505' (unique_violation).
+    SQLite (testes): cai para inspeção textual ("UNIQUE constraint failed").
+    """
+    pgcode = getattr(error.orig, "pgcode", None)
+    if pgcode is not None:
+        return pgcode == "23505"
+    msg = str(error.orig).lower()
+    return "unique" in msg
+
+
 def create_insumo(db: Session, data: InsumoCreateRequest) -> InsumoResponse:
     try:
         obj = insumos_repository.create(db, data)
-    except IntegrityError:
+    except IntegrityError as e:
         db.rollback()
-        existing = db.execute(select(Insumo).where(Insumo.nome == data.nome)).scalar_one_or_none()
-        if existing and not existing.ativo:
-            raise AppError(ErrorCode.CONFLICT, "Insumo inativo com este nome já existe. Reative-o em Cadastros → Insumos.", http_status=409) from None
-        raise AppError(ErrorCode.CONFLICT, "Já existe um insumo com este nome", http_status=409) from None
+        if _is_categoria_fk_violation(e):
+            raise AppError(ErrorCode.VALIDATION_ERROR, "Categoria inválida ou não encontrada", http_status=422) from None
+        if _is_nome_unique_violation(e):
+            existing = db.execute(select(Insumo).where(Insumo.nome == data.nome)).scalar_one_or_none()
+            if existing and not existing.ativo:
+                raise AppError(ErrorCode.CONFLICT, "Insumo inativo com este nome já existe. Reative-o em Cadastros → Insumos.", http_status=409) from None
+            raise AppError(ErrorCode.CONFLICT, "Já existe um insumo com este nome", http_status=409) from None
+        raise
     return InsumoResponse.model_validate(obj)
 
 
 def update_insumo(db: Session, insumo_id: int, data: InsumoUpdateRequest) -> InsumoResponse:
     try:
         obj = insumos_repository.update(db, insumo_id, data)
-    except IntegrityError:
+    except IntegrityError as e:
         db.rollback()
-        raise AppError(ErrorCode.CONFLICT, "Já existe um insumo com este nome", http_status=409) from None
+        if _is_categoria_fk_violation(e):
+            raise AppError(ErrorCode.VALIDATION_ERROR, "Categoria inválida ou não encontrada", http_status=422) from None
+        if _is_nome_unique_violation(e):
+            raise AppError(ErrorCode.CONFLICT, "Já existe um insumo com este nome", http_status=409) from None
+        raise
     if obj is None:
         raise AppError(ErrorCode.NOT_FOUND, "Insumo não encontrado", http_status=404)
     return InsumoResponse.model_validate(obj)

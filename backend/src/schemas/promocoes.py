@@ -1,14 +1,15 @@
 import datetime
+from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class PromoçaoCreate(BaseModel):
     nome: str
     descricao: Optional[str] = None  # noqa: UP045
     tipo_desconto: str  # 'porcentagem' | 'valor_fixo'
-    valor_desconto: float
+    valor_desconto: Decimal = Field(gt=0)
     data_inicio: datetime.date
     data_fim: Optional[datetime.date] = None  # noqa: UP045
     hora_inicio: Optional[datetime.time] = datetime.time(0, 0, 0)  # noqa: UP045
@@ -17,11 +18,14 @@ class PromoçaoCreate(BaseModel):
     dias_semana: Optional[list[int]] = None  # noqa: UP045
     dias_mes: Optional[list[int]] = None  # noqa: UP045
     produto_ids: list[int] = []
+    ativo: bool = True
 
     @model_validator(mode="after")
     def validar_recorrencia(self) -> "PromoçaoCreate":
         if self.tipo_desconto not in ("porcentagem", "valor_fixo"):
             raise ValueError("tipo_desconto deve ser 'porcentagem' ou 'valor_fixo'")
+        if self.tipo_desconto == "porcentagem" and self.valor_desconto > 100:
+            raise ValueError("valor_desconto não pode exceder 100 quando tipo_desconto='porcentagem'")
         if self.data_fim is not None and self.data_fim < self.data_inicio:
             raise ValueError("data_fim deve ser >= data_inicio")
         if self.recorrencia == "nenhuma":
@@ -48,7 +52,7 @@ class PromoçaoUpdate(BaseModel):
     nome: Optional[str] = None  # noqa: UP045
     descricao: Optional[str] = None  # noqa: UP045
     tipo_desconto: Optional[str] = None  # noqa: UP045
-    valor_desconto: Optional[float] = None  # noqa: UP045
+    valor_desconto: Optional[Decimal] = Field(default=None, gt=0)  # noqa: UP045
     data_inicio: Optional[datetime.date] = None  # noqa: UP045
     data_fim: Optional[datetime.date] = None  # noqa: UP045
     hora_inicio: Optional[datetime.time] = None  # noqa: UP045
@@ -57,11 +61,18 @@ class PromoçaoUpdate(BaseModel):
     dias_semana: Optional[list[int]] = None  # noqa: UP045
     dias_mes: Optional[list[int]] = None  # noqa: UP045
     produto_ids: Optional[list[int]] = None  # noqa: UP045
+    ativo: Optional[bool] = None  # noqa: UP045
 
     @model_validator(mode="after")
     def validar_campos(self) -> "PromoçaoUpdate":
         if self.tipo_desconto is not None and self.tipo_desconto not in ("porcentagem", "valor_fixo"):
             raise ValueError("tipo_desconto deve ser 'porcentagem' ou 'valor_fixo'")
+        if (
+            self.tipo_desconto == "porcentagem"
+            and self.valor_desconto is not None
+            and self.valor_desconto > 100
+        ):
+            raise ValueError("valor_desconto não pode exceder 100 quando tipo_desconto='porcentagem'")
         if self.data_inicio is not None and self.data_fim is not None and self.data_fim < self.data_inicio:
             raise ValueError("data_fim deve ser >= data_inicio")
         if self.recorrencia is not None:
@@ -87,7 +98,7 @@ class PromoçaoResponse(BaseModel):
     nome: str
     descricao: Optional[str] = None  # noqa: UP045
     tipo_desconto: str
-    valor_desconto: float
+    valor_desconto: Decimal
     data_inicio: datetime.date
     data_fim: Optional[datetime.date] = None  # noqa: UP045
     hora_inicio: Optional[datetime.time] = None  # noqa: UP045
@@ -98,5 +109,6 @@ class PromoçaoResponse(BaseModel):
     produto_ids: list[int] = []
     criado_por: Optional[int] = None  # noqa: UP045
     created_at: Optional[datetime.datetime] = None  # noqa: UP045
+    ativo: bool = True
 
     model_config = {"from_attributes": True}

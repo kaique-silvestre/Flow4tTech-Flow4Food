@@ -57,6 +57,7 @@ def resolve_promo(db: Session, produto_id: int) -> Optional[Promocao]:
             .join(PromocaoProduto, PromocaoProduto.promocao_id == Promocao.id)
             .where(
                 PromocaoProduto.produto_id == produto_id,
+                Promocao.ativo == True,  # noqa: E712
                 Promocao.data_inicio <= hoje,
                 (Promocao.data_fim == None) | (Promocao.data_fim >= hoje),  # noqa: E711
                 Promocao.hora_inicio <= hora_agora,

@@ -76,6 +76,7 @@ def create(db: Session, data: PromoçaoCreate, criado_por: Optional[int] = None)
         dias_mes=data.dias_mes,
         criado_por=criado_por,
         created_at=datetime.datetime.now(datetime.timezone.utc),
+        ativo=data.ativo,
     )
     db.add(promo)
     db.flush()
@@ -88,7 +89,7 @@ def create(db: Session, data: PromoçaoCreate, criado_por: Optional[int] = None)
 def update(db: Session, promo: Promocao, data: PromoçaoUpdate) -> Promocao:
     for field in ("nome", "descricao", "tipo_desconto", "valor_desconto",
                   "data_inicio", "data_fim", "hora_inicio", "hora_fim",
-                  "recorrencia", "dias_semana", "dias_mes"):
+                  "recorrencia", "dias_semana", "dias_mes", "ativo"):
         val = getattr(data, field)
         if val is not None:
             setattr(promo, field, val)
