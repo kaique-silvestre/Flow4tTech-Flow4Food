@@ -50,11 +50,12 @@ def dashboard(db: Session) -> DashboardResponse:
     contas_vencendo = db.execute(
         select(func.count(), func.sum(ContaPagar.valor)).where(
             ContaPagar.status.in_(["pendente", "vencido"]),
+            ContaPagar.data_vencimento >= hoje,
             ContaPagar.data_vencimento <= em_7_dias,
         )
     ).one()
     contas_vencendo_qtd = contas_vencendo[0] or 0
-    contas_vencendo_total = float(contas_vencendo[1] or Decimal("0"))
+    contas_vencendo_total = contas_vencendo[1] or Decimal("0")
 
     compras_agendadas = db.execute(
         select(Compra).where(
@@ -76,7 +77,7 @@ def dashboard(db: Session) -> DashboardResponse:
                 compra_id=c.id,
                 fornecedor_nome=nome or "Sem fornecedor",
                 data_prevista_recebimento=c.data_prevista_recebimento,
-                total=float(c.total),
+                total=c.total or Decimal("0"),
             )
         )
 
@@ -93,16 +94,16 @@ def dashboard(db: Session) -> DashboardResponse:
     ultimo_mes_ant = primeiro_mes_atual - datetime.timedelta(days=1)
     mes_ant = ultimo_mes_ant.month
     ano_ant = ultimo_mes_ant.year
-    faturamento_mes_atual = float(dr.faturamento_mes(db, hoje.year, hoje.month))
-    faturamento_mes_anterior = float(dr.faturamento_mes(db, ano_ant, mes_ant))
+    faturamento_mes_atual = dr.faturamento_mes(db, hoje.year, hoje.month)
+    faturamento_mes_anterior = dr.faturamento_mes(db, ano_ant, mes_ant)
 
     return DashboardResponse(
-        faturamento_hoje=float(faturamento_hoje),
-        ticket_medio_hoje=float(ticket_medio),
-        cmv_hoje=float(cmv),
+        faturamento_hoje=faturamento_hoje,
+        ticket_medio_hoje=ticket_medio,
+        cmv_hoje=cmv,
         comandas_abertas=len(abertas_lista),
         comandas_fechadas_hoje=qtd_fechadas,
-        lucro_estimado_hoje=float(lucro_estimado),
+        lucro_estimado_hoje=lucro_estimado,
         faturamento_por_hora=faturamento_por_hora,
         top_10_produtos=top_10,
         ultimos_30_dias=ultimos_30,

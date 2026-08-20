@@ -33,6 +33,21 @@ def _calcular_custo_medio(
     return (numerador / denominador).quantize(Decimal("0.0001"))
 
 
+def _reverter_custo_medio(
+    estoque_atual: Decimal,
+    custo_medio_atual: Optional[Decimal],
+    quantidade_removida: Decimal,
+    custo_unitario_removido: Decimal,
+    novo_estoque: Decimal,
+) -> Optional[Decimal]:
+    """Recalcula o custo médio ponderado removendo a contribuição de uma
+    compra cancelada, invertendo a fórmula usada em `_calcular_custo_medio`."""
+    if novo_estoque <= 0 or custo_medio_atual is None:
+        return custo_medio_atual
+    numerador = estoque_atual * custo_medio_atual - quantidade_removida * custo_unitario_removido
+    return (numerador / novo_estoque).quantize(Decimal("0.0001"))
+
+
 def _get_fornecedor_nome(db: Session, fornecedor_id: Optional[int]) -> Optional[str]:
     if fornecedor_id is None:
         return None
@@ -259,12 +274,19 @@ def cancelar_compra(db: Session, compra_id: int) -> CompraResponse:
                 if insumo is None:
                     continue
                 novo_estoque = insumo.estoque_atual - item.quantidade
-                estoque_repository.update_estoque_e_custo(db, insumo.id, novo_estoque, insumo.custo_medio)
+                novo_custo_medio = _reverter_custo_medio(
+                    insumo.estoque_atual,
+                    insumo.custo_medio,
+                    item.quantidade,
+                    item.custo_unitario,
+                    novo_estoque,
+                )
+                estoque_repository.update_estoque_e_custo(db, insumo.id, novo_estoque, novo_custo_medio)
                 estoque_repository.registrar_movimento(
                     db=db,
                     insumo_id=insumo.id,
                     tipo=TipoMovimento.ESTORNO_COMPRA,
-                    quantidade=-item.quantidade,
+                    quantidade=item.quantidade,
                     custo_unitario=item.custo_unitario,
                     saldo_apos=novo_estoque,
                     compra_id=compra_id,

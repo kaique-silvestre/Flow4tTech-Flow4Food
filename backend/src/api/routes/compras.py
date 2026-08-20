@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import (
@@ -20,6 +20,9 @@ from src.services import compras_service, nfe_match_service, nfe_parser
 
 router = APIRouter(dependencies=[Depends(require_feature("compras")), Depends(require_permission("compras"))])
 
+NFE_MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5MB
+NFE_ALLOWED_CONTENT_TYPES = {"application/xml", "text/xml"}
+
 
 @router.post("/importar-nfe", response_model=NFeImportResponse)
 def importar_nfe(
@@ -27,7 +30,30 @@ def importar_nfe(
     db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> NFeImportResponse:
-    xml_bytes = file.file.read()
+    filename = file.filename or ""
+    content_type = (file.content_type or "").lower()
+    if content_type not in NFE_ALLOWED_CONTENT_TYPES and not filename.lower().endswith(".xml"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Arquivo deve ser um XML de NFe válido.",
+        )
+
+    chunks: list[bytes] = []
+    total_size = 0
+    chunk_size = 1024 * 1024
+    while True:
+        chunk = file.file.read(chunk_size)
+        if not chunk:
+            break
+        total_size += len(chunk)
+        if total_size > NFE_MAX_UPLOAD_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="Arquivo excede o tamanho máximo permitido (5MB).",
+            )
+        chunks.append(chunk)
+    xml_bytes = b"".join(chunks)
+
     data = nfe_parser.parse_nfe(xml_bytes)
     return nfe_match_service.match_nfe(db, data)
 
