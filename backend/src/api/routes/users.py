@@ -141,10 +141,20 @@ def toggle_active(
 @router.post("/{user_id}/reset-password", response_model=ResetPasswordResponse)
 def do_reset_password(
     user_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
     payload: dict = Depends(require_permission("gestao_usuarios")),
 ) -> ResetPasswordResponse:
     temp = reset_password(db, payload["tenant_id"], user_id)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "user.reset_password",
+        tenant_id=payload["tenant_id"],
+        user_id=payload["user_id"],
+        entity="SystemUser",
+        entity_id=user_id,
+        impersonated_by=payload.get("impersonated_by"),
+    )
     return ResetPasswordResponse(temp_password=temp)
 
 

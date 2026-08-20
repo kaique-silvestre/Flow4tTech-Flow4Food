@@ -1,7 +1,7 @@
 """add hora to tenant_eventos and compras
 
 Revision ID: 0078
-Revises: 0077
+Revises: 0076
 Create Date: 2026-06-15
 
 """

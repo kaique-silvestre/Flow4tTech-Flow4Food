@@ -57,11 +57,14 @@ def _text(element: ET.Element, path: str, default: str = "") -> str:
     return (el.text or "").strip() if el is not None else default
 
 
-def _decimal(value: str) -> Decimal:
+def _decimal(value: str, *, campo: str) -> Decimal:
     try:
         return Decimal(value.replace(",", "."))
-    except InvalidOperation:
-        return Decimal("0")
+    except InvalidOperation as exc:
+        raise AppError(
+            ErrorCode.VALIDATION_ERROR,
+            f"Valor numérico inválido em {campo}: '{value}'",
+        ) from exc
 
 
 def _map_unidade(ucom: str) -> str:
@@ -127,10 +130,10 @@ def parse_nfe(xml_bytes: bytes) -> NFeData:
         nome = _text(prod, "xProd")
         ean_raw = _text(prod, "cEAN")
         ean: Optional[str] = None if ean_raw.upper() in ("SEM GTIN", "", "0") else ean_raw
-        quantidade = _decimal(_text(prod, "qCom", "0"))
+        quantidade = _decimal(_text(prod, "qCom", "0"), campo=f"qCom do item '{nome}'")
         unidade_xml = _text(prod, "uCom", "UN")
-        custo_unitario = _decimal(_text(prod, "vUnCom", "0"))
-        custo_total = _decimal(_text(prod, "vProd", "0"))
+        custo_unitario = _decimal(_text(prod, "vUnCom", "0"), campo=f"vUnCom do item '{nome}'")
+        custo_total = _decimal(_text(prod, "vProd", "0"), campo=f"vProd do item '{nome}'")
         itens.append(NFeItem(
             nome=nome,
             ean=ean,
