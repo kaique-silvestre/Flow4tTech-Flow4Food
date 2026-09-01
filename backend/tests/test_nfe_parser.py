@@ -128,6 +128,23 @@ def test_wrong_namespace_raises_app_error():
         parse_nfe(xml)
 
 
+def test_billion_laughs_xml_raises_app_error_instead_of_expanding():
+    """XML entity expansion ('billion laughs') must be rejected, not parsed."""
+    xml = b"""<?xml version="1.0"?>
+<!DOCTYPE lolz [
+ <!ENTITY lol "lol">
+ <!ELEMENT lolz (#PCDATA)>
+ <!ENTITY lol1 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+ <!ENTITY lol2 "&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;">
+ <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+ <!ENTITY lol4 "&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;">
+]>
+<lolz>&lol4;</lolz>
+"""
+    with pytest.raises(AppError):
+        parse_nfe(xml)
+
+
 def test_nfe_raw_root_without_proc():
     """NFe root directly (no nfeProc wrapper)."""
     xml = """\

@@ -6,6 +6,9 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Optional
 
+from defusedxml import DefusedXmlException
+from defusedxml.ElementTree import fromstring as defused_fromstring
+
 from src.core.errors import AppError, ErrorCode
 
 _NS = "http://www.portalfiscal.inf.br/nfe"
@@ -78,8 +81,8 @@ def _parse_date(raw: str) -> date:
 
 def parse_nfe(xml_bytes: bytes) -> NFeData:
     try:
-        root = ET.fromstring(xml_bytes)
-    except ET.ParseError as exc:
+        root = defused_fromstring(xml_bytes)
+    except (ET.ParseError, DefusedXmlException) as exc:
         raise AppError(ErrorCode.VALIDATION_ERROR, f"XML inválido: {exc}") from exc
 
     # Support both nfeProc (wrapper) and NFe (raw) as root

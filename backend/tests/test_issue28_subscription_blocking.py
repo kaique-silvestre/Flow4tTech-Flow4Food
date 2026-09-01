@@ -15,6 +15,7 @@ from sqlalchemy.orm import sessionmaker
 
 from src.api.dependencies import check_subscription, get_db
 from src.core.database import Base, get_platform_db
+from src.core.errors import register_exception_handlers
 from src.models.assinaturas import Assinatura
 from src.models.platform_settings import PlatformSettings
 from src.models.tenants import Tenant
@@ -57,6 +58,7 @@ def _make_token(tenant_id: int, exp_minutes: int = 60) -> str:
 
 def _make_app():
     app = FastAPI()
+    register_exception_handlers(app)
 
     @app.get("/protected")
     def _protected(payload: dict = Depends(check_subscription)):
