@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
+from src.core.logging import get_logger
 from src.models.insumos import Insumo
 from src.models.movimentos_estoque import TipoMovimento
 from src.repositories import compras_repository, contas_pagar_repository, estoque_repository
@@ -18,6 +19,8 @@ from src.schemas.compras import (
     ItemCompraResponse,
 )
 from src.services.shared import get_fornecedor_nome as _get_fornecedor_nome
+
+logger = get_logger(__name__)
 
 
 def _calcular_custo_medio(
@@ -54,6 +57,12 @@ def _mover_estoque_itens(db: Session, compra_id: int) -> list[ItemCompraResponse
     for item in itens:
         insumo = estoque_repository.get_insumo_for_update(db, item.insumo_id)
         if insumo is None:
+            logger.warning(
+                "compra_item_insumo_ausente",
+                compra_id=compra_id,
+                insumo_id=item.insumo_id,
+                acao="confirmar_recebimento",
+            )
             continue
         novo_custo_medio = _calcular_custo_medio(
             insumo.estoque_atual, insumo.custo_medio, item.quantidade, item.custo_unitario
@@ -265,6 +274,12 @@ def cancelar_compra(db: Session, compra_id: int) -> CompraResponse:
             for item in itens:
                 insumo = estoque_repository.get_insumo_for_update(db, item.insumo_id)
                 if insumo is None:
+                    logger.warning(
+                        "compra_item_insumo_ausente",
+                        compra_id=compra_id,
+                        insumo_id=item.insumo_id,
+                        acao="cancelar_compra",
+                    )
                     continue
                 novo_estoque = insumo.estoque_atual - item.quantidade
                 novo_custo_medio = _reverter_custo_medio(

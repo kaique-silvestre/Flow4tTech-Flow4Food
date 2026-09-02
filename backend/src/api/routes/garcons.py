@@ -134,10 +134,24 @@ def update_comissao(
 def toggle_pago_comissao(
     request: Request,
     comissao_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
-    _user: dict = Depends(get_current_user),
+    payload: dict = Depends(get_current_user),
 ) -> ComissaoResponse:
+    pago_antes = db.get(ComissaoGarcom, comissao_id)
+    estado_antes = pago_antes.pago if pago_antes is not None else None
     comissao = garcons_service.toggle_pago_comissao(db, comissao_id)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "comissao.pago.alternar",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="ComissaoGarcom",
+        entity_id=comissao_id,
+        before={"pago": estado_antes} if estado_antes is not None else None,
+        after={"pago": comissao.pago},
+        impersonated_by=payload.get("impersonated_by"),
+    )
     return ComissaoResponse.model_validate(comissao)
 
 
@@ -146,7 +160,30 @@ def toggle_pago_comissao(
 def delete_comissao(
     request: Request,
     comissao_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
-    _user: dict = Depends(get_current_user),
+    payload: dict = Depends(get_current_user),
 ) -> None:
+    comissao_antes = db.get(ComissaoGarcom, comissao_id)
+    snapshot = (
+        {
+            "garcom_id": comissao_antes.garcom_id,
+            "comanda_id": comissao_antes.comanda_id,
+            "valor": str(comissao_antes.valor),
+            "pago": comissao_antes.pago,
+        }
+        if comissao_antes is not None
+        else None
+    )
     garcons_service.delete_comissao(db, comissao_id)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "comissao.remover",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="ComissaoGarcom",
+        entity_id=comissao_id,
+        before=snapshot,
+        after=None,
+        impersonated_by=payload.get("impersonated_by"),
+    )

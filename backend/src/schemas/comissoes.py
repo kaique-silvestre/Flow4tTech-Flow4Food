@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ComissaoResponse(BaseModel):
@@ -17,7 +17,7 @@ class ComissaoResponse(BaseModel):
 
 
 class ComissaoUpdateRequest(BaseModel):
-    valor: Decimal
+    valor: Decimal = Field(ge=0)
 
 
 class GarcomStatsResponse(BaseModel):

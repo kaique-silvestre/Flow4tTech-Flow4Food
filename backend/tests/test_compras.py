@@ -12,6 +12,9 @@ from sqlalchemy.orm import sessionmaker
 from src.api.dependencies import get_current_user, get_db
 from src.core.database import Base
 from src.main import app
+from src.models.audit_logs import AuditLog
+from src.models.insumos import Insumo
+from src.services import audit_service
 
 _SQLITE_URL = "sqlite:///:memory:"
 _engine = create_engine(
@@ -33,8 +36,26 @@ def _setup_db():
     Base.metadata.drop_all(_engine)
 
 
+def _log_background_sync(action, *, tenant_id=None, user_id=None, entity=None, entity_id=None, before=None, after=None, impersonated_by=None):
+    db = _TestingSession()
+    try:
+        audit_service.log(
+            db,
+            action,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            entity=entity,
+            entity_id=entity_id,
+            before=before,
+            after=after,
+            impersonated_by=impersonated_by,
+        )
+    finally:
+        db.close()
+
+
 @pytest.fixture
-def crud_client():
+def crud_client(monkeypatch):
     def override_get_db():
         db = _TestingSession()
         try:
@@ -42,6 +63,7 @@ def crud_client():
         finally:
             db.close()
 
+    monkeypatch.setattr(audit_service, "log_background", _log_background_sync)
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = _fake_user
     with TestClient(app) as c:
@@ -160,3 +182,114 @@ def test_compra_item_inexistente(crud_client):
     }
     resp = crud_client.post("/api/compras", json=payload)
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Auditoria
+# ---------------------------------------------------------------------------
+
+def test_criar_compra_gera_log_de_auditoria(crud_client):
+    item = _criar_item(crud_client, "Item Auditado")
+    compra = _comprar(crud_client, item["id"], 10, 20.0)
+
+    db = _TestingSession()
+    logs = db.query(AuditLog).filter_by(action="compra.criar").all()
+    db.close()
+
+    assert len(logs) == 1
+    log = logs[0]
+    assert log.user_id == _fake_user()["user_id"]
+    assert log.entity == "Compra"
+    assert log.entity_id == compra["id"]
+
+
+def test_confirmar_recebimento_gera_log_de_auditoria(crud_client):
+    item = _criar_item(crud_client, "Item Agendado")
+    payload = {
+        "data_compra": "2026-05-07",
+        "tipo_compra": "agendada",
+        "data_prevista_recebimento": "2026-05-10",
+        "data_prevista_pagamento": "2026-05-20",
+        "itens": [{"item_id": item["id"], "quantidade": 5, "custo_total": 50.0}],
+    }
+    resp = crud_client.post("/api/compras", json=payload)
+    assert resp.status_code == 201, resp.text
+    compra_id = resp.json()["id"]
+
+    resp = crud_client.post(f"/api/compras/{compra_id}/confirmar-recebimento")
+    assert resp.status_code == 200, resp.text
+
+    db = _TestingSession()
+    logs = db.query(AuditLog).filter_by(action="compra.confirmar_recebimento").all()
+    db.close()
+
+    assert len(logs) == 1
+    assert logs[0].entity == "Compra"
+    assert logs[0].entity_id == compra_id
+
+
+def test_cancelar_compra_gera_log_de_auditoria(crud_client):
+    item = _criar_item(crud_client, "Item Cancelado")
+    compra = _comprar(crud_client, item["id"], 10, 20.0)
+
+    resp = crud_client.post(f"/api/compras/{compra['id']}/cancelar")
+    assert resp.status_code == 200, resp.text
+
+    db = _TestingSession()
+    logs = db.query(AuditLog).filter_by(action="compra.cancelar").all()
+    db.close()
+
+    assert len(logs) == 1
+    assert logs[0].entity == "Compra"
+    assert logs[0].entity_id == compra["id"]
+
+
+# ---------------------------------------------------------------------------
+# Descarte de item com insumo removido (não deve ser silencioso)
+# ---------------------------------------------------------------------------
+
+def test_confirmar_recebimento_loga_warning_quando_insumo_removido(crud_client, caplog):
+    item = _criar_item(crud_client, "Item Sumiu")
+    payload = {
+        "data_compra": "2026-05-07",
+        "tipo_compra": "agendada",
+        "data_prevista_recebimento": "2026-05-10",
+        "data_prevista_pagamento": "2026-05-20",
+        "itens": [{"item_id": item["id"], "quantidade": 5, "custo_total": 50.0}],
+    }
+    resp = crud_client.post("/api/compras", json=payload)
+    assert resp.status_code == 201, resp.text
+    compra_id = resp.json()["id"]
+
+    db = _TestingSession()
+    db.query(Insumo).filter_by(id=item["id"]).delete()
+    db.commit()
+    db.close()
+
+    with caplog.at_level("WARNING"):
+        resp = crud_client.post(f"/api/compras/{compra_id}/confirmar-recebimento")
+    assert resp.status_code == 200, resp.text
+
+    assert any(
+        rec.levelname == "WARNING" and "compra_item_insumo_ausente" in rec.message
+        for rec in caplog.records
+    )
+
+
+def test_cancelar_compra_loga_warning_quando_insumo_removido(crud_client, caplog):
+    item = _criar_item(crud_client, "Item Sumiu 2")
+    compra = _comprar(crud_client, item["id"], 10, 20.0)
+
+    db = _TestingSession()
+    db.query(Insumo).filter_by(id=item["id"]).delete()
+    db.commit()
+    db.close()
+
+    with caplog.at_level("WARNING"):
+        resp = crud_client.post(f"/api/compras/{compra['id']}/cancelar")
+    assert resp.status_code == 200, resp.text
+
+    assert any(
+        rec.levelname == "WARNING" and "compra_item_insumo_ausente" in rec.message
+        for rec in caplog.records
+    )

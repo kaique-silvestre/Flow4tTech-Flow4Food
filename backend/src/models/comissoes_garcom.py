@@ -9,6 +9,11 @@ from src.core.database import Base
 
 class ComissaoGarcom(Base):
     __tablename__ = "comissoes_garcom"
+    __table_args__ = (
+        sa.CheckConstraint(
+            "percentual >= 0 AND percentual <= 100", name="ck_comissoes_garcom_percentual_range"
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))

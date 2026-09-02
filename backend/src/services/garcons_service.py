@@ -2,6 +2,7 @@ import math
 from decimal import Decimal
 from typing import Optional
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
@@ -14,6 +15,19 @@ from src.schemas.garcons import (
     GarcomResponse,
     GarcomUpdateRequest,
 )
+
+
+def _is_nome_unique_violation(error: IntegrityError) -> bool:
+    """Detecta se o IntegrityError foi causado pela unique constraint uq_garcons_tenant_nome.
+
+    Postgres (psycopg2): usa o pgcode '23505' (unique_violation).
+    SQLite (testes): cai para inspeção textual ("UNIQUE constraint failed").
+    """
+    pgcode = getattr(error.orig, "pgcode", None)
+    if pgcode is not None:
+        return pgcode == "23505"
+    msg = str(error.orig).lower()
+    return "unique" in msg
 
 
 def list_garcons(
@@ -40,11 +54,23 @@ def get_garcom(db: Session, garcom_id: int) -> Garcom:
 
 
 def create_garcom(db: Session, data: GarcomCreateRequest) -> Garcom:
-    return garcons_repository.create(db, data)
+    try:
+        return garcons_repository.create(db, data)
+    except IntegrityError as e:
+        db.rollback()
+        if _is_nome_unique_violation(e):
+            raise AppError(ErrorCode.CONFLICT, "Já existe um garçom com este nome", http_status=409) from None
+        raise
 
 
 def update_garcom(db: Session, garcom_id: int, data: GarcomUpdateRequest) -> Garcom:
-    obj = garcons_repository.update(db, garcom_id, data)
+    try:
+        obj = garcons_repository.update(db, garcom_id, data)
+    except IntegrityError as e:
+        db.rollback()
+        if _is_nome_unique_violation(e):
+            raise AppError(ErrorCode.CONFLICT, "Já existe um garçom com este nome", http_status=409) from None
+        raise
     if obj is None:
         raise AppError(ErrorCode.NOT_FOUND, "Garçom não encontrado", http_status=404)
     return obj

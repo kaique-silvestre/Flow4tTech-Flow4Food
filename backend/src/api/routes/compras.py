@@ -1,6 +1,16 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import (
@@ -17,7 +27,7 @@ from src.schemas.compras import (
     ComprasPageResponse,
 )
 from src.schemas.nfe import NFeImportResponse
-from src.services import compras_service, nfe_match_service, nfe_parser
+from src.services import audit_service, compras_service, nfe_match_service, nfe_parser
 
 router = APIRouter(dependencies=[Depends(require_feature("compras")), Depends(require_permission("compras"))])
 
@@ -64,10 +74,22 @@ def importar_nfe(
 @router.post("", response_model=CompraResponse, status_code=status.HTTP_201_CREATED)
 def create_compra(
     data: CompraCreateRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
-    _user: dict = Depends(get_current_user),
+    payload: dict = Depends(get_current_user),
 ) -> CompraResponse:
-    return compras_service.criar_compra(db, data)
+    compra = compras_service.criar_compra(db, data)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "compra.criar",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="Compra",
+        entity_id=compra.id,
+        after={"fornecedor_id": compra.fornecedor_id, "total": str(compra.total), "status": compra.status},
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return compra
 
 
 @router.get("", response_model=ComprasPageResponse)
@@ -99,19 +121,43 @@ def get_compra(
 @router.post("/{compra_id}/confirmar-recebimento", response_model=CompraResponse)
 def confirmar_recebimento(
     compra_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
-    _user: dict = Depends(get_current_user),
+    payload: dict = Depends(get_current_user),
 ) -> CompraResponse:
-    return compras_service.confirmar_recebimento(db, compra_id)
+    compra = compras_service.confirmar_recebimento(db, compra_id)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "compra.confirmar_recebimento",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="Compra",
+        entity_id=compra.id,
+        after={"status": compra.status},
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return compra
 
 
 @router.post("/{compra_id}/cancelar", response_model=CompraResponse)
 def cancelar_compra(
     compra_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
-    _user: dict = Depends(get_current_user),
+    payload: dict = Depends(get_current_user),
 ) -> CompraResponse:
-    return compras_service.cancelar_compra(db, compra_id)
+    compra = compras_service.cancelar_compra(db, compra_id)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "compra.cancelar",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="Compra",
+        entity_id=compra.id,
+        after={"status": compra.status},
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return compra
 
 
 @router.patch("/{compra_id}", response_model=CompraResponse)

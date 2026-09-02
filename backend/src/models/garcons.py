@@ -6,6 +6,7 @@ from src.core.database import Base
 
 class Garcom(Base):
     __tablename__ = "garcons"
+    __table_args__ = (sa.UniqueConstraint("tenant_id", "nome", name="uq_garcons_tenant_nome"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
