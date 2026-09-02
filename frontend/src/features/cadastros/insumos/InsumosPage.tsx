@@ -14,7 +14,7 @@ type Filtro = "ativos" | "inativos" | "todos";
 const POR_PAGINA = 12;
 
 export function InsumosPage() {
-  const { data, isLoading } = useAllInsumos();
+  const { data, isLoading, isError } = useAllInsumos();
   const insumos = data?.itens ?? [];
   const toggleAtivo = useToggleInsumoAtivo();
 
@@ -65,6 +65,8 @@ export function InsumosPage() {
             <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />
           ))}
         </div>
+      ) : isError ? (
+        <p className="text-sm text-red-500">Erro ao carregar insumos. Tente novamente.</p>
       ) : insumosFiltrados.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum insumo encontrado.</p>
       ) : (

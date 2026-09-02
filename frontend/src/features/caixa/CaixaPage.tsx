@@ -315,7 +315,7 @@ function ResultadoFechamento({
 }
 
 export function CaixaPage() {
-  const { data: sessao, isLoading } = useSessaoAberta();
+  const { data: sessao, isLoading, isError, refetch } = useSessaoAberta();
   const [view, setView] = useState<ViewState>("turno");
   const [sessaoFechada, setSessaoFechada] = useState<CaixaSessao | null>(null);
 
@@ -324,6 +324,17 @@ export function CaixaPage() {
       <div className="p-6 space-y-4">
         <div className="h-8 w-48 bg-gray-200 animate-pulse rounded" />
         <div className="h-32 w-full max-w-sm bg-gray-200 animate-pulse rounded" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="max-w-sm mx-auto mt-10 space-y-4 text-center">
+        <p className="text-sm text-red-500">
+          Não foi possível verificar se há um caixa aberto. Tente novamente antes de continuar.
+        </p>
+        <Button onClick={() => refetch()}>Tentar novamente</Button>
       </div>
     );
   }

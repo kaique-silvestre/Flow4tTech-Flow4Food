@@ -24,7 +24,10 @@ _engine = create_engine(
 )
 _Session = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
 
-_SUPERADMIN_HEADERS = {"Authorization": "Bearer superadmin-test-token"}
+_SUPERADMIN_HEADERS = {
+    "Authorization": "Bearer superadmin-test-token",
+    "X-Admin-Identifier": "teste@flow4tech.com",
+}
 _WRONG_TOKEN_HEADERS = {"Authorization": "Bearer wrong-token"}
 
 _TENANT_PAYLOAD = {

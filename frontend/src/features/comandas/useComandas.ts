@@ -52,7 +52,7 @@ export interface ComandaResponse {
   estoque_insuficiente: string[];
 }
 
-function handle409(err: unknown, comanda_id: number | string, qc: ReturnType<typeof useQueryClient>) {
+export function handle409(err: unknown, comanda_id: number | string, qc: ReturnType<typeof useQueryClient>) {
   const axiosErr = err as { response?: { status?: number; data?: ApiErrorBody } };
   if (axiosErr?.response?.status === 409) {
     toast.error("Comanda alterada por outro usuário, recarregue");
@@ -197,29 +197,31 @@ export function useComandasFechadas(params?: {
   });
 }
 
-export function useReopenComanda(comanda_id: number | string) {
+export function useReopenComanda(comanda_id: number | string, version: number) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   return useMutation({
     mutationFn: () =>
-      api.post<ComandaResponse>(`/api/comandas/${comanda_id}/reabrir`).then((r) => r.data),
+      api.post<ComandaResponse>(`/api/comandas/${comanda_id}/reabrir`, { version }).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comandas"] });
       qc.invalidateQueries({ queryKey: ["insumos"] });
       navigate(`/vendas/comandas/${comanda_id}`);
       toast.success("Comanda reaberta com sucesso");
     },
-    onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.message;
-      toast.error(msg ?? "Erro ao reabrir comanda");
-    },
+    onError: (err: unknown) => handle409(err, comanda_id, qc),
   });
 }
 
 export function usePatchComanda(comanda_id: number | string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { identificacao?: string; garcom_id?: number; pessoas?: string[] }) =>
+    mutationFn: (data: {
+      identificacao?: string;
+      garcom_id?: number;
+      pessoas?: string[];
+      version: number;
+    }) =>
       api
         .patch<ComandaResponse>(`/api/comandas/${comanda_id}`, data)
         .then((r) => r.data),
@@ -227,10 +229,7 @@ export function usePatchComanda(comanda_id: number | string) {
       qc.invalidateQueries({ queryKey: ["comandas", comanda_id] });
       toast.success("Comanda atualizada.");
     },
-    onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.message;
-      toast.error(msg ?? "Erro ao atualizar comanda");
-    },
+    onError: (err: unknown) => handle409(err, comanda_id, qc),
   });
 }
 

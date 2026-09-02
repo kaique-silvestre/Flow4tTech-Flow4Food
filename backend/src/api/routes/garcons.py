@@ -2,7 +2,7 @@
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,7 @@ from src.api.dependencies import (
     require_feature,
     require_permission,
 )
+from src.core.limiter import limiter
 from src.models.comandas import Comanda
 from src.models.comissoes_garcom import ComissaoGarcom
 from src.schemas.comissoes import ComissaoResponse, ComissaoUpdateRequest, GarcomStatsResponse
@@ -24,6 +25,8 @@ from src.schemas.garcons import (
 from src.services import audit_service, garcons_service
 
 router = APIRouter(dependencies=[Depends(require_feature("cadastros")), Depends(require_permission("cadastros"))])
+
+_COMISSAO_RATE_LIMIT = "30/minute"
 
 
 @router.get("", response_model=GarcomPageResponse)
@@ -127,7 +130,9 @@ def update_comissao(
 
 
 @router.patch("/comissoes/{comissao_id}/toggle-pago", response_model=ComissaoResponse)
+@limiter.limit(_COMISSAO_RATE_LIMIT)
 def toggle_pago_comissao(
+    request: Request,
     comissao_id: int,
     db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
@@ -137,7 +142,9 @@ def toggle_pago_comissao(
 
 
 @router.delete("/comissoes/{comissao_id}", status_code=204)
+@limiter.limit(_COMISSAO_RATE_LIMIT)
 def delete_comissao(
+    request: Request,
     comissao_id: int,
     db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),

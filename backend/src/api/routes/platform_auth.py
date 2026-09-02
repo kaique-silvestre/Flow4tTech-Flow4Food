@@ -1,13 +1,14 @@
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import require_platform_admin
 from src.core.database import get_platform_db
 from src.core.errors import AppError
+from src.core.limiter import limiter
 from src.repositories import platform_repository, revoked_tokens_repository
 from src.services import audit_service, platform_auth_service
 from src.services.auth_service import create_access_token, hash_password
@@ -68,6 +69,11 @@ _public_router = APIRouter()
 # Protected router — all routes require platform admin token
 router = APIRouter(dependencies=[Depends(require_platform_admin)])
 
+_LOGIN_RATE_LIMIT = "5/15minutes"
+# Admin write actions (tenant/user provisioning, subscription changes,
+# impersonation) are more sensitive than routine reads — throttle harder.
+_ADMIN_WRITE_RATE_LIMIT = "10/minute"
+
 
 @_public_router.post(
     "/auth/login",
@@ -75,7 +81,9 @@ router = APIRouter(dependencies=[Depends(require_platform_admin)])
     status_code=status.HTTP_200_OK,
     tags=["platform"],
 )
+@limiter.limit(_LOGIN_RATE_LIMIT)
 def platform_login(
+    request: Request,
     body: PlatformLoginRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_platform_db),
@@ -200,7 +208,9 @@ def get_tenant_cockpit(
     status_code=status.HTTP_200_OK,
     tags=["platform"],
 )
+@limiter.limit(_ADMIN_WRITE_RATE_LIMIT)
 def update_assinatura(
+    request: Request,
     tenant_id: int,
     body: AssinaturaStatusUpdate,
     background_tasks: BackgroundTasks,
@@ -357,7 +367,9 @@ class ImpersonateResponse(BaseModel):
     status_code=status.HTTP_201_CREATED,
     tags=["platform"],
 )
+@limiter.limit(_ADMIN_WRITE_RATE_LIMIT)
 def create_tenant(
+    request: Request,
     body: PlatformTenantCreate,
     background_tasks: BackgroundTasks,
     payload: dict = Depends(require_platform_admin),
@@ -432,7 +444,9 @@ def update_tenant(
     status_code=status.HTTP_200_OK,
     tags=["platform"],
 )
+@limiter.limit(_ADMIN_WRITE_RATE_LIMIT)
 def update_assinatura_full(
+    request: Request,
     tenant_id: int,
     body: AssinaturaFullUpdate,
     background_tasks: BackgroundTasks,
@@ -476,7 +490,9 @@ def get_assinatura_history(
     status_code=status.HTTP_201_CREATED,
     tags=["platform"],
 )
+@limiter.limit(_ADMIN_WRITE_RATE_LIMIT)
 def create_platform_user(
+    request: Request,
     tenant_id: int,
     body: PlatformUserCreate,
     db: Session = Depends(get_platform_db),
@@ -500,7 +516,9 @@ def create_platform_user(
     status_code=status.HTTP_200_OK,
     tags=["platform"],
 )
+@limiter.limit(_ADMIN_WRITE_RATE_LIMIT)
 def update_platform_user(
+    request: Request,
     tenant_id: int,
     user_id: int,
     body: PlatformUserUpdate,
@@ -596,7 +614,9 @@ def upsert_tenant_features(
     status_code=status.HTTP_200_OK,
     tags=["platform"],
 )
+@limiter.limit(_ADMIN_WRITE_RATE_LIMIT)
 def impersonate_user(
+    request: Request,
     tenant_id: int,
     user_id: int,
     background_tasks: BackgroundTasks,

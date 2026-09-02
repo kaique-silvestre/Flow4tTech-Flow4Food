@@ -39,17 +39,17 @@ export function ComandaAbertaPage() {
   }
 
   function saveIdentificacao() {
-    if (!editIdentificacao.trim()) { setEditingField(null); return; }
+    if (!editIdentificacao.trim() || !comanda) { setEditingField(null); return; }
     patchComanda.mutate(
-      { identificacao: editIdentificacao.trim() },
+      { identificacao: editIdentificacao.trim(), version: comanda.version },
       { onSuccess: () => setEditingField(null) },
     );
   }
 
   function saveGarcom() {
-    if (!editGarcomId) { setEditingField(null); return; }
+    if (!editGarcomId || !comanda) { setEditingField(null); return; }
     patchComanda.mutate(
-      { garcom_id: editGarcomId },
+      { garcom_id: editGarcomId, version: comanda.version },
       { onSuccess: () => setEditingField(null) },
     );
   }
@@ -100,7 +100,7 @@ export function ComandaAbertaPage() {
   const [confirmCancelar, setConfirmCancelar] = useState(false);
   const [mobileTab, setMobileTab] = useState<"cardapio" | "itens">("cardapio");
 
-  const reopenComanda = useReopenComanda(comanda_id);
+  const reopenComanda = useReopenComanda(comanda_id, comanda?.version ?? 0);
   const cancelarComanda = useCancelarComanda(comanda_id, comanda?.version ?? 0);
 
   const [now, setNow] = useState(() => Date.now());
@@ -441,7 +441,7 @@ export function ComandaAbertaPage() {
                     className="text-gray-400 hover:text-gray-700"
                     onClick={() => {
                       const novaLista = comanda.pessoas.filter((_, j) => j !== i);
-                      patchComanda.mutate({ pessoas: novaLista });
+                      patchComanda.mutate({ pessoas: novaLista, version: comanda.version });
                     }}
                   >
                     ×
@@ -460,7 +460,7 @@ export function ComandaAbertaPage() {
                     e.preventDefault();
                     const nome = novaPessoa.trim();
                     if (!nome || comanda.pessoas.includes(nome)) return;
-                    patchComanda.mutate({ pessoas: [...comanda.pessoas, nome] });
+                    patchComanda.mutate({ pessoas: [...comanda.pessoas, nome], version: comanda.version });
                     setNovaPessoa("");
                   }
                 }}
@@ -471,7 +471,7 @@ export function ComandaAbertaPage() {
                 onClick={() => {
                   const nome = novaPessoa.trim();
                   if (!nome || comanda.pessoas.includes(nome)) return;
-                  patchComanda.mutate({ pessoas: [...comanda.pessoas, nome] });
+                  patchComanda.mutate({ pessoas: [...comanda.pessoas, nome], version: comanda.version });
                   setNovaPessoa("");
                 }}
               >

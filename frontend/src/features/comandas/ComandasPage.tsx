@@ -66,10 +66,12 @@ export function ComandasPage() {
   }
 
   const queryBusca = busca === "" ? undefined : debouncedBusca || undefined;
-  const { data: comandas = [], isLoading } = useComandas(queryBusca);
-  const { data: fechadasHoje = [], isLoading: loadingFechadas } = useComandasFechadas(
-    showHistorico ? { data_inicio: today, data_fim: today } : undefined
-  );
+  const { data: comandas = [], isLoading, isError } = useComandas(queryBusca);
+  const {
+    data: fechadasHoje = [],
+    isLoading: loadingFechadas,
+    isError: isErrorFechadas,
+  } = useComandasFechadas(showHistorico ? { data_inicio: today, data_fim: today } : undefined);
 
   function toggleView(mode: ViewMode) {
     setViewMode(mode);
@@ -128,6 +130,8 @@ export function ComandasPage() {
             <div key={i} className="h-20 animate-pulse rounded bg-gray-100" />
           ))}
         </div>
+      ) : isError ? (
+        <p className="text-sm text-red-500">Erro ao carregar comandas. Tente novamente.</p>
       ) : comandas.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhuma comanda aberta.</p>
       ) : viewMode === "lista" ? (
@@ -231,6 +235,8 @@ export function ComandasPage() {
                   <div key={i} className="h-16 animate-pulse rounded bg-gray-100" />
                 ))}
               </div>
+            ) : isErrorFechadas ? (
+              <p className="text-sm text-red-500">Erro ao carregar histórico. Tente novamente.</p>
             ) : fechadasHoje.length === 0 ? (
               <p className="text-sm text-gray-500">Nenhuma comanda fechada hoje.</p>
             ) : (

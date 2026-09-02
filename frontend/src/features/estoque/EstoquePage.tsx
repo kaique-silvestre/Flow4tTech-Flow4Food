@@ -13,7 +13,7 @@ export function EstoquePage() {
   const [filters, setFilters] = useState<SaldoFilters>({});
   const [debouncedBusca] = useDebounce(filters.busca, 350);
   const queryFilters: SaldoFilters = { ...filters, busca: filters.busca === "" || filters.busca == null ? filters.busca : debouncedBusca };
-  const { data: saldoData, isLoading } = useSaldoEstoque(queryFilters);
+  const { data: saldoData, isLoading, isError } = useSaldoEstoque(queryFilters);
   const itens = saldoData?.itens ?? [];
   const { data: categorias = [] } = useCategorias();
   const [baixaOpen, setBaixaOpen] = useState(false);
@@ -54,6 +54,8 @@ export function EstoquePage() {
         <div className="space-y-2">
           {[1, 2, 3].map((i) => <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />)}
         </div>
+      ) : isError ? (
+        <p className="text-sm text-red-500">Erro ao carregar estoque. Tente novamente.</p>
       ) : itens.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum item em estoque.</p>
       ) : (

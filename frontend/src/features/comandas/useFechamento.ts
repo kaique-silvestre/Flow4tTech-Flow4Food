@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/lib/toast";
 import { api, type ApiErrorBody } from "@/lib/api";
-import type { ComandaResponse } from "./useComandas";
+import { handle409, type ComandaResponse } from "./useComandas";
 import type { AplicarDescontoValues, FecharComandaValues } from "./fechamentoSchemas";
 
 export interface MetodoPagamento {
@@ -22,21 +22,18 @@ export function useMetodosPagamento() {
 export function useAplicarDesconto(comanda_id: number | string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: AplicarDescontoValues) => {
+    mutationFn: ({ version, ...data }: AplicarDescontoValues & { version: number }) => {
       const body =
         data.tipo === "percentual"
-          ? { desconto_percentual: data.valor }
-          : { desconto_valor: data.valor };
+          ? { desconto_percentual: data.valor, version }
+          : { desconto_valor: data.valor, version };
       return api.post<ComandaResponse>(`/api/comandas/${comanda_id}/desconto`, body).then((r) => r.data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["comandas", comanda_id] });
       toast.success("Desconto aplicado");
     },
-    onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.message;
-      toast.error(msg ?? "Erro ao aplicar desconto");
-    },
+    onError: (err: unknown) => handle409(err, comanda_id, qc),
   });
 }
 
@@ -44,7 +41,7 @@ export function useFecharComanda(comanda_id: number | string) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   return useMutation({
-    mutationFn: (data: FecharComandaValues) =>
+    mutationFn: (data: FecharComandaValues & { version: number }) =>
       api.post<ComandaResponse>(`/api/comandas/${comanda_id}/fechar`, data).then((r) => r.data),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["comandas"] });
@@ -63,6 +60,10 @@ export function useFecharComanda(comanda_id: number | string) {
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { status?: number; data?: ApiErrorBody } };
+      if (axiosErr?.response?.status === 409) {
+        handle409(err, comanda_id, qc);
+        return;
+      }
       const code = axiosErr?.response?.data?.error?.code;
       const msg = axiosErr?.response?.data?.error?.message;
       if (code === "PAGAMENTO_NAO_BATE") {

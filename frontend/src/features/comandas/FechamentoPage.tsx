@@ -70,11 +70,12 @@ export default function FechamentoPage() {
   const bate = Math.abs(totalPago - totalComTaxa) <= 0.01;
 
   function onSubmit(data: FecharComandaValues) {
+    if (!comanda) return;
     if (totalComTaxa > 0 && data.pagamentos.length === 0) {
       setError("pagamentos", { message: "Adicione ao menos um pagamento" });
       return;
     }
-    fechar(data);
+    fechar({ ...data, version: comanda.version });
   }
 
   const itensNaoCancelados = comanda.itens_ativos.filter((i) => !i.cancelado);
@@ -170,7 +171,14 @@ export default function FechamentoPage() {
               Cancelar
             </Button>
             <Button
-              onClick={() => fechar({ pagamentos: [], modo_divisao: "sem_divisao", taxa_servico: false })}
+              onClick={() =>
+                fechar({
+                  pagamentos: [],
+                  modo_divisao: "sem_divisao",
+                  taxa_servico: false,
+                  version: comanda.version,
+                })
+              }
               disabled={isPending}
             >
               {isPending ? "Processando..." : "Confirmar Fechamento (sem cobrança)"}

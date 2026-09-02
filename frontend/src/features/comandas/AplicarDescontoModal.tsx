@@ -27,7 +27,7 @@ export default function AplicarDescontoModal({ open, onClose, comanda }: Props) 
   const tipo = watch("tipo");
 
   function onSubmit(data: AplicarDescontoValues) {
-    mutate(data, { onSuccess: onClose });
+    mutate({ ...data, version: comanda.version }, { onSuccess: onClose });
   }
 
   return (

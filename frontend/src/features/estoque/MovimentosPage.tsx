@@ -53,7 +53,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 
 function InsumoMovimentos() {
   const [filters, setFilters] = useState<MovimentoFilters>({ pagina: 1, por_pagina: 15 });
-  const { data: result, isLoading } = useMovimentos(filters);
+  const { data: result, isLoading, isError } = useMovimentos(filters);
   const { data: saldoData } = useSaldoEstoque();
   const itens = saldoData?.itens ?? [];
 
@@ -113,6 +113,8 @@ function InsumoMovimentos() {
         <div className="space-y-2">
           {[1, 2, 3].map((i) => <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />)}
         </div>
+      ) : isError ? (
+        <p className="text-sm text-red-500">Erro ao carregar movimentos. Tente novamente.</p>
       ) : !result || result.itens.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum movimento encontrado.</p>
       ) : (
@@ -176,7 +178,7 @@ function InsumoMovimentos() {
 
 function ProdutoMovimentos() {
   const [filters, setFilters] = useState<MovimentoProdutoFilters>({ pagina: 1, por_pagina: 15 });
-  const { data: result, isLoading } = useMovimentosProdutos(filters);
+  const { data: result, isLoading, isError } = useMovimentosProdutos(filters);
   const { data: produtosData } = useProdutos(undefined, { ativo: undefined });
   const produtos = produtosData?.itens ?? [];
 
@@ -226,6 +228,8 @@ function ProdutoMovimentos() {
         <div className="space-y-2">
           {[1, 2, 3].map((i) => <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />)}
         </div>
+      ) : isError ? (
+        <p className="text-sm text-red-500">Erro ao carregar saídas de produtos. Tente novamente.</p>
       ) : !result || result.itens.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhuma saída de produto encontrada.</p>
       ) : (

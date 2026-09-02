@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import (
@@ -9,6 +9,7 @@ from src.api.dependencies import (
     require_feature,
     require_permission,
 )
+from src.core.limiter import limiter
 from src.schemas.compras import (
     CompraCreateRequest,
     CompraPatchRequest,
@@ -25,7 +26,9 @@ NFE_ALLOWED_CONTENT_TYPES = {"application/xml", "text/xml"}
 
 
 @router.post("/importar-nfe", response_model=NFeImportResponse)
+@limiter.limit("10/minute")
 def importar_nfe(
+    request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),

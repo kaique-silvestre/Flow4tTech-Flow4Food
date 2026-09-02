@@ -67,7 +67,7 @@ function CmvBadge({ preco, custo }: { preco: number | null; custo: number | null
 }
 
 export function CardapioPage() {
-  const { data: produtosData, isLoading } = useProdutos();
+  const { data: produtosData, isLoading, isError } = useProdutos();
   const produtos = produtosData?.itens ?? [];
   const { data: categorias = [] } = useCategorias();
   const desativar = useDesativarProduto();
@@ -185,6 +185,8 @@ export function CardapioPage() {
             <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />
           ))}
         </div>
+      ) : isError ? (
+        <p className="text-sm text-red-500">Erro ao carregar produtos. Tente novamente.</p>
       ) : produtosOrdenados.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum produto encontrado.</p>
       ) : (

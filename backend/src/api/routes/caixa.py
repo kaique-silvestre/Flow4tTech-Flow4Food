@@ -1,7 +1,8 @@
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_tenant_db, require_permission
+from src.core.limiter import limiter
 from src.schemas.caixa import (
     AbrirCaixaRequest,
     CaixaMovimentoResponse,
@@ -13,9 +14,14 @@ from src.services import audit_service, caixa_service
 
 router = APIRouter(dependencies=[Depends(require_permission("caixa"))])
 
+_WRITE_RATE_LIMIT = "30/minute"
+_READ_RATE_LIMIT = "60/minute"
+
 
 @router.post("/abrir", response_model=CaixaSessaoResponse, status_code=201)
+@limiter.limit(_WRITE_RATE_LIMIT)
 def abrir_caixa(
+    request: Request,
     body: AbrirCaixaRequest,
     background_tasks: BackgroundTasks,
     payload: dict = Depends(require_permission("caixa")),
@@ -37,7 +43,9 @@ def abrir_caixa(
 
 
 @router.post("/fechar", response_model=CaixaSessaoResponse)
+@limiter.limit(_WRITE_RATE_LIMIT)
 def fechar_caixa(
+    request: Request,
     body: FecharCaixaRequest,
     background_tasks: BackgroundTasks,
     payload: dict = Depends(require_permission("caixa")),
@@ -63,7 +71,9 @@ def fechar_caixa(
 
 
 @router.post("/movimentos", response_model=CaixaMovimentoResponse, status_code=201)
+@limiter.limit(_WRITE_RATE_LIMIT)
 def registrar_movimento(
+    request: Request,
     body: MovimentoCaixaRequest,
     background_tasks: BackgroundTasks,
     payload: dict = Depends(require_permission("caixa")),
@@ -85,7 +95,9 @@ def registrar_movimento(
 
 
 @router.get("/sessao", response_model=CaixaSessaoResponse)
+@limiter.limit(_READ_RATE_LIMIT)
 def get_sessao_aberta(
+    request: Request,
     db: Session = Depends(get_tenant_db),
 ) -> CaixaSessaoResponse:
     return caixa_service.get_sessao_aberta(db)
