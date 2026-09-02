@@ -9,6 +9,10 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 <!-- Novas entradas entram aqui, no topo. Ver CLAUDE.md → "Changelog" para o padrão de preenchimento. -->
 
+### Added
+
+- Adiciona `docs/engineering-pendencies/auditoria-matchpoint-handoff.md`: documento de transferência de contexto com tudo que já foi corrigido (5 lotes/17 fixes da auditoria Matchpoint) e backlog completo priorizado do que falta, para continuação por outro agente — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
+
 ### Fixed
 
 - Adiciona auditoria em `toggle_pago_comissao`/`delete_comissao` (com snapshot do valor removido) e bound checking (`ge=0`) em `ComissaoUpdateRequest.valor`; adiciona `CheckConstraint` no banco para `comissoes_garcom.percentual` (0-100); migra `garcons.nome` para unique constraint per-tenant (migration 0091, mesmo padrão da 0082 para categorias/insumos/system_users), tratando colisão como `AppError`/409 em vez de `IntegrityError` cru — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
