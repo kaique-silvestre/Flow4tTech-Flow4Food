@@ -1,13 +1,14 @@
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import require_platform_admin
 from src.core.database import get_platform_db
 from src.repositories import announcements_repository
+from src.services import audit_service
 
 router = APIRouter(dependencies=[Depends(require_platform_admin)])
 
@@ -52,6 +53,7 @@ def list_announcements(
 )
 def create_announcement(
     body: AnnouncementCreate,
+    background_tasks: BackgroundTasks,
     payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> AnnouncementResponse:
@@ -77,4 +79,23 @@ def create_announcement(
             "created_at": ann.created_at,
             "read_count": 0,
         }
+    actor_id = payload.get("platform_admin_id") or payload.get("admin_id") or payload.get("sub")
+    try:
+        actor_id = int(actor_id) if actor_id is not None else None
+    except (TypeError, ValueError):
+        actor_id = None
+    background_tasks.add_task(
+        audit_service.log_background,
+        "platform.announcement.create",
+        tenant_id=body.tenant_ids[0] if len(body.tenant_ids) == 1 else None,
+        user_id=actor_id,
+        entity="PlatformAnnouncement",
+        entity_id=ann.id,
+        after={
+            "title": ann.title,
+            "target": ann.target,
+            "tenant_ids": body.tenant_ids,
+            "expires_at": ann.expires_at.isoformat() if ann.expires_at else None,
+        },
+    )
     return AnnouncementResponse(**row)

@@ -9,12 +9,21 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 <!-- Novas entradas entram aqui, no topo. Ver CLAUDE.md → "Changelog" para o padrão de preenchimento. -->
 
+### Security
+
+- Registra trilha de auditoria para mutações administrativas autenticadas por JWT — incluindo usuários, permissões, recursos por tenant, configurações e anúncios — sem armazenar senhas, e redige CPF, credenciais e tokens dos logs estruturados — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
+
+### Changed
+
+- Atualiza o handoff da auditoria Matchpoint com a conclusão da Onda 6 e as validações executadas — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
+
 ### Added
 
 - Adiciona `docs/engineering-pendencies/auditoria-matchpoint-handoff.md`: documento de transferência de contexto com tudo que já foi corrigido (5 lotes/17 fixes da auditoria Matchpoint) e backlog completo priorizado do que falta, para continuação por outro agente — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
 
 ### Fixed
 
+- Unifica a criação de tenants pelos painéis legado e JWT, provisionando perfis, administrador owner e assinatura trial no mesmo fluxo para garantir login no tenant recém-criado — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
 - Adiciona auditoria em `toggle_pago_comissao`/`delete_comissao` (com snapshot do valor removido) e bound checking (`ge=0`) em `ComissaoUpdateRequest.valor`; adiciona `CheckConstraint` no banco para `comissoes_garcom.percentual` (0-100); migra `garcons.nome` para unique constraint per-tenant (migration 0091, mesmo padrão da 0082 para categorias/insumos/system_users), tratando colisão como `AppError`/409 em vez de `IntegrityError` cru — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
 - Adiciona auditoria em `criar_compra`/`confirmar_recebimento`/`cancelar_compra` (routes/compras.py) e log de warning explícito (`compra_item_insumo_ausente`) quando item é descartado silenciosamente por insumo ausente ao mover/estornar estoque de compra — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
 - Corrige migration 0085 (`uq_caixa_sessoes_tenant_aberta`): tentava recriar índice que a 0044 já cria, quebrando `alembic upgrade head` em banco vazio — vira idempotente (`CREATE UNIQUE INDEX IF NOT EXISTS`), downgrade delegado à 0044 — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02

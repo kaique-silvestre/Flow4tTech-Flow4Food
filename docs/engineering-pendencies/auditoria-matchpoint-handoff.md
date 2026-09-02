@@ -49,6 +49,17 @@ Detalhe do que cada commit resolveu (todos com testes passando, mypy limpo, suí
 3. **Proxy headers (`X-Forwarded-For`)**: rate limit hoje usa `get_remote_address` sem configurar proxy confiável — atrás do Railway, pode colapsar rate limit de todos tenants numa única chave (ou permitir spoofing se configurado errado). Não resolvido — precisa confirmar a config de rede do Railway antes de mexer.
 4. **`scheduler.py` não popula `_tenant_ctx`** (só faz `SET ROLE` direto). Hoje seguro porque nenhum job comita no meio do loop por tenant — risco late nte se isso mudar no futuro. Não mexido, só documentado.
 
+### Onda 6 concluída em 2026-09-02
+
+Commit local: `51cf84a fix(platform): unifica provisioning e audita mutações JWT` (não enviado ao remoto).
+
+- Unifica a criação JWT de tenant com `tenant_service.criar_tenant`, incluindo perfis clonados, usuário administrador owner e assinatura trial; o formulário da plataforma agora coleta as credenciais iniciais do administrador.
+- Adiciona auditoria às mutações JWT de plataforma e à criação de announcements, sem registrar senha crua.
+- Adiciona processor estruturado para redigir CPF, senhas, tokens e outras credenciais antes da renderização dos logs.
+- Validação integrada: `365 passed, 4 skipped`; type-check, lint e build do frontend passaram. Mypy mantém três erros preexistentes de incompatibilidade de middleware em `src/main.py` com as versões resolvidas neste ambiente.
+
+Próxima prioridade: Onda 7 da seção 5.
+
 ## 3. Como o trabalho foi organizado (pra você replicar)
 
 Fluxo usado nos 5 lotes anteriores — **replique este padrão**:

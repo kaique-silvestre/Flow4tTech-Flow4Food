@@ -24,18 +24,31 @@ function CreateTenantModal({ open, onClose }: { open: boolean; onClose: () => vo
   const [cnpj, setCnpj] = useState("");
   const [maxUsers, setMaxUsers] = useState(10);
   const [trialDays, setTrialDays] = useState(14);
+  const [adminName, setAdminName] = useState("");
+  const [adminUsername, setAdminUsername] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
   const create = useCreateTenant();
 
   if (!open) return null;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!nomeFantasia.trim()) {
-      toast.error("Nome fantasia é obrigatório");
+    if (!nomeFantasia.trim() || !adminName.trim() || !adminUsername.trim() || !adminEmail.trim() || !adminPassword) {
+      toast.error("Preencha os dados da empresa e do administrador");
       return;
     }
     create.mutate(
-      { nome_fantasia: nomeFantasia.trim(), cnpj: cnpj.trim() || undefined, max_users: maxUsers, trial_days: trialDays },
+      {
+        nome_fantasia: nomeFantasia.trim(),
+        cnpj: cnpj.trim() || undefined,
+        max_users: maxUsers,
+        trial_days: trialDays,
+        admin_name: adminName.trim(),
+        admin_username: adminUsername.trim(),
+        admin_email: adminEmail.trim(),
+        admin_password: adminPassword,
+      },
       {
         onSuccess: () => {
           toast.success("Empresa criada com sucesso");
@@ -44,6 +57,10 @@ function CreateTenantModal({ open, onClose }: { open: boolean; onClose: () => vo
           setCnpj("");
           setMaxUsers(10);
           setTrialDays(14);
+          setAdminName("");
+          setAdminUsername("");
+          setAdminEmail("");
+          setAdminPassword("");
         },
         onError: () => toast.error("Erro ao criar empresa"),
       }
@@ -95,6 +112,25 @@ function CreateTenantModal({ open, onClose }: { open: boolean; onClose: () => vo
               />
             </div>
           </div>
+          <fieldset className="space-y-4 border-t pt-4">
+            <legend className="text-sm font-medium text-gray-700">Administrador inicial</legend>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Nome *</label>
+              <input className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={adminName} onChange={(e) => setAdminName(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Usuário *</label>
+              <input className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={adminUsername} onChange={(e) => setAdminUsername(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">E-mail *</label>
+              <input type="email" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Senha *</label>
+              <input type="password" minLength={6} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} />
+            </div>
+          </fieldset>
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"

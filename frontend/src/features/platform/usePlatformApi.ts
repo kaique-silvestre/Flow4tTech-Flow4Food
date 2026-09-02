@@ -159,6 +159,10 @@ export function useCreateTenant() {
       telefone?: string;
       max_users: number;
       trial_days?: number;
+      admin_name: string;
+      admin_username: string;
+      admin_email: string;
+      admin_password: string;
     }) => {
       const { data } = await platformApi.post(`${BASE}/api/platform/tenants`, body, {
         headers: authHeaders(),

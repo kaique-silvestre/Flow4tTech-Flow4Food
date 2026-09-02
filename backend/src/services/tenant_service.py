@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -48,7 +48,20 @@ def _to_response(tenant: Tenant, assinatura: Optional[Assinatura] = None) -> Ten
     )
 
 
-def criar_tenant(db: Session, data: TenantCreate) -> TenantResponse:
+def criar_tenant(
+    db: Session,
+    data: TenantCreate,
+    *,
+    endereco: Optional[str] = None,
+    telefone: Optional[str] = None,
+    max_users: int = 5,
+    trial_days: Optional[int] = None,
+) -> TenantResponse:
+    """Provision a tenant and its first owner through the shared onboarding flow.
+
+    Platform administration can supply its extra tenant metadata, but all callers
+    use the same profile cloning, owner provisioning, and transaction boundary.
+    """
     if get_user_by_email_global(db, data.admin_email):
         raise AppError(
             code=ErrorCode.CONFLICT,
@@ -63,6 +76,9 @@ def criar_tenant(db: Session, data: TenantCreate) -> TenantResponse:
         tenant = Tenant(
             nome_fantasia=data.nome_fantasia,
             cnpj=data.cnpj,
+            endereco=endereco or None,
+            telefone=telefone or None,
+            max_users=max_users,
             status="ativo",
             created_at=now,
         )
@@ -110,7 +126,14 @@ def criar_tenant(db: Session, data: TenantCreate) -> TenantResponse:
         db.refresh(admin_user)
 
         # 6. Create trial subscription
-        assinatura = Assinatura(tenant_id=tenant.id, status="trial", data_inicio=now, created_at=now, updated_at=now)
+        assinatura = Assinatura(
+            tenant_id=tenant.id,
+            status="trial",
+            data_inicio=now,
+            data_vencimento=now + timedelta(days=trial_days) if trial_days is not None else None,
+            created_at=now,
+            updated_at=now,
+        )
         assinatura = create_assinatura(db, assinatura)
 
         # 7. Link admin_user_id back to tenant

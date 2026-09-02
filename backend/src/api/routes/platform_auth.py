@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import require_platform_admin
@@ -10,8 +10,10 @@ from src.core.database import get_platform_db
 from src.core.errors import AppError
 from src.core.limiter import limiter
 from src.repositories import platform_repository, revoked_tokens_repository
+from src.schemas.tenants import TenantCreate
 from src.services import audit_service, platform_auth_service
 from src.services.auth_service import create_access_token, hash_password
+from src.services.tenant_service import criar_tenant as provision_tenant
 
 
 class PlatformLoginRequest(BaseModel):
@@ -121,6 +123,20 @@ def _decode_platform_admin_id(access_token: str) -> Optional[int]:
         return None
 
 
+def _platform_actor_id(payload: dict) -> Optional[int]:
+    """Return the authenticated platform administrator id for audit records.
+
+    Older tokens used ``admin_id`` while current platform login tokens use
+    ``platform_admin_id``.  Keeping the compatibility fallback means every
+    protected mutation retains an accountable actor during the transition.
+    """
+    actor_id = payload.get("platform_admin_id") or payload.get("admin_id") or payload.get("sub")
+    try:
+        return int(actor_id) if actor_id is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 @router.post(
     "/auth/logout",
     status_code=204,
@@ -225,6 +241,9 @@ def update_assinatura(
         audit_service.log_background,
         "subscription.update",
         tenant_id=tenant_id,
+        user_id=_platform_actor_id(payload),
+        entity="Assinatura",
+        entity_id=assinatura.id,
         after={"status": body.status},
     )
     return {"tenant_id": tenant_id, "status": assinatura.status}
@@ -234,12 +253,16 @@ def update_assinatura(
 
 
 class PlatformTenantCreate(BaseModel):
-    nome_fantasia: str
+    nome_fantasia: str = Field(..., min_length=1, max_length=200)
     cnpj: Optional[str] = None  # noqa: UP045
     endereco: Optional[str] = None  # noqa: UP045
     telefone: Optional[str] = None  # noqa: UP045
     max_users: int = 5
     trial_days: Optional[int] = None  # noqa: UP045
+    admin_name: str = Field(..., min_length=1, max_length=200)
+    admin_username: str = Field(..., min_length=3, max_length=100)
+    admin_email: EmailStr
+    admin_password: str = Field(..., min_length=6, max_length=72)
 
 
 class TenantDetail(BaseModel):
@@ -379,19 +402,38 @@ def create_tenant(
     if trial_days is None:
         setting = platform_repository.get_setting(db, "trial_duration_days")
         trial_days = int(setting) if setting else 14
-    result = platform_repository.create_platform_tenant(
+    provisioned = provision_tenant(
         db,
-        nome_fantasia=body.nome_fantasia,
-        cnpj=body.cnpj,
+        TenantCreate(
+            nome_fantasia=body.nome_fantasia,
+            cnpj=body.cnpj,
+            admin_name=body.admin_name,
+            admin_username=body.admin_username,
+            admin_email=body.admin_email,
+            admin_password=body.admin_password,
+        ),
         endereco=body.endereco,
         telefone=body.telefone,
         max_users=body.max_users,
         trial_days=trial_days,
     )
+    result = {
+        "id": provisioned.id,
+        "nome_fantasia": provisioned.nome_fantasia,
+        "cnpj": provisioned.cnpj,
+        "status_tenant": provisioned.status,
+        "status_assinatura": provisioned.assinatura.status if provisioned.assinatura else None,
+        "data_vencimento": provisioned.assinatura.data_vencimento if provisioned.assinatura else None,
+        "max_users": body.max_users,
+        "qtd_usuarios": 1,
+    }
     background_tasks.add_task(
         audit_service.log_background,
         "tenant.create",
-        tenant_id=result.get("id") if isinstance(result, dict) else None,
+        tenant_id=provisioned.id,
+        user_id=_platform_actor_id(payload),
+        entity="Tenant",
+        entity_id=provisioned.id,
         after={"nome_fantasia": body.nome_fantasia},
     )
     return result
@@ -422,8 +464,11 @@ def get_tenant_detail(
 def update_tenant(
     tenant_id: int,
     body: TenantUpdate,
+    background_tasks: BackgroundTasks,
+    payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> TenantDetail:
+    before = platform_repository.get_tenant_detail(db, tenant_id)
     detail = platform_repository.update_tenant(
         db,
         tenant_id=tenant_id,
@@ -435,6 +480,23 @@ def update_tenant(
     )
     if detail is None:
         raise HTTPException(status_code=404, detail="Tenant não encontrado")
+    background_tasks.add_task(
+        audit_service.log_background,
+        "platform.tenant.update",
+        tenant_id=tenant_id,
+        user_id=_platform_actor_id(payload),
+        entity="Tenant",
+        entity_id=tenant_id,
+        before={
+            key: before[key]
+            for key in ("nome_fantasia", "cnpj", "endereco", "telefone", "max_users")
+            if before is not None and key in before
+        },
+        after={
+            key: detail[key]
+            for key in ("nome_fantasia", "cnpj", "endereco", "telefone", "max_users")
+        },
+    )
     return TenantDetail(**detail)
 
 
@@ -465,6 +527,9 @@ def update_assinatura_full(
         audit_service.log_background,
         "subscription.update_full",
         tenant_id=tenant_id,
+        user_id=_platform_actor_id(payload),
+        entity="Assinatura",
+        entity_id=assinatura.id,
         after={"status": body.status, "data_vencimento": body.data_vencimento.isoformat() if body.data_vencimento else None},
     )
     return {"tenant_id": tenant_id, "status": assinatura.status, "data_vencimento": assinatura.data_vencimento}
@@ -495,6 +560,8 @@ def create_platform_user(
     request: Request,
     tenant_id: int,
     body: PlatformUserCreate,
+    background_tasks: BackgroundTasks,
+    payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> PlatformUserResponse:
     user = platform_repository.create_tenant_user(
@@ -506,6 +573,19 @@ def create_platform_user(
         password_hash=hash_password(body.password),
         profile_id=body.profile_id,
         is_active=body.is_active,
+    )
+    background_tasks.add_task(
+        audit_service.log_background,
+        "platform.tenant_user.create",
+        tenant_id=tenant_id,
+        user_id=_platform_actor_id(payload),
+        entity="SystemUser",
+        entity_id=user["id"],
+        after={
+            "username": user["username"],
+            "profile_id": user["profile_id"],
+            "is_active": user["is_active"],
+        },
     )
     return PlatformUserResponse(**user)
 
@@ -522,8 +602,14 @@ def update_platform_user(
     tenant_id: int,
     user_id: int,
     body: PlatformUserUpdate,
+    background_tasks: BackgroundTasks,
+    payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> PlatformUserResponse:
+    before = next(
+        (user for user in platform_repository.get_tenant_users(db, tenant_id) if user["id"] == user_id),
+        None,
+    )
     pw_hash = hash_password(body.password) if body.password else None
     user = platform_repository.update_tenant_user(
         db,
@@ -538,6 +624,29 @@ def update_platform_user(
     )
     if user is None:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    background_tasks.add_task(
+        audit_service.log_background,
+        "platform.tenant_user.update",
+        tenant_id=tenant_id,
+        user_id=_platform_actor_id(payload),
+        entity="SystemUser",
+        entity_id=user_id,
+        before=(
+            {
+                "username": before["username"],
+                "profile_id": before["profile_id"],
+                "is_active": before["is_active"],
+            }
+            if before is not None
+            else None
+        ),
+        after={
+            "username": user["username"],
+            "profile_id": user["profile_id"],
+            "is_active": user["is_active"],
+            "password_changed": body.password is not None,
+        },
+    )
     return PlatformUserResponse(**user)
 
 
@@ -565,8 +674,14 @@ def update_tenant_profile(
     tenant_id: int,
     profile_id: int,
     body: ProfilePermissionsUpdate,
+    background_tasks: BackgroundTasks,
+    payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> ProfileResponse:
+    before = next(
+        (profile for profile in platform_repository.get_tenant_profiles(db, tenant_id) if profile["id"] == profile_id),
+        None,
+    )
     row = platform_repository.update_tenant_profile(
         db,
         tenant_id=tenant_id,
@@ -576,6 +691,20 @@ def update_tenant_profile(
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Perfil não encontrado")
+    background_tasks.add_task(
+        audit_service.log_background,
+        "platform.profile.update",
+        tenant_id=tenant_id,
+        user_id=_platform_actor_id(payload),
+        entity="Profile",
+        entity_id=profile_id,
+        before=(
+            {"permissions": before["permissions"], "is_active": before["is_active"]}
+            if before is not None
+            else None
+        ),
+        after={"permissions": row["permissions"], "is_active": row["is_active"]},
+    )
     return ProfileResponse(**row)
 
 
@@ -602,9 +731,25 @@ def get_tenant_features(
 def upsert_tenant_features(
     tenant_id: int,
     body: FeaturesUpdate,
+    background_tasks: BackgroundTasks,
+    payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> list[FeatureItem]:
+    before = {
+        row["feature"]: row["enabled"]
+        for row in platform_repository.get_tenant_features(db, tenant_id)
+    }
     rows = platform_repository.upsert_tenant_features(db, tenant_id, body.features)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "platform.tenant_features.update",
+        tenant_id=tenant_id,
+        user_id=_platform_actor_id(payload),
+        entity="TenantFeature",
+        entity_id=None,
+        before=before,
+        after=body.features,
+    )
     return [FeatureItem(**r) for r in rows]
 
 
@@ -691,7 +836,19 @@ def list_settings(
 def update_setting(
     key: str,
     body: PlatformSettingUpdate,
+    background_tasks: BackgroundTasks,
+    payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> PlatformSettingResponse:
+    before = platform_repository.get_setting(db, key)
     setting = platform_repository.upsert_setting(db, key, body.value)
+    background_tasks.add_task(
+        audit_service.log_background,
+        "platform.setting.update",
+        user_id=_platform_actor_id(payload),
+        entity="PlatformSettings",
+        entity_id=None,
+        before={"value": before} if before is not None else None,
+        after={"key": setting.key, "value": setting.value},
+    )
     return PlatformSettingResponse(key=setting.key, value=setting.value)
