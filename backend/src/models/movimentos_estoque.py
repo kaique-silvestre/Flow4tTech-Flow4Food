@@ -31,6 +31,11 @@ class MovimentoEstoque(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     tenant_id: Mapped[int] = mapped_column(sa.BigInteger(), nullable=False, server_default=sa.text("(NULLIF(current_setting('app.tenant_id', true), ''))::bigint"))
     insumo_id: Mapped[int] = mapped_column(sa.ForeignKey("insumos.id"), nullable=False)
+    user_id: Mapped[Optional[int]] = mapped_column(  # noqa: UP045
+        sa.BigInteger(),
+        sa.ForeignKey("system_users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     tipo: Mapped[str] = mapped_column(
         sa.Enum(TipoMovimento, native_enum=False), nullable=False
     )

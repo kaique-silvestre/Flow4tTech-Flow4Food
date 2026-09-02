@@ -31,6 +31,7 @@ class ErrorCode(str, Enum):
     NIVEL_MAX_ATINGIDO = "NIVEL_MAX_ATINGIDO"
     CONFLICT = "CONFLICT"
     FORBIDDEN = "FORBIDDEN"
+    CAIXA_JA_FECHADO = "CAIXA_JA_FECHADO"
 
 
 class AppError(Exception):

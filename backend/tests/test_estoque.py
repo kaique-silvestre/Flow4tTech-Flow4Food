@@ -12,6 +12,9 @@ from sqlalchemy.orm import sessionmaker
 from src.api.dependencies import get_current_user, get_db
 from src.core.database import Base
 from src.main import app
+from src.models.audit_logs import AuditLog
+from src.models.movimentos_estoque import MovimentoEstoque
+from src.services import audit_service
 
 _SQLITE_URL = "sqlite:///:memory:"
 _engine = create_engine(
@@ -33,8 +36,26 @@ def _setup_db():
     Base.metadata.drop_all(_engine)
 
 
+def _log_background_sync(action, *, tenant_id=None, user_id=None, entity=None, entity_id=None, before=None, after=None, impersonated_by=None):
+    db = _TestingSession()
+    try:
+        audit_service.log(
+            db,
+            action,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            entity=entity,
+            entity_id=entity_id,
+            before=before,
+            after=after,
+            impersonated_by=impersonated_by,
+        )
+    finally:
+        db.close()
+
+
 @pytest.fixture
-def crud_client():
+def crud_client(monkeypatch):
     def override_get_db():
         db = _TestingSession()
         try:
@@ -42,6 +63,7 @@ def crud_client():
         finally:
             db.close()
 
+    monkeypatch.setattr(audit_service, "log_background", _log_background_sync)
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = _fake_user
     with TestClient(app) as c:
@@ -163,3 +185,102 @@ def test_saldo_filtro_busca(crud_client):
     nomes = [s["nome"] for s in resp.json()["itens"]]
     assert "Coca Cola" in nomes
     assert "Fanta Laranja" not in nomes
+
+
+# ---------------------------------------------------------------------------
+# Autoria e auditoria (baixa manual de estoque)
+# ---------------------------------------------------------------------------
+
+def test_baixa_sem_venda_grava_user_id_no_movimento(crud_client):
+    item = _criar_item(crud_client, "Item Autoria")
+
+    resp = _baixa(crud_client, item["id"], 3, "perda")
+    assert resp.status_code == 201
+    movimento_id = resp.json()["movimento"]["id"]
+
+    db = _TestingSession()
+    mov = db.get(MovimentoEstoque, movimento_id)
+    db.close()
+
+    assert mov is not None
+    assert mov.user_id == _fake_user()["user_id"]
+
+
+def test_baixa_sem_venda_gera_log_de_auditoria(crud_client):
+    item = _criar_item(crud_client, "Item Auditado")
+
+    resp = _baixa(crud_client, item["id"], 2, "quebra")
+    assert resp.status_code == 201
+    movimento_id = resp.json()["movimento"]["id"]
+
+    db = _TestingSession()
+    logs = db.query(AuditLog).filter_by(action="estoque.baixa_sem_venda").all()
+    db.close()
+
+    assert len(logs) == 1
+    log = logs[0]
+    assert log.user_id == _fake_user()["user_id"]
+    assert log.entity == "MovimentoEstoque"
+    assert log.entity_id == movimento_id
+
+
+# ---------------------------------------------------------------------------
+# Auditoria de insumos (create/update/toggle/delete)
+# ---------------------------------------------------------------------------
+
+def test_insumo_create_gera_log_de_auditoria(crud_client):
+    item = _criar_item(crud_client, "Insumo Auditado")
+
+    db = _TestingSession()
+    logs = db.query(AuditLog).filter_by(action="insumo.create").all()
+    db.close()
+
+    assert len(logs) == 1
+    assert logs[0].entity == "Insumo"
+    assert logs[0].entity_id == item["id"]
+    assert logs[0].user_id == _fake_user()["user_id"]
+
+
+def test_insumo_update_gera_log_de_auditoria(crud_client):
+    item = _criar_item(crud_client, "Insumo Original")
+
+    resp = crud_client.put(
+        f"/api/insumos/{item['id']}",
+        json={"nome": "Insumo Renomeado", "unidade_base": "un"},
+    )
+    assert resp.status_code == 200
+
+    db = _TestingSession()
+    logs = db.query(AuditLog).filter_by(action="insumo.update").all()
+    db.close()
+
+    assert len(logs) == 1
+    assert logs[0].entity_id == item["id"]
+
+
+def test_insumo_toggle_ativo_gera_log_de_auditoria(crud_client):
+    item = _criar_item(crud_client, "Insumo Toggle")
+
+    resp = crud_client.patch(f"/api/insumos/{item['id']}/toggle-ativo")
+    assert resp.status_code == 200
+
+    db = _TestingSession()
+    logs = db.query(AuditLog).filter_by(action="insumo.toggle_ativo").all()
+    db.close()
+
+    assert len(logs) == 1
+    assert logs[0].entity_id == item["id"]
+
+
+def test_insumo_delete_gera_log_de_auditoria(crud_client):
+    item = _criar_item(crud_client, "Insumo Deletado")
+
+    resp = crud_client.delete(f"/api/insumos/{item['id']}")
+    assert resp.status_code == 204
+
+    db = _TestingSession()
+    logs = db.query(AuditLog).filter_by(action="insumo.delete").all()
+    db.close()
+
+    assert len(logs) == 1
+    assert logs[0].entity_id == item["id"]

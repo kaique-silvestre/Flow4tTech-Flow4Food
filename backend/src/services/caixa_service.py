@@ -76,23 +76,33 @@ def fechar_caixa(
     pagamentos_dinheiro = caixa_repository.sum_pagamentos_dinheiro(db, sessao.opened_at, now)
     valor_esperado = sessao.valor_abertura + pagamentos_dinheiro + suprimentos - sangrias
 
-    sessao = caixa_repository.fechar_sessao(
+    sessao_fechada = caixa_repository.fechar_sessao(
         db,
-        sessao=sessao,
+        sessao_id=sessao.id,
         valor_informado=body.valor_informado,
         valor_esperado=valor_esperado,
         user_id=user_id,
         observacao=body.observacao,
     )
+    if sessao_fechada is None:
+        db.rollback()
+        raise AppError(
+            code=ErrorCode.CAIXA_JA_FECHADO,
+            message="Caixa já foi fechado por outra operação",
+            http_status=409,
+        )
     db.commit()
-    db.refresh(sessao)
-    return _build_sessao_response(db, sessao)
+    db.refresh(sessao_fechada)
+    return _build_sessao_response(db, sessao_fechada)
 
 
 def registrar_movimento(
     db: Session, body: MovimentoCaixaRequest, user_id: int
 ) -> CaixaMovimentoResponse:
-    sessao = caixa_repository.get_sessao_aberta(db)
+    # Locks the session row so a concurrent `fechar_caixa` can't close the
+    # session between this check and the insert below, which would let the
+    # movement land after closing without being reflected in valor_esperado.
+    sessao = caixa_repository.get_sessao_aberta(db, for_update=True)
     if sessao is None:
         raise AppError(
             code=ErrorCode.NOT_FOUND,

@@ -1,4 +1,4 @@
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from datetime import timezone
 from typing import Annotated, Optional
 
@@ -73,10 +73,10 @@ def check_subscription(
     return payload
 
 
-def get_tenant_db(
+async def get_tenant_db(
     db: Session = Depends(get_db),
     payload: dict = Depends(check_subscription),
-) -> Generator[Session, None, None]:
+) -> AsyncGenerator[Session, None]:
     """Session scoped to tenant via RLS (PostgreSQL only).
 
     Two-layer approach:
@@ -85,9 +85,21 @@ def get_tenant_db(
        connection from the pool BEFORE _tenant_ctx is set. The checkout listener
        fires without tenant context. We must re-apply SET ROLE / SET tenant_id
        explicitly on the already-checked-out connection.
-    2. _tenant_ctx (thread-local) is set so the pool checkout listener
-       re-establishes RLS context on any NEW connection checked out after
-       db.commit() (SQLAlchemy 2.0 releases connection on commit).
+    2. _tenant_ctx (a contextvars.ContextVar, see core/database.py) is set so
+       the pool checkout listener re-establishes RLS context on any NEW
+       connection checked out after db.commit() (SQLAlchemy 2.0 releases the
+       connection on commit).
+
+    This must stay `async def` (not a plain sync generator): FastAPI runs
+    async generator dependencies' setup/teardown directly on the event loop,
+    inside the request's own asyncio task, so the ContextVar.set() below
+    mutates the task's own context. anyio's threadpool then copies that same
+    (correctly mutated) task context into every later `run_in_threadpool`
+    call for this request — including the endpoint body and any mid-request
+    db.commit() that re-triggers the checkout listener. A sync generator
+    dependency would instead run setup/teardown each in their own throwaway
+    threadpool copy of the context, and the tenant_id set in setup would
+    never be visible to the endpoint call or the listener.
     """
     tenant_id = payload.get("tenant_id")
     # Use session's bound engine — not the module-level engine — to detect dialect.

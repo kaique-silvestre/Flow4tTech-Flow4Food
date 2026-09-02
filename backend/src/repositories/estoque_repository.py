@@ -82,6 +82,7 @@ def registrar_movimento(
     motivo: Optional[str] = None,
     observacao: Optional[str] = None,
     compra_id: Optional[int] = None,
+    user_id: Optional[int] = None,
 ) -> MovimentoEstoque:
     mov = MovimentoEstoque(
         insumo_id=insumo_id,
@@ -92,6 +93,7 @@ def registrar_movimento(
         motivo=motivo,
         observacao=observacao,
         compra_id=compra_id,
+        user_id=user_id,
     )
     db.add(mov)
     db.flush()

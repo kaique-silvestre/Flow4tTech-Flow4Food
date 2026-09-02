@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import (
@@ -16,7 +16,7 @@ from src.schemas.estoque import (
     MovimentoProdutoListResponse,
     SaldoPageResponse,
 )
-from src.services import estoque_service
+from src.services import audit_service, estoque_service
 
 router = APIRouter(dependencies=[Depends(require_feature("estoque")), Depends(require_permission("estoque"))])
 
@@ -44,10 +44,26 @@ def get_saldo(
 @router.post("/baixa-sem-venda", status_code=status.HTTP_201_CREATED)
 def baixa_sem_venda(
     data: BaixaSemVendaRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
-    _user: dict = Depends(get_current_user),
+    payload: dict = Depends(get_current_user),
 ) -> dict:
-    return estoque_service.baixa_sem_venda(db, data)
+    result = estoque_service.baixa_sem_venda(db, data, payload.get("user_id"))
+    background_tasks.add_task(
+        audit_service.log_background,
+        "estoque.baixa_sem_venda",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="MovimentoEstoque",
+        entity_id=result["movimento"].id,
+        after={
+            "insumo_id": data.item_id,
+            "quantidade": str(data.quantidade),
+            "motivo": data.motivo.value,
+        },
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.get("/movimentos", response_model=MovimentoListResponse)

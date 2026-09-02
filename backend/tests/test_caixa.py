@@ -12,7 +12,11 @@ from sqlalchemy.orm import sessionmaker
 
 from src.api.dependencies import get_current_user, get_db
 from src.core.database import Base
+from src.core.errors import AppError, ErrorCode
 from src.main import app
+from src.repositories import caixa_repository
+from src.schemas.caixa import FecharCaixaRequest
+from src.services import caixa_service
 
 _engine = create_engine(
     "sqlite:///:memory:",
@@ -190,3 +194,63 @@ def test_sessao_fecha_impede_nova_abertura_ate_fechar(client):
     client.post("/api/caixa/fechar", json={"valor_informado": "50.00"})
     r = client.post("/api/caixa/abrir", json={"valor_abertura": "60.00"})
     assert r.status_code == 201, r.text
+
+
+# ---------------------------------------------------------------------------
+# Fechamento concorrente
+# ---------------------------------------------------------------------------
+
+def test_fechamento_concorrente_um_sucede_outro_recebe_conflito(client):
+    client.post("/api/caixa/abrir", json={"valor_abertura": "100.00"})
+
+    db_a = _TestingSession()
+    db_b = _TestingSession()
+    try:
+        # Both "requests" read the session while it is still open, before
+        # either has written its close back.
+        sessao_a = caixa_repository.get_sessao_aberta(db_a)
+        sessao_b = caixa_repository.get_sessao_aberta(db_b)
+        assert sessao_a is not None and sessao_b is not None
+
+        resultado_a = caixa_repository.fechar_sessao(
+            db_a,
+            sessao_id=sessao_a.id,
+            valor_informado=Decimal("100.00"),
+            valor_esperado=Decimal("100.00"),
+            user_id=1,
+        )
+        db_a.commit()
+        assert resultado_a is not None
+        assert resultado_a.status == "fechada"
+
+        resultado_b = caixa_repository.fechar_sessao(
+            db_b,
+            sessao_id=sessao_b.id,
+            valor_informado=Decimal("90.00"),
+            valor_esperado=Decimal("100.00"),
+            user_id=2,
+        )
+        db_b.commit()
+        assert resultado_b is None
+    finally:
+        db_a.close()
+        db_b.close()
+
+
+def test_fechar_caixa_service_levanta_conflito_quando_ja_fechado(client, monkeypatch):
+    client.post("/api/caixa/abrir", json={"valor_abertura": "100.00"})
+
+    db = _TestingSession()
+    try:
+        # Simulate a request that read the session as open, but loses the
+        # race: by the time it tries to write, the session is already
+        # closed (fechar_sessao's CAS update matches 0 rows).
+        monkeypatch.setattr(caixa_repository, "fechar_sessao", lambda *a, **k: None)
+        with pytest.raises(AppError) as exc_info:
+            caixa_service.fechar_caixa(
+                db, FecharCaixaRequest(valor_informado=Decimal("100.00")), user_id=1
+            )
+        assert exc_info.value.code == ErrorCode.CAIXA_JA_FECHADO
+        assert exc_info.value.http_status == 409
+    finally:
+        db.close()

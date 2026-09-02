@@ -131,7 +131,9 @@ def get_insumos_criticos(db: Session) -> list[InsumoCriticoResponse]:
     return result
 
 
-def baixa_sem_venda(db: Session, data: BaixaSemVendaRequest) -> dict:
+def baixa_sem_venda(
+    db: Session, data: BaixaSemVendaRequest, user_id: Optional[int] = None
+) -> dict:
     insumo = estoque_repository.get_insumo_for_update(db, data.item_id)
     if insumo is None:
         raise AppError(ErrorCode.NOT_FOUND, "Insumo não encontrado", http_status=404)
@@ -147,6 +149,7 @@ def baixa_sem_venda(db: Session, data: BaixaSemVendaRequest) -> dict:
         saldo_apos=novo_saldo,
         motivo=data.motivo.value,
         observacao=data.observacao,
+        user_id=user_id,
     )
     db.commit()
 
