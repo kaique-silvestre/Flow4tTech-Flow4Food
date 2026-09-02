@@ -17,21 +17,35 @@ def _normalize(text: str) -> str:
     return "".join(c for c in nfkd if not unicodedata.combining(c)).strip()
 
 
-def _match_insumo(db: Session, item: NFeItem) -> Optional[Insumo]:
+def _build_insumo_index(db: Session) -> tuple[dict[str, Insumo], dict[str, Insumo]]:
+    """Load every active insumo once and index it for in-memory matching.
+
+    Replaces per-item DB lookups (both the EAN point query and the full
+    active-insumos scan) with a single query reused across every item of
+    the NF-e, and a single unbounded query (no 2000-row cap) so tenants
+    with more active insumos than any pagination limit are not silently
+    truncated.
+    """
+    by_ean: dict[str, Insumo] = {}
+    by_name: dict[str, Insumo] = {}
+    for insumo in insumos_repository.list_all_ativos(db):
+        if insumo.ean and insumo.ean not in by_ean:
+            by_ean[insumo.ean] = insumo
+        normalized = _normalize(insumo.nome)
+        if normalized not in by_name:
+            by_name[normalized] = insumo
+    return by_ean, by_name
+
+
+def _match_insumo(
+    item: NFeItem, by_ean: dict[str, Insumo], by_name: dict[str, Insumo]
+) -> Optional[Insumo]:
     # 1. EAN exact match
-    if item.ean:
-        found = insumos_repository.get_by_ean(db, item.ean)
-        if found:
-            return found
+    if item.ean and item.ean in by_ean:
+        return by_ean[item.ean]
 
     # 2. Name case-insensitive + accent-stripped match
-    normalized_xml = _normalize(item.nome)
-    all_insumos, _ = insumos_repository.list_ativos(db, por_pagina=2000)
-    for insumo in all_insumos:
-        if _normalize(insumo.nome) == normalized_xml:
-            return insumo
-
-    return None
+    return by_name.get(_normalize(item.nome))
 
 
 def match_nfe(db: Session, data: NFeData) -> NFeImportResponse:
@@ -39,9 +53,11 @@ def match_nfe(db: Session, data: NFeData) -> NFeImportResponse:
     fornecedor = fornecedores_repository.get_by_cnpj(db, data.cnpj_emitente)
     fornecedor_id: Optional[int] = fornecedor.id if fornecedor else None
 
+    by_ean, by_name = _build_insumo_index(db) if data.itens else ({}, {})
+
     itens: list[NFeItemResponse] = []
     for item in data.itens:
-        matched = _match_insumo(db, item)
+        matched = _match_insumo(item, by_ean, by_name)
         itens.append(NFeItemResponse(
             nome_xml=item.nome,
             ean_xml=item.ean,

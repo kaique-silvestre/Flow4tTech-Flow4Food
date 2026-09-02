@@ -97,13 +97,21 @@ def _lancar_item(c, comanda_id, item_id, version, quantidade=1):
     return resp.json()
 
 
-def _fechar(c, comanda_id, metodo_id, valor):
+def _fechar(c, comanda_id, metodo_id, valor, version):
     resp = c.post(
         f"/api/comandas/{comanda_id}/fechar",
-        json={"pagamentos": [{"metodo_id": metodo_id, "valor": str(valor)}], "modo_divisao": "sem_divisao"},
+        json={
+            "pagamentos": [{"metodo_id": metodo_id, "valor": str(valor)}],
+            "modo_divisao": "sem_divisao",
+            "version": version,
+        },
     )
     assert resp.status_code == 200, resp.text
     return resp.json()
+
+
+def _reabrir(c, comanda_id, version):
+    return c.post(f"/api/comandas/{comanda_id}/reabrir", json={"version": version})
 
 
 def _set_estoque(insumo_id: int, valor: float) -> None:
@@ -147,12 +155,12 @@ def test_reabrir_comanda_fechada_ok(c):
 
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, produto["id"], comanda["version"])
-    _fechar(c, cid, metodo["id"], "30.00")
+    r = _lancar_item(c, cid, produto["id"], comanda["version"])
+    fechado = _fechar(c, cid, metodo["id"], "30.00", r["version"])
 
     assert pytest.approx(_get_estoque_db(insumo["id"]), abs=0.001) == 9.0
 
-    resp = c.post(f"/api/comandas/{cid}/reabrir")
+    resp = _reabrir(c, cid, fechado["version"])
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert data["status"] == "reaberta"
@@ -193,13 +201,13 @@ def test_reabrir_estorna_item_composto(c):
 
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, produto["id"], comanda["version"], quantidade=2)
-    _fechar(c, cid, metodo["id"], "100.00")
+    r = _lancar_item(c, cid, produto["id"], comanda["version"], quantidade=2)
+    fechado = _fechar(c, cid, metodo["id"], "100.00", r["version"])
 
     assert pytest.approx(_get_estoque_db(insumo1["id"]), abs=0.001) == 8.0
     assert pytest.approx(_get_estoque_db(insumo2["id"]), abs=0.001) == 6.0
 
-    resp = c.post(f"/api/comandas/{cid}/reabrir")
+    resp = _reabrir(c, cid, fechado["version"])
     assert resp.status_code == 200, resp.text
 
     assert pytest.approx(_get_estoque_db(insumo1["id"]), abs=0.001) == 10.0
@@ -209,7 +217,7 @@ def test_reabrir_estorna_item_composto(c):
 def test_reabrir_comanda_aberta_retorna_400(c):
     garcom = _criar_garcom(c)
     comanda = _abrir_comanda(c, garcom["id"])
-    resp = c.post(f"/api/comandas/{comanda['id']}/reabrir")
+    resp = _reabrir(c, comanda["id"], comanda["version"])
     assert resp.status_code == 400, resp.text
     assert resp.json()["error"]["code"] == "COMANDA_NAO_FECHADA"
 
@@ -220,22 +228,27 @@ def test_reabrir_comanda_parcial_retorna_400(c):
     metodo = _criar_metodo(c)
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, produto["id"], comanda["version"])
+    r = _lancar_item(c, cid, produto["id"], comanda["version"])
 
     resp = c.post(
         f"/api/comandas/{cid}/fechar",
-        json={"pagamentos": [{"metodo_id": metodo["id"], "valor": "50.00"}], "modo_divisao": "parcial"},
+        json={
+            "pagamentos": [{"metodo_id": metodo["id"], "valor": "50.00"}],
+            "modo_divisao": "parcial",
+            "version": r["version"],
+        },
     )
     assert resp.status_code == 200
-    assert resp.json()["status"] == "aberta"
+    parcial = resp.json()
+    assert parcial["status"] == "aberta"
 
-    resp = c.post(f"/api/comandas/{cid}/reabrir")
+    resp = _reabrir(c, cid, parcial["version"])
     assert resp.status_code == 400
     assert resp.json()["error"]["code"] == "COMANDA_NAO_FECHADA"
 
 
 def test_reabrir_comanda_inexistente_retorna_404(c):
-    resp = c.post("/api/comandas/99999/reabrir")
+    resp = _reabrir(c, 99999, 1)
     assert resp.status_code == 404, resp.text
 
 
@@ -245,13 +258,13 @@ def test_reaberta_aparece_na_lista_abertas(c):
     metodo = _criar_metodo(c)
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, produto["id"], comanda["version"])
-    _fechar(c, cid, metodo["id"], "50.00")
+    r = _lancar_item(c, cid, produto["id"], comanda["version"])
+    fechado = _fechar(c, cid, metodo["id"], "50.00", r["version"])
 
     lista = c.get("/api/comandas").json()
     assert all(cmd["id"] != cid for cmd in lista)
 
-    c.post(f"/api/comandas/{cid}/reabrir")
+    _reabrir(c, cid, fechado["version"])
 
     lista = c.get("/api/comandas").json()
     assert any(cmd["id"] == cid for cmd in lista)

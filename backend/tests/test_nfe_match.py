@@ -108,6 +108,60 @@ def test_no_match_returns_none(db):
     assert result.itens[0].insumo_nome is None
 
 
+def _count_insumo_queries(engine, fn):
+    """Run fn() while counting SELECT statements hitting the insumos table."""
+    count = 0
+
+    def _before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+        nonlocal count
+        if "insumos" in statement.lower():
+            count += 1
+
+    sa.event.listen(engine, "before_cursor_execute", _before_cursor_execute)
+    try:
+        result = fn()
+    finally:
+        sa.event.remove(engine, "before_cursor_execute", _before_cursor_execute)
+    return result, count
+
+
+def test_insumo_queries_do_not_scale_with_item_count(db):
+    for i in range(5):
+        db.add(Insumo(nome=f"Insumo {i}", unidade_base="kg", estoque_atual=Decimal("0")))
+    db.commit()
+
+    one_item = [_nfe_item(nome="Insumo 0")]
+    many_items = [_nfe_item(nome=f"Insumo {i}") for i in range(5)] + [
+        _nfe_item(nome=f"Sem Match {i}") for i in range(45)
+    ]
+
+    _, count_one = _count_insumo_queries(_engine, lambda: match_nfe(db, _nfe_data(itens=one_item)))
+    _, count_many = _count_insumo_queries(_engine, lambda: match_nfe(db, _nfe_data(itens=many_items)))
+
+    assert count_one == count_many
+    assert count_one == 1
+
+
+def test_match_result_unaffected_by_single_load(db):
+    ean_insumo = Insumo(nome="Feijão Preto", unidade_base="kg", ean="7891234567890", estoque_atual=Decimal("0"))
+    name_insumo = Insumo(nome="Açúcar Cristal", unidade_base="kg", estoque_atual=Decimal("0"))
+    db.add_all([ean_insumo, name_insumo])
+    db.commit()
+    db.refresh(ean_insumo)
+    db.refresh(name_insumo)
+
+    itens = [
+        _nfe_item(nome="Feijao Preto", ean="7891234567890"),
+        _nfe_item(nome="ACUCAR CRISTAL", ean=None),
+        _nfe_item(nome="Produto Inexistente", ean="9999999999999"),
+    ]
+    result = match_nfe(db, _nfe_data(itens=itens))
+
+    assert result.itens[0].insumo_id == ean_insumo.id
+    assert result.itens[1].insumo_id == name_insumo.id
+    assert result.itens[2].insumo_id is None
+
+
 def test_response_fields(db):
     result = match_nfe(db, _nfe_data(cnpj="11111111000111", itens=[]))
     assert result.numero_nota == "1"

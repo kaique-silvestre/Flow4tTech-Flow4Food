@@ -92,10 +92,14 @@ def _lancar_item(c, comanda_id, item_id, version, quantidade=1, cortesia=False):
     return resp.json()
 
 
-def _fechar(c, comanda_id, metodo_id, valor):
+def _fechar(c, comanda_id, metodo_id, valor, version):
     resp = c.post(
         f"/api/comandas/{comanda_id}/fechar",
-        json={"pagamentos": [{"metodo_id": metodo_id, "valor": str(valor)}], "modo_divisao": "sem_divisao"},
+        json={
+            "pagamentos": [{"metodo_id": metodo_id, "valor": str(valor)}],
+            "modo_divisao": "sem_divisao",
+            "version": version,
+        },
     )
     assert resp.status_code == 200, resp.text
     return resp.json()
@@ -135,8 +139,8 @@ def test_dashboard_cards_hoje(c):
     metodo = _criar_metodo(c)
 
     comanda = _abrir_comanda(c, garcom["id"])
-    _lancar_item(c, comanda["id"], item["id"], comanda["version"])
-    _fechar(c, comanda["id"], metodo["id"], "100.00")
+    r = _lancar_item(c, comanda["id"], item["id"], comanda["version"])
+    _fechar(c, comanda["id"], metodo["id"], "100.00", r["version"])
 
     resp = c.get("/api/dashboard")
     assert resp.status_code == 200, resp.text
@@ -165,8 +169,8 @@ def test_dashboard_lucro_estimado(c):
     produto = produto_resp.json()
 
     comanda = _abrir_comanda(c, garcom["id"])
-    _lancar_item(c, comanda["id"], produto["id"], comanda["version"])
-    _fechar(c, comanda["id"], metodo["id"], "100.00")
+    r = _lancar_item(c, comanda["id"], produto["id"], comanda["version"])
+    _fechar(c, comanda["id"], metodo["id"], "100.00", r["version"])
 
     resp = c.get("/api/dashboard")
     assert resp.status_code == 200, resp.text
@@ -185,8 +189,8 @@ def test_dashboard_faturamento_por_hora_timezone(c):
     metodo = _criar_metodo(c)
 
     comanda = _abrir_comanda(c, garcom["id"])
-    _lancar_item(c, comanda["id"], item["id"], comanda["version"])
-    _fechar(c, comanda["id"], metodo["id"], "50.00")
+    r = _lancar_item(c, comanda["id"], item["id"], comanda["version"])
+    _fechar(c, comanda["id"], metodo["id"], "50.00", r["version"])
 
     # Forçar data_fechamento = hoje às 23:00 UTC (= 20:00 SP)
     import datetime
@@ -221,8 +225,8 @@ def test_dashboard_top_10_produtos(c):
     v = r["version"]
     r = _lancar_item(c, comanda["id"], item_b["id"], v, quantidade=2)
     v = r["version"]
-    _lancar_item(c, comanda["id"], item_c["id"], v, quantidade=1)
-    _fechar(c, comanda["id"], metodo["id"], "60.00")
+    r = _lancar_item(c, comanda["id"], item_c["id"], v, quantidade=1)
+    _fechar(c, comanda["id"], metodo["id"], "60.00", r["version"])
 
     resp = c.get("/api/dashboard")
     assert resp.status_code == 200, resp.text

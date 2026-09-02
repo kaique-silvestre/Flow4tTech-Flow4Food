@@ -28,6 +28,16 @@ def list_ativos(
     return list(db.execute(stmt.offset(offset).limit(por_pagina)).scalars().all()), total
 
 
+def list_all_ativos(db: Session) -> list[Insumo]:
+    """Load every active insumo in a single query, no pagination limit.
+
+    Used for in-memory matching (e.g. NF-e import) where the full active
+    set must be scanned per call rather than per row being matched.
+    """
+    stmt = select(Insumo).where(Insumo.ativo == True)  # noqa: E712
+    return list(db.execute(stmt).scalars().all())
+
+
 def list_all(
     db: Session,
     busca: Optional[str] = None,
@@ -76,12 +86,6 @@ def update(db: Session, insumo_id: int, data: InsumoUpdateRequest) -> Optional[I
     db.commit()
     db.refresh(obj)
     return obj
-
-
-def get_by_ean(db: Session, ean: str) -> Optional[Insumo]:
-    return db.execute(
-        select(Insumo).where(Insumo.ean == ean, Insumo.ativo == True).limit(1)  # noqa: E712
-    ).scalars().first()
 
 
 def toggle_ativo(db: Session, insumo_id: int) -> Optional[Insumo]:

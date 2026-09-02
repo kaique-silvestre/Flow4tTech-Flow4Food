@@ -172,9 +172,10 @@ def dre(db: Session, mes: str) -> DREResponse:
 
 def cmv_por_produto(db: Session) -> CMVPorProdutoResponse:
     produtos = rr.todos_produtos_ativos(db)
+    custos = rr.calcular_custos_produtos(db, [p.id for p in produtos])
     resultado = []
     for produto in produtos:
-        custo = rr.calcular_custo_produto(db, produto.id)
+        custo = custos.get(produto.id)
         if custo is None or produto.preco_venda is None:
             resultado.append(
                 CMVProdutoItem(

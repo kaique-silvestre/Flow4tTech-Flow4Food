@@ -4,7 +4,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_current_user, get_tenant_db, require_feature, require_permission
-from src.repositories import comandas_repository as _cr
 from src.schemas.comandas import (
     CancelarComandaRequest,
     CancelarItemRequest,
@@ -13,11 +12,11 @@ from src.schemas.comandas import (
     EditarItemRequest,
     LancarItemRequest,
     PatchComandaRequest,
+    ReabrirComandaRequest,
 )
 from src.schemas.comprovante import ComprovanteResponse
 from src.schemas.fechamento import AplicarDescontoRequest, FecharComandaRequest
 from src.services import audit_service, comandas_service, comprovante_service
-from src.services.comandas_service import _build_response
 
 router = APIRouter(dependencies=[Depends(require_feature("comandas")), Depends(require_permission("comandas"))])
 
@@ -44,8 +43,7 @@ def list_fechadas(
         if data_fim
         else None
     )
-    comandas = _cr.list_fechadas(db, busca, dt_inicio, dt_fim)
-    return [_build_response(db, c) for c in comandas]  # type: ignore[return-value]
+    return comandas_service.list_comandas_fechadas(db, busca, dt_inicio, dt_fim)  # type: ignore[return-value]
 
 
 @router.get("/count-abertas", response_model=int)
@@ -61,10 +59,7 @@ def list_comandas(
     busca: Optional[str] = Query(None),
     db: Session = Depends(get_tenant_db),
 ) -> list[ComandaResponse]:
-    from src.repositories import comandas_repository
-    from src.services.comandas_service import _build_response
-    comandas = comandas_repository.list_abertas(db, busca)
-    return [_build_response(db, c) for c in comandas]  # type: ignore[return-value]
+    return comandas_service.list_comandas_abertas(db, busca)  # type: ignore[return-value]
 
 
 @router.patch("/{comanda_id}", response_model=ComandaResponse)
@@ -156,19 +151,33 @@ def aplicar_desconto(
 def fechar_comanda(
     comanda_id: int,
     body: FecharComandaRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
+    payload: dict = Depends(get_current_user),
 ) -> ComandaResponse:
-    return comandas_service.fechar_comanda(db, comanda_id, body)  # type: ignore[return-value]
+    result = comandas_service.fechar_comanda(db, comanda_id, body)  # type: ignore[return-value]
+    background_tasks.add_task(
+        audit_service.log_background,
+        "comanda.fechar",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="Comanda",
+        entity_id=comanda_id,
+        after={"modo_divisao": body.modo_divisao, "taxa_servico": body.taxa_servico},
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.post("/{comanda_id}/reabrir", response_model=ComandaResponse)
 def reabrir_comanda(
     comanda_id: int,
+    body: ReabrirComandaRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
     payload: dict = Depends(get_current_user),
 ) -> ComandaResponse:
-    result = comandas_service.reabrir_comanda(db, comanda_id)  # type: ignore[return-value]
+    result = comandas_service.reabrir_comanda(db, comanda_id, body)  # type: ignore[return-value]
     background_tasks.add_task(
         audit_service.log_background,
         "comanda.reabrir",
@@ -185,9 +194,21 @@ def reabrir_comanda(
 def cancelar_comanda(
     comanda_id: int,
     body: CancelarComandaRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
+    payload: dict = Depends(get_current_user),
 ) -> ComandaResponse:
-    return comandas_service.cancelar_comanda(db, comanda_id, body)  # type: ignore[return-value]
+    result = comandas_service.cancelar_comanda(db, comanda_id, body)  # type: ignore[return-value]
+    background_tasks.add_task(
+        audit_service.log_background,
+        "comanda.cancelar",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="Comanda",
+        entity_id=comanda_id,
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.get("/{comanda_id}/comprovante", response_model=ComprovanteResponse)

@@ -11,6 +11,7 @@ from src.core.logging import get_logger
 from src.models.comandas import Comanda, StatusComanda
 from src.models.comissoes_garcom import ComissaoGarcom
 from src.models.eventos_comanda import TipoEvento
+from src.models.garcons import Garcom
 from src.models.insumos import Insumo
 from src.models.itens_comanda import ItemComanda
 from src.models.metodos_pagamento import MetodoPagamento
@@ -33,6 +34,7 @@ from src.schemas.comandas import (
     ItemComandaResponse,
     LancarItemRequest,
     PatchComandaRequest,
+    ReabrirComandaRequest,
 )
 from src.schemas.fechamento import AplicarDescontoRequest, FecharComandaRequest, PagamentoResponse
 from src.schemas.produtos import ProdutoResponse
@@ -104,13 +106,17 @@ def apply_discount(preco_venda: Decimal, promo: Promocao) -> Decimal:
     return max(Decimal("0"), resultado).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def _build_item_response(db: Session, ic: ItemComanda) -> ItemComandaResponse:
-    produto = db.execute(select(Produto).where(Produto.id == ic.produto_id)).scalar_one_or_none()
+def _build_item_response(
+    ic: ItemComanda,
+    produtos_by_id: dict[int, Produto],
+    promos_by_id: dict[int, Promocao],
+) -> ItemComandaResponse:
+    produto = produtos_by_id.get(ic.produto_id)
     item_nome = produto.nome if produto else f"Produto {ic.produto_id}"
     subtotal = ic.quantidade * ic.preco_unitario
     promocao_nome: Optional[str] = None
     if ic.promocao_id:
-        promo = db.execute(select(Promocao).where(Promocao.id == ic.promocao_id)).scalar_one_or_none()
+        promo = promos_by_id.get(ic.promocao_id)
         promocao_nome = promo.nome if promo else None
     return ItemComandaResponse(
         id=ic.id,
@@ -131,64 +137,130 @@ def _build_item_response(db: Session, ic: ItemComanda) -> ItemComandaResponse:
     )
 
 
-def _build_response(db: Session, comanda: Comanda) -> ComandaResponse:
-    garcom = garcons_repository.get_by_id(db, comanda.garcom_id)
-    garcom_nome = garcom.nome if garcom else f"Garçom {comanda.garcom_id}"
+def _build_responses(db: Session, comandas: list[Comanda]) -> list[ComandaResponse]:
+    """Builds ComandaResponse objects for a batch of comandas with a fixed number of
+    queries total (garçons, itens, produtos, promoções, pagamentos, métodos), regardless
+    of how many comandas are passed in — avoids the N+1 pattern of querying per comanda."""
+    if not comandas:
+        return []
 
-    pessoas = _parse_pessoas(comanda.pessoas)
-    itens = comandas_repository.get_itens_ativos(db, comanda.id)
-    itens_resp = [_build_item_response(db, ic) for ic in itens]
+    comanda_ids = [c.id for c in comandas]
 
-    total_parcial = sum(
-        (ir.subtotal for ir in itens_resp if not ir.cancelado),
-        Decimal("0"),
+    garcom_ids = {c.garcom_id for c in comandas}
+    garcoes_by_id: dict[int, Garcom] = {
+        g.id: g for g in db.execute(select(Garcom).where(Garcom.id.in_(garcom_ids))).scalars().all()
+    }
+
+    itens = (
+        db.execute(
+            select(ItemComanda)
+            .where(ItemComanda.comanda_id.in_(comanda_ids))
+            .order_by(ItemComanda.created_at.asc())
+        )
+        .scalars()
+        .all()
+    )
+    itens_by_comanda: dict[int, list[ItemComanda]] = {}
+    for ic in itens:
+        itens_by_comanda.setdefault(ic.comanda_id, []).append(ic)
+
+    produto_ids = {ic.produto_id for ic in itens}
+    produtos_by_id: dict[int, Produto] = (
+        {p.id: p for p in db.execute(select(Produto).where(Produto.id.in_(produto_ids))).scalars().all()}
+        if produto_ids
+        else {}
+    )
+
+    promocao_ids = {ic.promocao_id for ic in itens if ic.promocao_id is not None}
+    promos_by_id: dict[int, Promocao] = (
+        {pr.id: pr for pr in db.execute(select(Promocao).where(Promocao.id.in_(promocao_ids))).scalars().all()}
+        if promocao_ids
+        else {}
+    )
+
+    pagamentos = (
+        db.execute(select(Pagamento).where(Pagamento.comanda_id.in_(comanda_ids)).order_by(Pagamento.id))
+        .scalars()
+        .all()
+    )
+    pagamentos_by_comanda: dict[int, list[Pagamento]] = {}
+    for p in pagamentos:
+        pagamentos_by_comanda.setdefault(p.comanda_id, []).append(p)
+
+    metodo_ids = {p.metodo_id for p in pagamentos}
+    metodos_by_id: dict[int, MetodoPagamento] = (
+        {m.id: m for m in db.execute(select(MetodoPagamento).where(MetodoPagamento.id.in_(metodo_ids))).scalars().all()}
+        if metodo_ids
+        else {}
     )
 
     now = datetime.datetime.utcnow()
-    created = comanda.created_at
-    if hasattr(created, "replace"):
-        delta = now - created.replace(tzinfo=None)
-    else:
-        delta = datetime.timedelta(0)
-    tempo_aberta_minutos = int(delta.total_seconds() // 60)
+    responses: list[ComandaResponse] = []
+    for comanda in comandas:
+        garcom = garcoes_by_id.get(comanda.garcom_id)
+        garcom_nome = garcom.nome if garcom else f"Garçom {comanda.garcom_id}"
 
-    pagamentos_db = pagamentos_repository.list_by_comanda(db, comanda.id)
-    pagamentos_resp = []
-    for p in pagamentos_db:
-        metodo = db.get(MetodoPagamento, p.metodo_id)
-        metodo_nome = metodo.nome if metodo else f"Método {p.metodo_id}"
-        pagamentos_resp.append(
-            PagamentoResponse(
-                id=p.id,
-                metodo_id=p.metodo_id,
-                metodo_nome=metodo_nome,
-                valor=p.valor,
-                valor_nota=p.valor_nota,
-                troco=p.troco,
-            )
+        pessoas = _parse_pessoas(comanda.pessoas)
+        itens_resp = [
+            _build_item_response(ic, produtos_by_id, promos_by_id)
+            for ic in itens_by_comanda.get(comanda.id, [])
+        ]
+
+        total_parcial = sum(
+            (ir.subtotal for ir in itens_resp if not ir.cancelado),
+            Decimal("0"),
         )
 
-    return ComandaResponse(
-        id=comanda.id,
-        numero_dia=comanda.numero_dia,
-        identificacao=comanda.identificacao,
-        tipo_identificacao=comanda.tipo_identificacao,
-        garcom_id=comanda.garcom_id,
-        garcom_nome=garcom_nome,
-        status=comanda.status,
-        version=comanda.version,
-        pessoas=pessoas,
-        total_parcial=total_parcial,
-        itens_ativos=itens_resp,
-        created_at=comanda.created_at,
-        tempo_aberta_minutos=tempo_aberta_minutos,
-        desconto_percentual=comanda.desconto_percentual,
-        desconto_valor=comanda.desconto_valor,
-        total=comanda.total,
-        saldo_pendente=comanda.saldo_pendente,
-        data_fechamento=comanda.data_fechamento,
-        pagamentos=pagamentos_resp,
-    )
+        created = comanda.created_at
+        if hasattr(created, "replace"):
+            delta = now - created.replace(tzinfo=None)
+        else:
+            delta = datetime.timedelta(0)
+        tempo_aberta_minutos = int(delta.total_seconds() // 60)
+
+        pagamentos_resp = []
+        for p in pagamentos_by_comanda.get(comanda.id, []):
+            metodo = metodos_by_id.get(p.metodo_id)
+            metodo_nome = metodo.nome if metodo else f"Método {p.metodo_id}"
+            pagamentos_resp.append(
+                PagamentoResponse(
+                    id=p.id,
+                    metodo_id=p.metodo_id,
+                    metodo_nome=metodo_nome,
+                    valor=p.valor,
+                    valor_nota=p.valor_nota,
+                    troco=p.troco,
+                )
+            )
+
+        responses.append(
+            ComandaResponse(
+                id=comanda.id,
+                numero_dia=comanda.numero_dia,
+                identificacao=comanda.identificacao,
+                tipo_identificacao=comanda.tipo_identificacao,
+                garcom_id=comanda.garcom_id,
+                garcom_nome=garcom_nome,
+                status=comanda.status,
+                version=comanda.version,
+                pessoas=pessoas,
+                total_parcial=total_parcial,
+                itens_ativos=itens_resp,
+                created_at=comanda.created_at,
+                tempo_aberta_minutos=tempo_aberta_minutos,
+                desconto_percentual=comanda.desconto_percentual,
+                desconto_valor=comanda.desconto_valor,
+                total=comanda.total,
+                saldo_pendente=comanda.saldo_pendente,
+                data_fechamento=comanda.data_fechamento,
+                pagamentos=pagamentos_resp,
+            )
+        )
+    return responses
+
+
+def _build_response(db: Session, comanda: Comanda) -> ComandaResponse:
+    return _build_responses(db, [comanda])[0]
 
 
 def abrir_comanda(db: Session, data: ComandaCreateRequest) -> ComandaResponse:
@@ -218,7 +290,37 @@ def get_comanda(db: Session, comanda_id: int) -> ComandaResponse:
     return _build_response(db, comanda)
 
 
+def list_comandas_abertas(db: Session, busca: Optional[str] = None) -> list[ComandaResponse]:
+    comandas = comandas_repository.list_abertas(db, busca)
+    return _build_responses(db, comandas)
+
+
+def list_comandas_fechadas(
+    db: Session,
+    busca: Optional[str] = None,
+    data_inicio: Optional[datetime.datetime] = None,
+    data_fim: Optional[datetime.datetime] = None,
+) -> list[ComandaResponse]:
+    comandas = comandas_repository.list_fechadas(db, busca, data_inicio, data_fim)
+    return _build_responses(db, comandas)
+
+
 _ABERTA_STATUSES = {StatusComanda.ABERTA.value, StatusComanda.REABERTA.value}
+
+
+def _lock_comanda(db: Session, comanda_id: int, version: int) -> None:
+    """Optimistic lock: atomically bumps a comanda's version, matching only
+    if it's still at `version`. Raises COMANDA_DESATUALIZADA (409) on
+    conflict (concurrent mutation/duplicate request). The repository call
+    expires all session objects, so any already-loaded `Comanda` instance
+    transparently reloads its attributes from the DB on next access."""
+    ok = comandas_repository.increment_version(db, comanda_id, version)
+    if not ok:
+        raise AppError(
+            ErrorCode.COMANDA_DESATUALIZADA,
+            "Comanda foi alterada por outro usuário, recarregue",
+            http_status=409,
+        )
 
 
 def patch_comanda(db: Session, comanda_id: int, data: PatchComandaRequest) -> ComandaResponse:
@@ -227,6 +329,8 @@ def patch_comanda(db: Session, comanda_id: int, data: PatchComandaRequest) -> Co
         raise AppError(ErrorCode.NOT_FOUND, "Comanda não encontrada", http_status=404)
     if comanda.status not in _ABERTA_STATUSES:
         raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
+
+    _lock_comanda(db, comanda_id, data.version)
 
     if data.garcom_id is not None:
         garcom = garcons_repository.get_by_id(db, data.garcom_id)
@@ -459,6 +563,8 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
     if comanda.status not in _ABERTA_STATUSES:
         raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
 
+    _lock_comanda(db, comanda_id, data.version)
+
     if data.modo_divisao == "por_pessoa":
         pessoas = _parse_pessoas(comanda.pessoas)
         if len(pessoas) < 2:
@@ -616,7 +722,7 @@ def _baixar_insumo(db: Session, insumo: Insumo, quantidade: Decimal) -> list[str
     return [insumo.nome] if novo_estoque < 0 else []
 
 
-def reabrir_comanda(db: Session, comanda_id: int) -> ComandaResponse:
+def reabrir_comanda(db: Session, comanda_id: int, data: ReabrirComandaRequest) -> ComandaResponse:
     comanda = comandas_repository.get_by_id(db, comanda_id)
     if comanda is None:
         raise AppError(ErrorCode.NOT_FOUND, "Comanda não encontrada", http_status=404)
@@ -626,6 +732,8 @@ def reabrir_comanda(db: Session, comanda_id: int) -> ComandaResponse:
             "Apenas comandas fechadas podem ser reabertas",
             http_status=400,
         )
+
+    _lock_comanda(db, comanda_id, data.version)
 
     itens = comandas_repository.get_itens_para_fechar(db, comanda_id)
     for ic in itens:

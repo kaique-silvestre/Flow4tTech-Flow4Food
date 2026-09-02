@@ -136,10 +136,10 @@ def _cancelar_item(c, comanda_id, item_comanda_id, version):
     return resp.json()
 
 
-def _fechar(c, comanda_id, metodo_id, valor, modo="sem_divisao"):
+def _fechar(c, comanda_id, metodo_id, valor, version, modo="sem_divisao"):
     return c.post(
         f"/api/comandas/{comanda_id}/fechar",
-        json={"pagamentos": [{"metodo_id": metodo_id, "valor": str(valor)}], "modo_divisao": modo},
+        json={"pagamentos": [{"metodo_id": metodo_id, "valor": str(valor)}], "modo_divisao": modo, "version": version},
     )
 
 
@@ -161,7 +161,7 @@ def test_subtotal_exclui_cancelados(c):
     r3 = _cancelar_item(c, cid, item_comanda_id, r2["version"])
     assert float(r3["total_parcial"]) == 30.0
 
-    resp = _fechar(c, cid, metodo["id"], "30.00")
+    resp = _fechar(c, cid, metodo["id"], "30.00", r3["version"])
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert data["status"] == "fechada"
@@ -196,7 +196,7 @@ def test_cortesia_nao_some_subtotal_mas_baixa_estoque(c):
     r2 = _lancar_item(c, cid, item_normal["id"], r1["version"])
     assert float(r2["total_parcial"]) == 30.0
 
-    resp = _fechar(c, cid, metodo["id"], "30.00")
+    resp = _fechar(c, cid, metodo["id"], "30.00", r2["version"])
     assert resp.status_code == 200, resp.text
     assert resp.json()["status"] == "fechada"
 
@@ -224,7 +224,7 @@ def test_fechar_com_desconto_percentual(c):
     resp_desc = c.post(f"/api/comandas/{cid}/desconto", json={"version": lancado["version"], "desconto_percentual": "10"})
     assert resp_desc.status_code == 200, resp_desc.text
 
-    resp = _fechar(c, cid, metodo["id"], "90.00")
+    resp = _fechar(c, cid, metodo["id"], "90.00", resp_desc.json()["version"])
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert data["status"] == "fechada"
@@ -243,7 +243,7 @@ def test_fechar_com_desconto_valor(c):
     resp_desc = c.post(f"/api/comandas/{cid}/desconto", json={"version": lancado["version"], "desconto_valor": "8.90"})
     assert resp_desc.status_code == 200, resp_desc.text
 
-    resp = _fechar(c, cid, metodo["id"], "91.10")
+    resp = _fechar(c, cid, metodo["id"], "91.10", resp_desc.json()["version"])
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert data["status"] == "fechada"
@@ -257,8 +257,8 @@ def test_pagamento_nao_bate_retorna_400(c):
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
 
-    _lancar_item(c, cid, item["id"], comanda["version"])
-    resp = _fechar(c, cid, metodo["id"], "80.00")  # deveria ser 90
+    r = _lancar_item(c, cid, item["id"], comanda["version"])
+    resp = _fechar(c, cid, metodo["id"], "80.00", r["version"])  # deveria ser 90
     assert resp.status_code == 400
     assert resp.json()["error"]["code"] == "PAGAMENTO_NAO_BATE"
     # comanda permanece aberta
@@ -272,8 +272,8 @@ def test_fechar_parcial_mantem_aberta(c):
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
 
-    _lancar_item(c, cid, item["id"], comanda["version"])
-    resp = _fechar(c, cid, metodo["id"], "50.00", modo="parcial")
+    r = _lancar_item(c, cid, item["id"], comanda["version"])
+    resp = _fechar(c, cid, metodo["id"], "50.00", r["version"], modo="parcial")
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert data["status"] == "aberta"
@@ -287,12 +287,12 @@ def test_fechar_parcial_calculado_sem_desconto(c):
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
 
-    _lancar_item(c, cid, item["id"], comanda["version"])
+    r = _lancar_item(c, cid, item["id"], comanda["version"])
     # desconto 20% => total final seria 80, mas parcial usa subtotal=100
     c.post(f"/api/comandas/{cid}/desconto", json={"desconto_percentual": "20"})
 
     # parcial de 60 sobre base 100 eh valido
-    resp = _fechar(c, cid, metodo["id"], "60.00", modo="parcial")
+    resp = _fechar(c, cid, metodo["id"], "60.00", r["version"], modo="parcial")
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert data["status"] == "aberta"
@@ -306,8 +306,8 @@ def test_divisao_por_pessoa_sem_pessoas_retorna_400(c):
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
 
-    _lancar_item(c, cid, item["id"], comanda["version"])
-    resp = _fechar(c, cid, metodo["id"], "50.00", modo="por_pessoa")
+    r = _lancar_item(c, cid, item["id"], comanda["version"])
+    resp = _fechar(c, cid, metodo["id"], "50.00", r["version"], modo="por_pessoa")
     assert resp.status_code == 400
     assert resp.json()["error"]["code"] == "PESSOAS_INSUFICIENTES"
 
@@ -339,9 +339,9 @@ def test_baixa_estoque_item_simples(c):
 
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, produto_id, comanda["version"], quantidade=3)
+    r = _lancar_item(c, cid, produto_id, comanda["version"], quantidade=3)
 
-    resp = _fechar(c, cid, metodo["id"], "90.00")
+    resp = _fechar(c, cid, metodo["id"], "90.00", r["version"])
     assert resp.status_code == 200, resp.text
 
     db = _TestingSession()
@@ -391,9 +391,9 @@ def test_baixa_estoque_composto_explode_ficha(c):
 
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, produto["id"], comanda["version"], quantidade=2)
+    r = _lancar_item(c, cid, produto["id"], comanda["version"], quantidade=2)
 
-    resp = _fechar(c, cid, metodo["id"], "40.00")
+    resp = _fechar(c, cid, metodo["id"], "40.00", r["version"])
     assert resp.status_code == 200, resp.text
 
     db = _TestingSession()
@@ -422,13 +422,13 @@ def test_atomicidade_falha_nao_persiste(c_no_raise):
     metodo = _criar_metodo(c_no_raise)
     comanda = _abrir_comanda(c_no_raise, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c_no_raise, cid, item["id"], comanda["version"])
+    r = _lancar_item(c_no_raise, cid, item["id"], comanda["version"])
 
     with mock.patch(
         "src.services.comandas_service._dar_baixa_estoque",
         side_effect=RuntimeError("falha simulada"),
     ):
-        resp = _fechar(c_no_raise, cid, metodo["id"], "50.00")
+        resp = _fechar(c_no_raise, cid, metodo["id"], "50.00", r["version"])
         assert resp.status_code == 500
 
     assert c_no_raise.get(f"/api/comandas/{cid}").json()["status"] == "aberta"

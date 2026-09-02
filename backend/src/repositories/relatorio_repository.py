@@ -129,19 +129,53 @@ def _month_utc_range(mes: str) -> tuple[datetime.datetime, datetime.datetime]:
     return _day_utc_range(first)[0], _day_utc_range(last)[1]
 
 
-def calcular_custo_produto(db: Session, produto_id: int) -> Optional[Decimal]:
+def calcular_custos_produtos(
+    db: Session, produto_ids: list[int]
+) -> dict[int, Optional[Decimal]]:
+    """Custo de ficha técnica de vários produtos em bulk (mesma técnica de `cmv_total`).
+
+    Pré-carrega componentes e insumos via `IN` e agrupa em memória, evitando
+    1 query por produto + 1 query por componente (N+1).
+    """
+    if not produto_ids:
+        return {}
+
     componentes = db.execute(
-        select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)
+        select(FichaTecnica).where(FichaTecnica.produto_id.in_(produto_ids))
     ).scalars().all()
-    if not componentes:
-        return None
-    total = Decimal("0")
+
+    insumo_ids = {comp.insumo_id for comp in componentes}
+    insumos_by_id = {
+        insumo.id: insumo
+        for insumo in db.execute(
+            select(Insumo).where(Insumo.id.in_(insumo_ids))
+        ).scalars().all()
+    }
+
+    componentes_by_produto: dict[int, list[FichaTecnica]] = {}
     for comp in componentes:
-        insumo = db.execute(select(Insumo).where(Insumo.id == comp.insumo_id)).scalar_one_or_none()
-        if insumo is None or insumo.custo_medio is None:
-            return None
-        total += comp.quantidade * insumo.custo_medio
-    return total
+        componentes_by_produto.setdefault(comp.produto_id, []).append(comp)
+
+    resultado: dict[int, Optional[Decimal]] = {}
+    for produto_id in produto_ids:
+        comps = componentes_by_produto.get(produto_id)
+        if not comps:
+            resultado[produto_id] = None
+            continue
+        total = Decimal("0")
+        completo = True
+        for comp in comps:
+            insumo = insumos_by_id.get(comp.insumo_id)
+            if insumo is None or insumo.custo_medio is None:
+                completo = False
+                break
+            total += comp.quantidade * insumo.custo_medio
+        resultado[produto_id] = total if completo else None
+    return resultado
+
+
+def calcular_custo_produto(db: Session, produto_id: int) -> Optional[Decimal]:
+    return calcular_custos_produtos(db, [produto_id]).get(produto_id)
 
 
 def cmv_total(db: Session, comanda_ids: list[int]) -> Decimal:
@@ -240,14 +274,16 @@ def produtos_sem_custo(db: Session, comanda_ids: list[int]) -> list[dict]:
         .where(ItemComanda.comanda_id.in_(comanda_ids), ItemComanda.cancelado.is_(False))
         .distinct()
     ).scalars().all()
-    result = []
-    for produto_id in ics:
-        custo = calcular_custo_produto(db, produto_id)
-        if custo is None:
-            produto = db.execute(select(Produto).where(Produto.id == produto_id)).scalar_one_or_none()
-            if produto:
-                result.append({"item_id": produto.id, "nome": produto.nome})
-    return result
+    produto_ids = list(ics)
+    custos = calcular_custos_produtos(db, produto_ids)
+    sem_custo_ids = [pid for pid in produto_ids if custos.get(pid) is None]
+    if not sem_custo_ids:
+        return []
+
+    produtos = db.execute(
+        select(Produto).where(Produto.id.in_(sem_custo_ids))
+    ).scalars().all()
+    return [{"item_id": p.id, "nome": p.nome} for p in produtos]
 
 
 def comissoes_total_por_comanda_ids(db: Session, comanda_ids: list[int]) -> Decimal:

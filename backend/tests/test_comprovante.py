@@ -87,10 +87,14 @@ def _lancar_item(c, comanda_id, item_id, version, quantidade=1):
     return resp.json()
 
 
-def _fechar(c, comanda_id, metodo_id, valor):
+def _fechar(c, comanda_id, metodo_id, valor, version):
     resp = c.post(
         f"/api/comandas/{comanda_id}/fechar",
-        json={"pagamentos": [{"metodo_id": metodo_id, "valor": str(valor)}], "modo_divisao": "sem_divisao"},
+        json={
+            "pagamentos": [{"metodo_id": metodo_id, "valor": str(valor)}],
+            "modo_divisao": "sem_divisao",
+            "version": version,
+        },
     )
     assert resp.status_code == 200, resp.text
     return resp.json()
@@ -129,8 +133,8 @@ def test_comprovante_comanda_fechada(c):
     cid = comanda["id"]
     version = comanda["version"]
 
-    _lancar_item(c, cid, item["id"], version)
-    _fechar(c, cid, metodo["id"], "30.00")
+    r = _lancar_item(c, cid, item["id"], version)
+    _fechar(c, cid, metodo["id"], "30.00", r["version"])
 
     resp = c.get(f"/api/comandas/{cid}/comprovante")
     assert resp.status_code == 200, resp.text
@@ -150,8 +154,8 @@ def test_comprovante_sem_estabelecimento_usa_fallback(c):
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
     version = comanda["version"]
-    _lancar_item(c, cid, item["id"], version)
-    _fechar(c, cid, metodo["id"], "50.00")
+    r = _lancar_item(c, cid, item["id"], version)
+    _fechar(c, cid, metodo["id"], "50.00", r["version"])
 
     resp = c.get(f"/api/comandas/{cid}/comprovante")
     assert resp.status_code == 200, resp.text
@@ -168,8 +172,8 @@ def test_comprovante_com_estabelecimento(c):
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
     version = comanda["version"]
-    _lancar_item(c, cid, item["id"], version)
-    _fechar(c, cid, metodo["id"], "50.00")
+    r = _lancar_item(c, cid, item["id"], version)
+    _fechar(c, cid, metodo["id"], "50.00", r["version"])
 
     resp = c.get(f"/api/comandas/{cid}/comprovante")
     assert resp.status_code == 200, resp.text

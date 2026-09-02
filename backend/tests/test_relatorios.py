@@ -95,10 +95,14 @@ def _lancar_item(c, comanda_id, item_id, version, quantidade=1):
     return resp.json()
 
 
-def _fechar(c, comanda_id, metodo_id, valor):
+def _fechar(c, comanda_id, metodo_id, valor, version):
     resp = c.post(
         f"/api/comandas/{comanda_id}/fechar",
-        json={"pagamentos": [{"metodo_id": metodo_id, "valor": str(valor)}], "modo_divisao": "sem_divisao"},
+        json={
+            "pagamentos": [{"metodo_id": metodo_id, "valor": str(valor)}],
+            "modo_divisao": "sem_divisao",
+            "version": version,
+        },
     )
     assert resp.status_code == 200, resp.text
     return resp.json()
@@ -127,8 +131,8 @@ def test_vendas_do_dia_retorna_apenas_fechadas_hoje(c):
 
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, item["id"], comanda["version"])
-    _fechar(c, cid, metodo["id"], "50.00")
+    r = _lancar_item(c, cid, item["id"], comanda["version"])
+    _fechar(c, cid, metodo["id"], "50.00", r["version"])
 
     # Comanda aberta (não deve aparecer)
     _abrir_comanda(c, garcom["id"], "Mesa 2")
@@ -151,13 +155,13 @@ def test_historico_filtra_por_periodo(c):
 
     # Comanda de hoje
     cmd_hoje = _abrir_comanda(c, garcom["id"], "Mesa 1")
-    _lancar_item(c, cmd_hoje["id"], item["id"], cmd_hoje["version"])
-    _fechar(c, cmd_hoje["id"], metodo["id"], "50.00")
+    r_hoje = _lancar_item(c, cmd_hoje["id"], item["id"], cmd_hoje["version"])
+    _fechar(c, cmd_hoje["id"], metodo["id"], "50.00", r_hoje["version"])
 
     # Comanda de 10 dias atrás (forçar data_fechamento)
     cmd_antiga = _abrir_comanda(c, garcom["id"], "Mesa 2")
-    _lancar_item(c, cmd_antiga["id"], item["id"], cmd_antiga["version"])
-    _fechar(c, cmd_antiga["id"], metodo["id"], "50.00")
+    r_antiga = _lancar_item(c, cmd_antiga["id"], item["id"], cmd_antiga["version"])
+    _fechar(c, cmd_antiga["id"], metodo["id"], "50.00", r_antiga["version"])
     dt_antiga = datetime.datetime.utcnow() - datetime.timedelta(days=10)
     _forcar_data_fechamento(cmd_antiga["id"], dt_antiga)
 
@@ -178,12 +182,12 @@ def test_historico_filtra_por_garcom(c):
     metodo = _criar_metodo(c)
 
     cmd1 = _abrir_comanda(c, garcom1["id"], "Mesa 1")
-    _lancar_item(c, cmd1["id"], item["id"], cmd1["version"])
-    _fechar(c, cmd1["id"], metodo["id"], "50.00")
+    r1 = _lancar_item(c, cmd1["id"], item["id"], cmd1["version"])
+    _fechar(c, cmd1["id"], metodo["id"], "50.00", r1["version"])
 
     cmd2 = _abrir_comanda(c, garcom2["id"], "Mesa 2")
-    _lancar_item(c, cmd2["id"], item["id"], cmd2["version"])
-    _fechar(c, cmd2["id"], metodo["id"], "50.00")
+    r2 = _lancar_item(c, cmd2["id"], item["id"], cmd2["version"])
+    _fechar(c, cmd2["id"], metodo["id"], "50.00", r2["version"])
 
     hoje = _hoje_sp()
     resp = c.get(f"/api/relatorios/historico-comandas?data_inicio={hoje}&data_fim={hoje}&garcom_id={garcom1['id']}")
@@ -203,7 +207,7 @@ def test_fechamento_caixa_agrega_por_metodo(c):
 
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, item["id"], comanda["version"])
+    r = _lancar_item(c, cid, item["id"], comanda["version"])
 
     # O endpoint aceita lista de pagamentos em um único POST:
     resp = c.post(
@@ -214,6 +218,7 @@ def test_fechamento_caixa_agrega_por_metodo(c):
                 {"metodo_id": dinheiro["id"], "valor": "80.00"},
             ],
             "modo_divisao": "sem_divisao",
+            "version": r["version"],
         },
     )
     assert resp.status_code == 200, resp.text
@@ -240,12 +245,16 @@ def test_parcial_nao_conta_como_fechada(c):
 
     comanda = _abrir_comanda(c, garcom["id"])
     cid = comanda["id"]
-    _lancar_item(c, cid, item["id"], comanda["version"])
+    r = _lancar_item(c, cid, item["id"], comanda["version"])
 
     # Pagamento parcial → status permanece "aberta"
     resp = c.post(
         f"/api/comandas/{cid}/fechar",
-        json={"pagamentos": [{"metodo_id": metodo["id"], "valor": "50.00"}], "modo_divisao": "parcial"},
+        json={
+            "pagamentos": [{"metodo_id": metodo["id"], "valor": "50.00"}],
+            "modo_divisao": "parcial",
+            "version": r["version"],
+        },
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "aberta"

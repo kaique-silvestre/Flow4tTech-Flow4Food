@@ -1,4 +1,3 @@
-from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import func, select
@@ -103,17 +102,3 @@ def upsert_ficha(
             quantidade=comp.quantidade,
         ))
     db.flush()
-
-
-def calcular_custo(db: Session, produto_id: int) -> Optional[Decimal]:
-    from src.models.insumos import Insumo
-    componentes = get_ficha(db, produto_id)
-    if not componentes:
-        return None
-    total = Decimal("0")
-    for comp in componentes:
-        insumo = db.execute(select(Insumo).where(Insumo.id == comp.insumo_id)).scalar_one_or_none()
-        if insumo is None or insumo.custo_medio is None:
-            return None
-        total += comp.quantidade * insumo.custo_medio
-    return total
