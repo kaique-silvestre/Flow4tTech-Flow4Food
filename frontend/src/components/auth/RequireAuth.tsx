@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
-import { IMPERSONATION_SESSION_KEY } from "@/App";
+import { IMPERSONATION_SESSION_KEY } from "@/lib/impersonation";
 
 export function RequireAuth() {
   const { token, user, clearToken } = useAuthStore();

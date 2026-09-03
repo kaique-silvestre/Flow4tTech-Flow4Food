@@ -1,16 +1,68 @@
 import axios from "axios";
+import type { AxiosError, InternalAxiosRequestConfig } from "axios";
+import * as Sentry from "@sentry/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePlatformAuthStore } from "@/stores/platformAuthStore";
 
 const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-const platformApi = axios.create({ baseURL: BASE });
+export const platformApi = axios.create({ baseURL: BASE, withCredentials: true });
+
+function isPlatformAdminToken(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))) as {
+      platform_admin?: boolean;
+    };
+    return payload.platform_admin === true;
+  } catch {
+    return false;
+  }
+}
+
+let refreshingPlatformToken = false;
+let platformRefreshPromise: Promise<string> | null = null;
+
+async function refreshPlatformToken(): Promise<string> {
+  if (!platformRefreshPromise) {
+    refreshingPlatformToken = true;
+    platformRefreshPromise = axios
+      .post<{ access_token: string }>(`${BASE}/api/auth/refresh`, {}, { withCredentials: true })
+      .then(({ data }) => {
+        if (!isPlatformAdminToken(data.access_token)) {
+          throw new Error("Invalid platform refresh token");
+        }
+        usePlatformAuthStore.getState().setToken(data.access_token);
+        return data.access_token;
+      })
+      .finally(() => {
+        refreshingPlatformToken = false;
+        platformRefreshPromise = null;
+      });
+  }
+  return platformRefreshPromise;
+}
+
 platformApi.interceptors.response.use(
   (r) => r,
-  (err) => {
-    if (err?.response?.status === 401) {
+  async (err: AxiosError) => {
+    const original = err.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    if (err.response?.status === 401 && original && !original._retry) {
+      original._retry = true;
+      try {
+        const token = refreshingPlatformToken ? await platformRefreshPromise! : await refreshPlatformToken();
+        original.headers.Authorization = `Bearer ${token}`;
+        return platformApi(original);
+      } catch {
+        // A normal tenant refresh cookie is never accepted here. Only a
+        // verified platform token may retry a platform-admin request.
+      }
+    }
+    if (err.response?.status === 401) {
       usePlatformAuthStore.getState().clearToken();
       window.location.href = "/platform/login";
+    }
+    if (err.response?.status && err.response.status >= 500) {
+      Sentry.captureException(err);
     }
     return Promise.reject(err);
   }
@@ -45,6 +97,14 @@ export interface TenantDetail {
   status_assinatura: string | null;
   data_vencimento: string | null;
   qtd_usuarios: number;
+}
+
+export interface PageResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
 }
 
 export interface TenantUserItem {
@@ -122,16 +182,16 @@ export interface PlatformSettingItem {
 
 // ─── Tenants ─────────────────────────────────────────────────────────────────
 
-export function useTenants(statusFilter?: string) {
-  return useQuery<TenantListItem[]>({
-    queryKey: ["platform-tenants", statusFilter],
+export function useTenants(statusFilter?: string, page = 1, pageSize = 50) {
+  return useQuery<PageResponse<TenantListItem>>({
+    queryKey: ["platform-tenants", statusFilter, page, pageSize],
     queryFn: async () => {
-      const params = statusFilter ? { status: statusFilter } : {};
+      const params = { ...(statusFilter ? { status: statusFilter } : {}), page, page_size: pageSize };
       const { data } = await platformApi.get(`${BASE}/api/platform/tenants`, {
         headers: authHeaders(),
         params,
       });
-      return data;
+      return data as PageResponse<TenantListItem>;
     },
   });
 }
@@ -464,16 +524,16 @@ export function useUpdateSetting() {
 
 // ─── Cockpit ──────────────────────────────────────────────────────────────────
 
-export function usePlatformCockpit(statusFilter?: string) {
-  return useQuery<CockpitMetricsItem[]>({
-    queryKey: ["platform-cockpit", statusFilter],
+export function usePlatformCockpit(statusFilter?: string, page = 1, pageSize = 50) {
+  return useQuery<PageResponse<CockpitMetricsItem>>({
+    queryKey: ["platform-cockpit", statusFilter, page, pageSize],
     queryFn: async () => {
-      const params = statusFilter ? { status: statusFilter } : {};
+      const params = { ...(statusFilter ? { status: statusFilter } : {}), page, page_size: pageSize };
       const { data } = await platformApi.get(`${BASE}/api/platform/cockpit`, {
         headers: authHeaders(),
         params,
       });
-      return data;
+      return data as PageResponse<CockpitMetricsItem>;
     },
   });
 }

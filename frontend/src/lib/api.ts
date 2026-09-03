@@ -1,7 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import * as Sentry from "@sentry/react";
 import { useAuthStore } from "@/stores/authStore";
-import { IMPERSONATION_SESSION_KEY } from "@/App";
+import { hasImpersonationSession, IMPERSONATION_SESSION_KEY } from "@/lib/impersonation";
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000",
@@ -35,6 +35,14 @@ api.interceptors.response.use(
     const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     if (error.response?.status === 401 && !original._retry) {
+      // The refresh cookie belongs to the platform user's normal session, not
+      // the impersonated tenant session. Refreshing here would silently swap
+      // the active identity, so an impersonated session must never refresh.
+      if (hasImpersonationSession()) {
+        sessionStorage.removeItem(IMPERSONATION_SESSION_KEY);
+        if (window.location.pathname !== "/login") window.location.assign("/login");
+        return Promise.reject(error);
+      }
       if (_refreshing) {
         return new Promise((resolve, reject) => {
           _queue.push({

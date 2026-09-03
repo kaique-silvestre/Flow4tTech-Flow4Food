@@ -108,15 +108,17 @@ def _seed_user_with_profile(tenant_id: int) -> SystemUser:
 
 # ── D1: GET /platform/tenants retorna lista ──────────────────────────────────
 
-def test_list_tenants_returns_all(client):
+def test_list_tenants_returns_paginated_page(client):
     _seed_tenants(2)
     _seed_assinatura(1, "ativa")
     _seed_assinatura(2, "trial")
     resp = client.get("/api/platform/tenants", headers={"Authorization": f"Bearer {_platform_token()}"})
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data) == 2
-    ids = {t["id"] for t in data}
+    assert data["total"] == 2
+    assert data["page"] == 1
+    assert data["page_size"] == 50
+    ids = {t["id"] for t in data["items"]}
     assert ids == {1, 2}
 
 
@@ -132,9 +134,31 @@ def test_list_tenants_filter_by_status(client):
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data) == 1
-    assert data[0]["id"] == 1
-    assert data[0]["status_assinatura"] == "ativa"
+    assert data["total"] == 1
+    assert data["items"][0]["id"] == 1
+    assert data["items"][0]["status_assinatura"] == "ativa"
+
+
+def test_list_tenants_paginates_on_server(client):
+    _seed_tenants(3)
+    resp = client.get(
+        "/api/platform/tenants?page=2&page_size=1",
+        headers={"Authorization": f"Bearer {_platform_token()}"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 3
+    assert data["total_pages"] == 3
+    assert data["page"] == 2
+    assert [item["id"] for item in data["items"]] == [2]
+
+
+def test_list_tenants_rejects_unsafe_page_size(client):
+    resp = client.get(
+        "/api/platform/tenants?page_size=101",
+        headers={"Authorization": f"Bearer {_platform_token()}"},
+    )
+    assert resp.status_code == 422
 
 
 # ── D3: GET /platform/tenants/{id}/users ─────────────────────────────────────
@@ -171,7 +195,7 @@ def test_patch_assinatura_updates_status(client):
         "/api/platform/tenants?status=ativa",
         headers={"Authorization": f"Bearer {_platform_token()}"},
     )
-    assert len(resp2.json()) == 1
+    assert len(resp2.json()["items"]) == 1
 
 
 def test_patch_assinatura_creates_if_not_exists(client):

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
-import { IMPERSONATION_SESSION_KEY } from "@/App";
+import { IMPERSONATION_SESSION_KEY } from "@/lib/impersonation";
 import { toast } from "@/lib/toast";
 import { Menu, CalendarDays, ArrowUpRight, X } from "lucide-react";
 import { useActiveAnnouncements, useMarkAnnouncementRead } from "@/features/comunicados/useAnnouncements";

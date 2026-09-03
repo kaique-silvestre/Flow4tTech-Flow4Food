@@ -15,7 +15,12 @@ from src.models.tenant_features import TenantFeature
 from src.models.tenants import Tenant
 
 
-def list_tenants(db: Session, status_filter: Optional[str] = None) -> list[dict]:  # noqa: UP045
+def list_tenants(
+    db: Session,
+    status_filter: Optional[str] = None,  # noqa: UP045
+    page: int = 1,
+    page_size: int = 50,
+) -> dict:
     user_count_sq = (
         select(func.count(SystemUser.id))
         .where(SystemUser.tenant_id == Tenant.id)
@@ -38,8 +43,17 @@ def list_tenants(db: Session, status_filter: Optional[str] = None) -> list[dict]
     )
     if status_filter:
         stmt = stmt.where(Assinatura.status == status_filter)
-    rows = db.execute(stmt).all()
-    return [
+    if status_filter:
+        count_stmt = (
+            select(func.count(Tenant.id))
+            .outerjoin(Assinatura, Assinatura.tenant_id == Tenant.id)
+            .where(Assinatura.status == status_filter)
+        )
+    else:
+        count_stmt = select(func.count(Tenant.id))
+    total = int(db.execute(count_stmt).scalar_one() or 0)
+    rows = db.execute(stmt.limit(page_size).offset((page - 1) * page_size)).all()
+    items = [
         {
             "id": r.id,
             "nome_fantasia": r.nome_fantasia,
@@ -52,6 +66,13 @@ def list_tenants(db: Session, status_filter: Optional[str] = None) -> list[dict]
         }
         for r in rows
     ]
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size,
+    }
 
 
 def get_setting(db: Session, key: str) -> Optional[str]:  # noqa: UP045

@@ -17,7 +17,7 @@ import {
   type TenantUserItem,
   type ProfileItem,
 } from "./usePlatformApi";
-import { IMPERSONATION_SESSION_KEY } from "@/App";
+import { openImpersonationSession } from "@/lib/impersonation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const STATUS_OPTIONS = ["trial", "ativa", "suspensa", "cancelada"] as const;
@@ -371,9 +371,11 @@ function UsuariosTab({ tenantId }: { tenantId: number }) {
       { tenantId, userId: u.id },
       {
         onSuccess: ({ access_token }) => {
-          sessionStorage.setItem(IMPERSONATION_SESSION_KEY, access_token);
-          window.open(`/?impersonation_token=${access_token}`, "_blank");
-          toast.success(`Sessão de suporte iniciada como ${u.name}`);
+          if (openImpersonationSession(access_token)) {
+            toast.success(`Sessão de suporte iniciada como ${u.name}`);
+          } else {
+            toast.error("Permita pop-ups para iniciar a sessão de suporte");
+          }
         },
         onError: () => toast.error("Erro ao iniciar sessão de suporte"),
       }

@@ -11,6 +11,7 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ### Security
 
+- Protege sessões de impersonação contra refresh indevido, remove JWT da URL e envia falhas administrativas 5xx ao Sentry; pagina tenants e cockpit no servidor — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
 - Registra trilha de auditoria para mutações administrativas autenticadas por JWT — incluindo usuários, permissões, recursos por tenant, configurações e anúncios — sem armazenar senhas, e redige CPF, credenciais e tokens dos logs estruturados — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
 
 ### Changed

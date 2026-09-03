@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { usePlatformCockpit, type CockpitMetricsItem } from "./usePlatformApi";
 
 const STATUS_OPTIONS = ["", "trial", "ativa", "suspensa", "cancelada"] as const;
@@ -50,28 +50,10 @@ function renderCell(key: SortKey, row: CockpitMetricsItem) {
 
 export function PlatformCockpitPage() {
   const [statusFilter, setStatusFilter] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("dias_cliente");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(1);
 
-  const { data: rows = [], isLoading } = usePlatformCockpit(statusFilter || undefined);
-
-  const sorted = useMemo(
-    () =>
-      [...rows].sort((a, b) => {
-        const diff = a[sortKey] - b[sortKey];
-        return sortDir === "asc" ? diff : -diff;
-      }),
-    [rows, sortKey, sortDir],
-  );
-
-  function toggleSort(key: SortKey) {
-    if (key === sortKey) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("desc");
-    }
-  }
+  const { data, isLoading } = usePlatformCockpit(statusFilter || undefined, page);
+  const rows = data?.items ?? [];
 
   return (
     <div className="space-y-4">
@@ -79,7 +61,7 @@ export function PlatformCockpitPage() {
         <h1 className="text-xl font-semibold text-gray-900">Cockpit de Métricas</h1>
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Todos os status</option>
@@ -102,23 +84,14 @@ export function PlatformCockpitPage() {
                 <th className="px-4 py-3 font-medium">Assinatura</th>
                 <th className="px-4 py-3 font-medium">Último login</th>
                 {COLUMNS.map(({ key, label }) => (
-                  <th
-                    key={key}
-                    className="px-4 py-3 font-medium cursor-pointer select-none hover:bg-gray-100"
-                    onClick={() => toggleSort(key)}
-                  >
+                  <th key={key} className="px-4 py-3 font-medium">
                     {label}
-                    {key === sortKey ? (
-                      <span className="ml-1">{sortDir === "asc" ? "↑" : "↓"}</span>
-                    ) : (
-                      <span className="ml-1 text-gray-300">↕</span>
-                    )}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {sorted.map((t) => (
+              {rows.map((t) => (
                 <tr key={t.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <div className="font-medium text-gray-900">{t.nome_fantasia}</div>
@@ -143,7 +116,7 @@ export function PlatformCockpitPage() {
                   ))}
                 </tr>
               ))}
-              {sorted.length === 0 && (
+              {rows.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                     Nenhum tenant encontrado
@@ -152,6 +125,13 @@ export function PlatformCockpitPage() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+      {data && data.total_pages > 1 && (
+        <div className="flex items-center justify-end gap-3 text-sm text-gray-600">
+          <span>Página {data.page} de {data.total_pages} ({data.total} empresas)</span>
+          <button type="button" onClick={() => setPage((current) => current - 1)} disabled={page === 1} className="rounded border px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50">Anterior</button>
+          <button type="button" onClick={() => setPage((current) => current + 1)} disabled={page >= data.total_pages} className="rounded border px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50">Próxima</button>
         </div>
       )}
     </div>

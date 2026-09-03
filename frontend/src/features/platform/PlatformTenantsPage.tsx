@@ -155,8 +155,10 @@ function CreateTenantModal({ open, onClose }: { open: boolean; onClose: () => vo
 
 export function PlatformTenantsPage() {
   const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
-  const { data: tenants = [], isLoading } = useTenants(statusFilter || undefined);
+  const { data, isLoading } = useTenants(statusFilter || undefined, page);
+  const tenants = data?.items ?? [];
   const updateAssinatura = useUpdateAssinatura();
   const navigate = useNavigate();
 
@@ -177,7 +179,7 @@ export function PlatformTenantsPage() {
         <div className="flex items-center gap-3">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Todos os status</option>
@@ -266,6 +268,28 @@ export function PlatformTenantsPage() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {data && data.total_pages > 1 && (
+        <div className="flex items-center justify-end gap-3 text-sm text-gray-600">
+          <span>Página {data.page} de {data.total_pages} ({data.total} empresas)</span>
+          <button
+            type="button"
+            onClick={() => setPage((current) => current - 1)}
+            disabled={page === 1}
+            className="rounded border px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Anterior
+          </button>
+          <button
+            type="button"
+            onClick={() => setPage((current) => current + 1)}
+            disabled={page >= data.total_pages}
+            className="rounded border px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Próxima
+          </button>
         </div>
       )}
 

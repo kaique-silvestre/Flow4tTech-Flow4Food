@@ -20,7 +20,8 @@ function AnnouncementModal({
   const [expiresAt, setExpiresAt] = useState("");
   const [target, setTarget] = useState<"all" | "specific">("all");
   const [selectedTenants, setSelectedTenants] = useState<number[]>([]);
-  const { data: tenants = [] } = useTenants();
+  const { data: tenantsPage } = useTenants();
+  const tenants = tenantsPage?.items ?? [];
   const create = useCreateAnnouncement();
 
   if (!open) return null;
