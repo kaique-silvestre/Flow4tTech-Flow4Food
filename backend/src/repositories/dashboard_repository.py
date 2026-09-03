@@ -7,12 +7,22 @@ from sqlalchemy.orm import Session
 
 from src.models.comandas import Comanda, StatusComanda
 from src.models.compras import Compra
+from src.models.fornecedores import Fornecedor
 from src.models.insumos import Insumo
 from src.models.itens_comanda import ItemComanda
 from src.models.produtos import Produto
 from src.repositories.relatorio_repository import _day_utc_range, cmv_total
 
 TZ = ZoneInfo("America/Sao_Paulo")
+
+
+def compras_agendadas_com_fornecedor(db: Session, data_limite: datetime.date) -> list[dict]:
+    rows = db.execute(
+        select(Compra, Fornecedor.nome.label("fornecedor_nome"))
+        .outerjoin(Fornecedor, Compra.fornecedor_id == Fornecedor.id)
+        .where(Compra.status == "confirmado", Compra.data_prevista_recebimento <= data_limite)
+    ).all()
+    return [{"compra": row.Compra, "fornecedor_nome": row.fornecedor_nome} for row in rows]
 
 
 def _today_sp() -> datetime.date:

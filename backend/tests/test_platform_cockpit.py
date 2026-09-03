@@ -77,7 +77,7 @@ _SAMPLE_METRIC = {
 def test_get_cockpit_returns_list(client):
     with patch(
         "src.repositories.platform_repository.get_cockpit_metrics",
-        return_value=[_SAMPLE_METRIC],
+        return_value={"items": [_SAMPLE_METRIC], "total": 1, "page": 1, "page_size": 50, "total_pages": 1},
     ):
         resp = client.get(
             "/api/platform/cockpit",
@@ -85,34 +85,48 @@ def test_get_cockpit_returns_list(client):
         )
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data) == 1
-    assert data[0]["id"] == 1
-    assert data[0]["nome_fantasia"] == "Empresa A"
-    assert data[0]["comandas_mes"] == 10
-    assert data[0]["faturamento_mes"] == pytest.approx(1500.0)
-    assert data[0]["usuarios_ativos_30d"] == 3
-    assert data[0]["compras_mes"] == 5
-    assert data[0]["dias_cliente"] == 30
+    assert data["total"] == 1
+    assert data["page"] == 1
+    assert len(data["items"]) == 1
+    assert data["items"][0]["id"] == 1
+    assert data["items"][0]["nome_fantasia"] == "Empresa A"
+    assert data["items"][0]["comandas_mes"] == 10
+    assert data["items"][0]["faturamento_mes"] == pytest.approx(1500.0)
+    assert data["items"][0]["usuarios_ativos_30d"] == 3
+    assert data["items"][0]["compras_mes"] == 5
+    assert data["items"][0]["dias_cliente"] == 30
 
 
 # G2 — filtro por status passa para repositório
 def test_get_cockpit_passes_status_filter(client):
     captured = {}
 
-    def fake_get_cockpit(db, status_filter=None):
+    def fake_get_cockpit(db, status_filter=None, page=1, page_size=50):
         captured["status_filter"] = status_filter
-        return []
+        captured["page"] = page
+        captured["page_size"] = page_size
+        return {"items": [], "total": 0, "page": page, "page_size": page_size, "total_pages": 0}
 
     with patch(
         "src.repositories.platform_repository.get_cockpit_metrics",
         side_effect=fake_get_cockpit,
     ):
         resp = client.get(
-            "/api/platform/cockpit?status=trial",
+            "/api/platform/cockpit?status=trial&page=2&page_size=20",
             headers={"Authorization": f"Bearer {_platform_token()}"},
         )
     assert resp.status_code == 200
     assert captured["status_filter"] == "trial"
+    assert captured["page"] == 2
+    assert captured["page_size"] == 20
+
+
+def test_get_cockpit_rejects_unsafe_page_size(client):
+    resp = client.get(
+        "/api/platform/cockpit?page_size=101",
+        headers={"Authorization": f"Bearer {_platform_token()}"},
+    )
+    assert resp.status_code == 422
 
 
 # G3 — GET /api/platform/tenants/{id}/cockpit retorna métricas do tenant

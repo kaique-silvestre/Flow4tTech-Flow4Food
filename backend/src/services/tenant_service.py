@@ -14,7 +14,7 @@ from src.repositories.tenant_repository import (
     create_tenant,
     get_assinatura_by_tenant,
     get_tenant_by_id,
-    list_tenants,
+    list_tenants_with_assinaturas,
     set_rls_tenant,
     update_tenant,
 )
@@ -189,9 +189,7 @@ def update_existing_tenant(db: Session, tenant_id: int, data: TenantUpdate) -> T
 
 
 def get_all_tenants(db: Session) -> list[TenantResponse]:
-    tenants = list_tenants(db)
-    result = []
-    for t in tenants:
-        assinatura = get_assinatura_by_tenant(db, t.id)
-        result.append(_to_response(t, assinatura))
-    return result
+    return [
+        _to_response(tenant, assinatura)
+        for tenant, assinatura in list_tenants_with_assinaturas(db)
+    ]

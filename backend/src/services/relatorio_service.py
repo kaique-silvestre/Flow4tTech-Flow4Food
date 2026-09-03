@@ -1,9 +1,12 @@
 import datetime
+import math
+import re
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from src.core.errors import AppError, ErrorCode
 from src.repositories import relatorio_repository as rr
 from src.schemas.relatorio_schemas import (
     CMVPorProdutoResponse,
@@ -96,13 +99,20 @@ def historico_comandas(
     data_fim: datetime.date,
     garcom_id: Optional[int] = None,
     busca: Optional[str] = None,
+    pagina: int = 1,
+    por_pagina: int = 50,
 ) -> HistoricoResponse:
+    _validar_periodo(data_inicio, data_fim)
     start, _ = rr._day_utc_range(data_inicio)
     _, end = rr._day_utc_range(data_fim)
-    comandas = rr.list_fechadas_no_periodo(db, start, end, garcom_id, busca)
+    total = rr.count_fechadas_no_periodo(db, start, end, garcom_id, busca)
+    comandas = rr.list_fechadas_no_periodo_paginada(db, start, end, garcom_id, busca, pagina, por_pagina)
     garcom_names, cortesias_map, pagamentos_map, _ = _aggregate(db, comandas)
     return HistoricoResponse(
-        total=len(comandas),
+        total=total,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        total_paginas=max(1, math.ceil(total / por_pagina)),
         comandas=_build_comanda_items(comandas, garcom_names, cortesias_map, pagamentos_map),
     )
 
@@ -131,6 +141,7 @@ def fechamento_caixa(db: Session, data: datetime.date) -> FechamentoCaixaRespons
 
 
 def dre(db: Session, mes: str) -> DREResponse:
+    _validar_mes(mes)
     start, end = rr._month_utc_range(mes)
     comandas = rr.list_fechadas_no_periodo(db, start, end)
     ids = [c.id for c in comandas]
@@ -214,6 +225,7 @@ def cmv_por_produto(db: Session) -> CMVPorProdutoResponse:
 def perdas_cortesias(
     db: Session, data_inicio: datetime.date, data_fim: datetime.date
 ) -> PerdasCortesiasResponse:
+    _validar_periodo(data_inicio, data_fim)
     start, _ = rr._day_utc_range(data_inicio)
     _, end = rr._day_utc_range(data_fim)
     grupos_raw = rr.perdas_no_periodo(db, start, end)
@@ -233,6 +245,7 @@ def perdas_cortesias(
 def produtos_mais_vendidos(
     db: Session, data_inicio: datetime.date, data_fim: datetime.date
 ) -> ProdutosMaisVendidosResponse:
+    _validar_periodo(data_inicio, data_fim)
     start, _ = rr._day_utc_range(data_inicio)
     _, end = rr._day_utc_range(data_fim)
     rows = rr.produtos_mais_vendidos(db, start, end)
@@ -266,6 +279,7 @@ def produtos_mais_vendidos(
 def pico_vendas_horario(
     db: Session, data_inicio: datetime.date, data_fim: datetime.date
 ) -> PicoVendasHorarioResponse:
+    _validar_periodo(data_inicio, data_fim)
     start, _ = rr._day_utc_range(data_inicio)
     _, end = rr._day_utc_range(data_fim)
     horarios_raw = rr.vendas_por_hora(db, start, end)
@@ -292,6 +306,7 @@ def pico_vendas_horario(
 def vendas_por_garcom(
     db: Session, data_inicio: datetime.date, data_fim: datetime.date
 ) -> VendasPorGarcomResponse:
+    _validar_periodo(data_inicio, data_fim)
     start, _ = rr._day_utc_range(data_inicio)
     _, end = rr._day_utc_range(data_fim)
     rows = rr.vendas_por_garcom_periodo(db, start, end)
@@ -323,6 +338,7 @@ def vendas_por_garcom(
 def vendas_por_produto(
     db: Session, data_inicio: datetime.date, data_fim: datetime.date
 ) -> VendasPorProdutoResponse:
+    _validar_periodo(data_inicio, data_fim)
     start, _ = rr._day_utc_range(data_inicio)
     _, end = rr._day_utc_range(data_fim)
     rows = rr.vendas_por_produto_periodo(db, start, end)
@@ -349,3 +365,15 @@ def vendas_por_produto(
         total_faturamento=total,
         itens=itens,
     )
+
+
+def _validar_periodo(data_inicio: datetime.date, data_fim: datetime.date) -> None:
+    if data_inicio > data_fim:
+        raise AppError(ErrorCode.VALIDATION_ERROR, "A data inicial não pode ser posterior à data final.", "data_inicio")
+    if (data_fim - data_inicio).days > 366:
+        raise AppError(ErrorCode.VALIDATION_ERROR, "O período máximo permitido é de 366 dias.", "data_fim")
+
+
+def _validar_mes(mes: str) -> None:
+    if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", mes):
+        raise AppError(ErrorCode.VALIDATION_ERROR, "Informe o mês no formato YYYY-MM.", "mes")

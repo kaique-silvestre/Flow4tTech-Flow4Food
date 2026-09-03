@@ -167,6 +167,16 @@ def test_dre_produto_sem_custo_gera_alerta(c):
     assert float(data["cmv"]) == pytest.approx(0.0)
 
 
+def test_dre_rejeita_mes_malformado_com_erro_da_aplicacao(c):
+    resp = c.get("/api/relatorios/dre?mes=2026-99")
+    assert resp.status_code == 400
+    assert resp.json()["error"] == {
+        "code": "VALIDATION_ERROR",
+        "message": "Informe o mês no formato YYYY-MM.",
+        "field": "mes",
+    }
+
+
 def test_dre_cortesia_entra_cmv_nao_receita(c):
     """Cortesia: CMV inclui custo do item cortesia; faturamento_liquido não inclui."""
     garcom = _criar_garcom(c)

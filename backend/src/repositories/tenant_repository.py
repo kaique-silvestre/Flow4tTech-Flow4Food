@@ -2,7 +2,7 @@ import contextlib
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from src.models.assinaturas import Assinatura
@@ -29,6 +29,17 @@ def update_tenant(db: Session, tenant: Tenant) -> Tenant:
 
 def list_tenants(db: Session) -> list[Tenant]:
     return db.query(Tenant).order_by(Tenant.id).all()
+
+
+def list_tenants_with_assinaturas(db: Session) -> list[tuple[Tenant, Optional[Assinatura]]]:
+    """Fetch tenants and their subscription in one query for platform-wide listings."""
+    return list(
+        db.execute(
+            select(Tenant, Assinatura)
+            .outerjoin(Assinatura, Assinatura.tenant_id == Tenant.id)
+            .order_by(Tenant.id)
+        ).all()
+    )
 
 
 def get_assinatura_by_tenant(db: Session, tenant_id: int) -> Optional[Assinatura]:

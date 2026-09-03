@@ -38,6 +38,9 @@ class VendasDoDiaResponse(BaseModel):
 
 class HistoricoResponse(BaseModel):
     total: int
+    pagina: int
+    por_pagina: int
+    total_paginas: int
     comandas: list[ComandaRelatorioItem]
 
 

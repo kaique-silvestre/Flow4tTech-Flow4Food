@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 
@@ -63,6 +63,14 @@ class CockpitMetricsItem(BaseModel):
     faturamento_mes: float
     usuarios_ativos_30d: int
     compras_mes: int
+
+
+class CockpitPage(BaseModel):
+    items: list[CockpitMetricsItem]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
 
 
 # Public router — login endpoint has no auth dependency
@@ -190,16 +198,20 @@ def get_tenant_users(
 
 @router.get(
     "/cockpit",
-    response_model=list[CockpitMetricsItem],
+    response_model=CockpitPage,
     status_code=status.HTTP_200_OK,
     tags=["platform"],
 )
 def get_cockpit(
     status: Optional[str] = None,  # noqa: UP045
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_platform_db),
-) -> list[CockpitMetricsItem]:
-    rows = platform_repository.get_cockpit_metrics(db, status_filter=status)
-    return [CockpitMetricsItem(**r) for r in rows]
+) -> CockpitPage:
+    result = platform_repository.get_cockpit_metrics(
+        db, status_filter=status, page=page, page_size=page_size
+    )
+    return CockpitPage(**result)
 
 
 @router.get(
@@ -703,7 +715,7 @@ def update_tenant_profile(
             if before is not None
             else None
         ),
-        after={"permissions": row["permissions"], "is_active": row["is_active"]},
+        after={"permissions": body.permissions, "is_active": row["is_active"]},
     )
     return ProfileResponse(**row)
 

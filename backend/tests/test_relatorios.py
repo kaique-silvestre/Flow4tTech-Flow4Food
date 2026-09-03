@@ -278,3 +278,34 @@ def test_parcial_nao_conta_como_fechada(c):
     assert resp.status_code == 200
     ids = [cmd["id"] for cmd in resp.json()["comandas"]]
     assert cid not in ids
+
+
+def test_historico_comandas_paginado_com_metadata(c):
+    garcom = _criar_garcom(c)
+    item = _criar_item(c)
+    metodo = _criar_metodo(c)
+    for numero in range(3):
+        comanda = _abrir_comanda(c, garcom["id"], f"Mesa {numero}")
+        atualizada = _lancar_item(c, comanda["id"], item["id"], comanda["version"])
+        _fechar(c, comanda["id"], metodo["id"], "50.00", atualizada["version"])
+
+    hoje = _hoje_sp()
+    resp = c.get(f"/api/relatorios/historico-comandas?data_inicio={hoje}&data_fim={hoje}&pagina=2&por_pagina=2")
+
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["total"] == 3
+    assert data["pagina"] == 2
+    assert data["por_pagina"] == 2
+    assert data["total_paginas"] == 2
+    assert len(data["comandas"]) == 1
+
+
+def test_historico_rejeita_intervalo_invertido_e_maior_que_um_ano(c):
+    resp = c.get("/api/relatorios/historico-comandas?data_inicio=2026-02-01&data_fim=2026-01-01")
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "VALIDATION_ERROR"
+
+    resp = c.get("/api/relatorios/historico-comandas?data_inicio=2024-01-01&data_fim=2025-01-02")
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "VALIDATION_ERROR"

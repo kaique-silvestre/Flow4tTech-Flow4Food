@@ -8,7 +8,7 @@ os.environ.setdefault("ENV", "test")
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import StaticPool, create_engine, update
+from sqlalchemy import StaticPool, create_engine, event, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.api.dependencies import get_current_user, get_db
@@ -149,6 +149,54 @@ def test_dashboard_cards_hoje(c):
     assert float(data["faturamento_hoje"]) == pytest.approx(100.0)
     assert float(data["ticket_medio_hoje"]) == pytest.approx(100.0)
     assert data["comandas_fechadas_hoje"] == 1
+
+
+def test_compras_agendadas_carrega_fornecedores_em_uma_query():
+    from src.models.compras import Compra
+    from src.models.fornecedores import Fornecedor
+    from src.repositories import dashboard_repository as dr
+
+    db: Session = _TestingSession()
+    try:
+        hoje = datetime.date.today()
+        fornecedores = [Fornecedor(tenant_id=1, nome=f"Fornecedor {indice}") for indice in range(3)]
+        db.add_all(fornecedores)
+        db.flush()
+        db.add_all(
+            [
+                Compra(
+                    tenant_id=1,
+                    fornecedor_id=fornecedor.id,
+                    data_compra=hoje,
+                    data_prevista_recebimento=hoje,
+                    total=Decimal("10.00"),
+                    status="confirmado",
+                )
+                for fornecedor in fornecedores
+            ]
+        )
+        db.commit()
+
+        queries = 0
+
+        def contar_queries(*_args, **_kwargs):
+            nonlocal queries
+            queries += 1
+
+        event.listen(_engine, "before_cursor_execute", contar_queries)
+        try:
+            entregas = dr.compras_agendadas_com_fornecedor(db, hoje)
+        finally:
+            event.remove(_engine, "before_cursor_execute", contar_queries)
+
+        assert queries == 1
+        assert [entrega["fornecedor_nome"] for entrega in entregas] == [
+            "Fornecedor 0",
+            "Fornecedor 1",
+            "Fornecedor 2",
+        ]
+    finally:
+        db.close()
 
 
 def test_dashboard_lucro_estimado(c):

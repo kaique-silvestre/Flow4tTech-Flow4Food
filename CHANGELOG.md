@@ -23,6 +23,7 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ### Fixed
 
+- Elimina N+1 na administração da plataforma e nas compras agendadas do dashboard, pagina cockpit e histórico de comandas, e transforma entradas inválidas de período/mês/ano em erros de domínio — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
 - Unifica a criação de tenants pelos painéis legado e JWT, provisionando perfis, administrador owner e assinatura trial no mesmo fluxo para garantir login no tenant recém-criado — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
 - Adiciona auditoria em `toggle_pago_comissao`/`delete_comissao` (com snapshot do valor removido) e bound checking (`ge=0`) em `ComissaoUpdateRequest.valor`; adiciona `CheckConstraint` no banco para `comissoes_garcom.percentual` (0-100); migra `garcons.nome` para unique constraint per-tenant (migration 0091, mesmo padrão da 0082 para categorias/insumos/system_users), tratando colisão como `AppError`/409 em vez de `IntegrityError` cru — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
 - Adiciona auditoria em `criar_compra`/`confirmar_recebimento`/`cancelar_compra` (routes/compras.py) e log de warning explícito (`compra_item_insumo_ausente`) quando item é descartado silenciosamente por insumo ausente ao mover/estornar estoque de compra — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02

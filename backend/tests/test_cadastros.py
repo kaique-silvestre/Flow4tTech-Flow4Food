@@ -174,6 +174,12 @@ def test_resumo_anual_retorna_12_entradas(crud_client):
     assert len(resp.json()) == 12
 
 
+def test_resumo_anual_rejeita_ano_invalido_sem_erro_500(crud_client):
+    resp = crud_client.get("/api/dashboard/resumo-anual?ano=0")
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
 # ---------------------------------------------------------------------------
 # Fornecedores
 # ---------------------------------------------------------------------------

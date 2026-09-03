@@ -119,6 +119,36 @@ def list_fechadas_no_periodo(
     return q.order_by(Comanda.data_fechamento.desc()).all()
 
 
+def count_fechadas_no_periodo(
+    db: Session, start_utc: datetime.datetime, end_utc: datetime.datetime,
+    garcom_id: Optional[int] = None, busca: Optional[str] = None,
+) -> int:
+    q = db.query(func.count(Comanda.id)).filter(
+        Comanda.status == StatusComanda.FECHADA.value,
+        Comanda.data_fechamento >= start_utc, Comanda.data_fechamento <= end_utc,
+    )
+    if garcom_id is not None:
+        q = q.filter(Comanda.garcom_id == garcom_id)
+    if busca:
+        q = q.filter(Comanda.identificacao.ilike(f"%{busca}%"))
+    return int(q.scalar() or 0)
+
+
+def list_fechadas_no_periodo_paginada(
+    db: Session, start_utc: datetime.datetime, end_utc: datetime.datetime,
+    garcom_id: Optional[int], busca: Optional[str], pagina: int, por_pagina: int,
+) -> list[Comanda]:
+    q = db.query(Comanda).filter(
+        Comanda.status == StatusComanda.FECHADA.value,
+        Comanda.data_fechamento >= start_utc, Comanda.data_fechamento <= end_utc,
+    )
+    if garcom_id is not None:
+        q = q.filter(Comanda.garcom_id == garcom_id)
+    if busca:
+        q = q.filter(Comanda.identificacao.ilike(f"%{busca}%"))
+    return q.order_by(Comanda.data_fechamento.desc()).offset((pagina - 1) * por_pagina).limit(por_pagina).all()
+
+
 def _month_utc_range(mes: str) -> tuple[datetime.datetime, datetime.datetime]:
     year, month = int(mes[:4]), int(mes[5:7])
     first = datetime.date(year, month, 1)

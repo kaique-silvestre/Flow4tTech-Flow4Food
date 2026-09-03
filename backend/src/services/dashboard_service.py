@@ -4,9 +4,8 @@ from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from src.models.compras import Compra
 from src.models.contas_pagar import ContaPagar
-from src.models.fornecedores import Fornecedor
+from src.core.errors import AppError, ErrorCode
 from src.repositories import dashboard_repository as dr
 from src.schemas.dashboard_schemas import (
     ComandaAbertaItem,
@@ -57,25 +56,15 @@ def dashboard(db: Session) -> DashboardResponse:
     contas_vencendo_qtd = contas_vencendo[0] or 0
     contas_vencendo_total = contas_vencendo[1] or Decimal("0")
 
-    compras_agendadas = db.execute(
-        select(Compra).where(
-            Compra.status == "confirmado",
-            Compra.data_prevista_recebimento <= em_7_dias,
-        )
-    ).scalars().all()
-
     entregas = []
-    for c in compras_agendadas:
+    for compra_agendada in dr.compras_agendadas_com_fornecedor(db, em_7_dias):
+        c = compra_agendada["compra"]
         if c.data_prevista_recebimento is None:
             continue
-        nome = None
-        if c.fornecedor_id:
-            f = db.execute(select(Fornecedor).where(Fornecedor.id == c.fornecedor_id)).scalar_one_or_none()
-            nome = f.nome if f else None
         entregas.append(
             EntregaEsperadaItem(
                 compra_id=c.id,
-                fornecedor_nome=nome or "Sem fornecedor",
+                fornecedor_nome=compra_agendada["fornecedor_nome"] or "Sem fornecedor",
                 data_prevista_recebimento=c.data_prevista_recebimento,
                 total=c.total or Decimal("0"),
             )
@@ -124,10 +113,25 @@ def dashboard(db: Session) -> DashboardResponse:
 def dashboard_historico(
     db: Session, inicio: datetime.date, fim: datetime.date
 ) -> list[DashboardHistoricoItem]:
+    _validar_periodo(inicio, fim)
     rows = dr.historico_periodo(db, inicio, fim)
     return [DashboardHistoricoItem(**r) for r in rows]
 
 
 def dashboard_resumo_anual(db: Session, ano: int) -> list[DashboardResumoAnualItem]:
+    _validar_ano(ano)
     rows = dr.resumo_anual(db, ano)
     return [DashboardResumoAnualItem(**r) for r in rows]
+
+
+def _validar_periodo(inicio: datetime.date, fim: datetime.date) -> None:
+    if inicio > fim:
+        raise AppError(ErrorCode.VALIDATION_ERROR, "A data inicial não pode ser posterior à data final.", "inicio")
+    if (fim - inicio).days > 366:
+        raise AppError(ErrorCode.VALIDATION_ERROR, "O período máximo permitido é de 366 dias.", "fim")
+
+
+def _validar_ano(ano: int) -> None:
+    ano_atual = datetime.date.today().year
+    if not 2000 <= ano <= ano_atual + 1:
+        raise AppError(ErrorCode.VALIDATION_ERROR, "Informe um ano entre 2000 e o próximo ano.", "ano")

@@ -49,10 +49,12 @@ def historico_comandas(
     data_fim: datetime.date = Query(...),
     garcom_id: Optional[int] = Query(None),
     busca: Optional[str] = Query(None),
+    pagina: int = Query(1, ge=1),
+    por_pagina: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> HistoricoResponse:
-    return relatorio_service.historico_comandas(db, data_inicio, data_fim, garcom_id, busca)
+    return relatorio_service.historico_comandas(db, data_inicio, data_fim, garcom_id, busca, pagina, por_pagina)
 
 
 @router.get("/fechamento-caixa", response_model=FechamentoCaixaResponse)

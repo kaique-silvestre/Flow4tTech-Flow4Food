@@ -176,13 +176,15 @@ SELECT
   (SELECT COUNT(*)
    FROM comandas c
    WHERE c.tenant_id = t.id
-     AND DATE_TRUNC('month', c.created_at) = DATE_TRUNC('month', NOW()))
+     AND c.created_at >= :month_start
+     AND c.created_at < :month_end)
                                                               AS comandas_mes,
   (SELECT COALESCE(SUM(c.total), 0)
    FROM comandas c
-   WHERE c.tenant_id = t.id
+     WHERE c.tenant_id = t.id
      AND c.status = 'fechada'
-     AND DATE_TRUNC('month', c.created_at) = DATE_TRUNC('month', NOW()))
+     AND c.created_at >= :month_start
+     AND c.created_at < :month_end)
                                                               AS faturamento_mes,
   (SELECT COUNT(DISTINCT u.id)
    FROM system_users u
@@ -191,7 +193,8 @@ SELECT
   (SELECT COUNT(*)
    FROM compras cp
    WHERE cp.tenant_id = t.id
-     AND DATE_TRUNC('month', cp.created_at) = DATE_TRUNC('month', NOW()))
+     AND cp.created_at >= :month_start
+     AND cp.created_at < :month_end)
                                                               AS compras_mes
 FROM tenants t
 LEFT JOIN assinaturas a ON a.tenant_id = t.id
@@ -199,8 +202,11 @@ LEFT JOIN assinaturas a ON a.tenant_id = t.id
 
 
 def get_cockpit_metrics(
-    db: Session, status_filter: Optional[str] = None  # noqa: UP045
-) -> list[dict]:
+    db: Session,
+    status_filter: Optional[str] = None,  # noqa: UP045
+    page: int = 1,
+    page_size: int = 50,
+) -> dict:
     # _COCKPIT_SQL stays raw SQL: it relies on correlated subqueries and
     # Postgres-specific functions (EXTRACT, DATE_TRUNC, INTERVAL) that are
     # awkward to express via the SQLAlchemy query builder. To keep future
@@ -208,25 +214,58 @@ def get_cockpit_metrics(
     # are collected as explicit fragments and joined with " AND " instead
     # of being concatenated ad hoc, and ORDER BY is always appended last.
     where_clauses: list[str] = []
-    params: dict[str, object] = {}
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_end = (
+        month_start.replace(year=month_start.year + 1, month=1)
+        if month_start.month == 12
+        else month_start.replace(month=month_start.month + 1)
+    )
+    params: dict[str, object] = {
+        "month_start": month_start,
+        "month_end": month_end,
+        "limit": page_size,
+        "offset": (page - 1) * page_size,
+    }
     if status_filter:
         where_clauses.append("a.status = :status_filter")
         params["status_filter"] = status_filter
 
     query = _COCKPIT_SQL.text
+    count_query = "SELECT COUNT(*) FROM tenants t LEFT JOIN assinaturas a ON a.tenant_id = t.id"
     if where_clauses:
-        query += " WHERE " + " AND ".join(where_clauses)
-    query += " ORDER BY t.id"
+        where = " WHERE " + " AND ".join(where_clauses)
+        query += where
+        count_query += where
+    query += " ORDER BY t.id LIMIT :limit OFFSET :offset"
 
+    total = db.execute(text(count_query), params).scalar_one()
     rows = db.execute(text(query), params).all()
-    return [_row_to_cockpit_dict(r) for r in rows]
+    return {
+        "items": [_row_to_cockpit_dict(r) for r in rows],
+        "total": int(total or 0),
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (int(total or 0) + page_size - 1) // page_size,
+    }
 
 
 def get_tenant_cockpit_metrics(db: Session, tenant_id: int) -> Optional[dict]:  # noqa: UP045
     # Same rationale as get_cockpit_metrics: raw SQL with explicit,
     # joined WHERE fragments rather than ad-hoc string concatenation.
     where_clauses = ["t.id = :tenant_id"]
-    params: dict[str, object] = {"tenant_id": tenant_id}
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_end = (
+        month_start.replace(year=month_start.year + 1, month=1)
+        if month_start.month == 12
+        else month_start.replace(month=month_start.month + 1)
+    )
+    params: dict[str, object] = {
+        "tenant_id": tenant_id,
+        "month_start": month_start,
+        "month_end": month_end,
+    }
 
     query = _COCKPIT_SQL.text + " WHERE " + " AND ".join(where_clauses)
 
@@ -484,24 +523,35 @@ def get_tenant_profiles(db: Session, tenant_id: int) -> list[dict]:
     profiles = db.execute(
         select(Profile).where(Profile.tenant_id == tenant_id).order_by(Profile.id)
     ).scalars().all()
-    result = []
-    for profile in profiles:
-        perms = db.execute(
-            select(ProfilePermission.screen)
-            .where(ProfilePermission.profile_id == profile.id)
-        ).scalars().all()
-        user_count = db.execute(
-            select(func.count(SystemUser.id)).where(SystemUser.profile_id == profile.id)
-        ).scalar_one()
-        result.append({
+    if not profiles:
+        return []
+    profile_ids = [profile.id for profile in profiles]
+    permission_rows = db.execute(
+        select(ProfilePermission.profile_id, ProfilePermission.screen)
+        .where(ProfilePermission.tenant_id == tenant_id, ProfilePermission.profile_id.in_(profile_ids))
+        .order_by(ProfilePermission.profile_id, ProfilePermission.screen)
+    ).all()
+    permissions_by_profile: dict[int, list[str]] = {profile_id: [] for profile_id in profile_ids}
+    for row in permission_rows:
+        permissions_by_profile[row.profile_id].append(row.screen)
+
+    count_rows = db.execute(
+        select(SystemUser.profile_id, func.count(SystemUser.id).label("user_count"))
+        .where(SystemUser.tenant_id == tenant_id, SystemUser.profile_id.in_(profile_ids))
+        .group_by(SystemUser.profile_id)
+    ).all()
+    user_count_by_profile = {row.profile_id: int(row.user_count or 0) for row in count_rows}
+    return [
+        {
             "id": profile.id,
             "name": profile.name,
             "description": profile.description,
             "is_active": profile.is_active,
-            "permissions": list(perms),
-            "user_count": int(user_count or 0),
-        })
-    return result
+            "permissions": permissions_by_profile[profile.id],
+            "user_count": user_count_by_profile.get(profile.id, 0),
+        }
+        for profile in profiles
+    ]
 
 
 def update_tenant_profile(
