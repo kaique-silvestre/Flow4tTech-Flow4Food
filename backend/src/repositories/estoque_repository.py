@@ -12,10 +12,13 @@ from src.models.movimentos_estoque import MovimentoEstoque, TipoMovimento
 T = TypeVar("T")
 
 
-def get_insumo_for_update(db: Session, insumo_id: int) -> Optional[Insumo]:
-    return db.execute(
-        select(Insumo).where(Insumo.id == insumo_id).with_for_update()
-    ).scalar_one_or_none()
+def get_insumo_for_update(
+    db: Session, insumo_id: int, tenant_id: Optional[int] = None
+) -> Optional[Insumo]:
+    stmt = select(Insumo).where(Insumo.id == insumo_id)
+    if tenant_id is not None:
+        stmt = stmt.where(Insumo.tenant_id == tenant_id)
+    return db.execute(stmt.with_for_update()).scalar_one_or_none()
 
 
 def ajustar_estoque_ficha_tecnica(
@@ -45,7 +48,9 @@ def ajustar_estoque_ficha_tecnica(
     que já flushavam dentro de sua própria lógica de ajuste.
     """
     componentes = db.execute(
-        select(FichaTecnica).where(FichaTecnica.produto_id == produto_id)
+        select(FichaTecnica)
+        .where(FichaTecnica.produto_id == produto_id)
+        .order_by(FichaTecnica.insumo_id)
     ).scalars().all()
     resultados: list[T] = []
     for comp in componentes:
@@ -65,8 +70,12 @@ def update_estoque_e_custo(
     insumo_id: int,
     novo_estoque: Decimal,
     novo_custo_medio: Optional[Decimal],
+    tenant_id: Optional[int] = None,
 ) -> None:
-    insumo = db.execute(select(Insumo).where(Insumo.id == insumo_id)).scalar_one_or_none()
+    stmt = select(Insumo).where(Insumo.id == insumo_id)
+    if tenant_id is not None:
+        stmt = stmt.where(Insumo.tenant_id == tenant_id)
+    insumo = db.execute(stmt).scalar_one_or_none()
     if insumo is not None:
         insumo.estoque_atual = novo_estoque
         insumo.custo_medio = novo_custo_medio

@@ -308,13 +308,13 @@ def list_comandas_fechadas(
 _ABERTA_STATUSES = {StatusComanda.ABERTA.value, StatusComanda.REABERTA.value}
 
 
-def _lock_comanda(db: Session, comanda_id: int, version: int) -> None:
+def _lock_comanda(db: Session, comanda_id: int, version: int, tenant_id: int) -> None:
     """Optimistic lock: atomically bumps a comanda's version, matching only
     if it's still at `version`. Raises COMANDA_DESATUALIZADA (409) on
     conflict (concurrent mutation/duplicate request). The repository call
     expires all session objects, so any already-loaded `Comanda` instance
     transparently reloads its attributes from the DB on next access."""
-    ok = comandas_repository.increment_version(db, comanda_id, version)
+    ok = comandas_repository.increment_version(db, comanda_id, version, tenant_id)
     if not ok:
         raise AppError(
             ErrorCode.COMANDA_DESATUALIZADA,
@@ -330,7 +330,7 @@ def patch_comanda(db: Session, comanda_id: int, data: PatchComandaRequest) -> Co
     if comanda.status not in _ABERTA_STATUSES:
         raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
 
-    _lock_comanda(db, comanda_id, data.version)
+    _lock_comanda(db, comanda_id, data.version, comanda.tenant_id)
 
     if data.garcom_id is not None:
         garcom = garcons_repository.get_by_id(db, data.garcom_id)
@@ -379,7 +379,7 @@ def lancar_item(db: Session, comanda_id: int, data: LancarItemRequest) -> Comand
             preco_unitario = apply_discount(preco_unitario, promo)
             promocao_id = promo.id
 
-    ok = comandas_repository.increment_version(db, comanda_id, data.version)
+    ok = comandas_repository.increment_version(db, comanda_id, data.version, comanda.tenant_id)
     if not ok:
         raise AppError(
             ErrorCode.COMANDA_DESATUALIZADA,
@@ -436,7 +436,7 @@ def editar_item(
     if item_c.cancelado:
         raise AppError(ErrorCode.NOT_FOUND, "Item já cancelado", http_status=400)
 
-    ok = comandas_repository.increment_version(db, comanda_id, data.version)
+    ok = comandas_repository.increment_version(db, comanda_id, data.version, comanda.tenant_id)
     if not ok:
         raise AppError(
             ErrorCode.COMANDA_DESATUALIZADA,
@@ -489,7 +489,7 @@ def cancelar_item(
     if item_c.cancelado:
         raise AppError(ErrorCode.NOT_FOUND, "Item já cancelado", http_status=400)
 
-    ok = comandas_repository.increment_version(db, comanda_id, data.version)
+    ok = comandas_repository.increment_version(db, comanda_id, data.version, comanda.tenant_id)
     if not ok:
         raise AppError(
             ErrorCode.COMANDA_DESATUALIZADA,
@@ -527,7 +527,7 @@ def aplicar_desconto(db: Session, comanda_id: int, data: AplicarDescontoRequest)
     if comanda.status not in _ABERTA_STATUSES:
         raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
 
-    ok = comandas_repository.increment_version(db, comanda_id, data.version)
+    ok = comandas_repository.increment_version(db, comanda_id, data.version, comanda.tenant_id)
     if not ok:
         raise AppError(ErrorCode.COMANDA_DESATUALIZADA, "Versão desatualizada", http_status=409)
 
@@ -563,7 +563,7 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
     if comanda.status not in _ABERTA_STATUSES:
         raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
 
-    _lock_comanda(db, comanda_id, data.version)
+    _lock_comanda(db, comanda_id, data.version, comanda.tenant_id)
 
     if data.modo_divisao == "por_pessoa":
         pessoas = _parse_pessoas(comanda.pessoas)
@@ -679,7 +679,7 @@ def cancelar_comanda(db: Session, comanda_id: int, data: CancelarComandaRequest)
     if comanda.status not in _ABERTA_STATUSES:
         raise AppError(ErrorCode.COMANDA_FECHADA, "Comanda não está aberta", http_status=400)
 
-    ok = comandas_repository.increment_version(db, comanda_id, data.version)
+    ok = comandas_repository.increment_version(db, comanda_id, data.version, comanda.tenant_id)
     if not ok:
         raise AppError(ErrorCode.COMANDA_DESATUALIZADA, "Versão desatualizada", http_status=409)
 
@@ -733,7 +733,7 @@ def reabrir_comanda(db: Session, comanda_id: int, data: ReabrirComandaRequest) -
             http_status=400,
         )
 
-    _lock_comanda(db, comanda_id, data.version)
+    _lock_comanda(db, comanda_id, data.version, comanda.tenant_id)
 
     itens = comandas_repository.get_itens_para_fechar(db, comanda_id)
     for ic in itens:

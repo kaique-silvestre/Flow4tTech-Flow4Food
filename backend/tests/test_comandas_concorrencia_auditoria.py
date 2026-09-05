@@ -229,8 +229,8 @@ def test_increment_version_e_atomico_apenas_uma_chamada_sucede(c):
 
     db = _TestingSession()
     try:
-        ok1 = comandas_repository.increment_version(db, cid, comanda["version"])
-        ok2 = comandas_repository.increment_version(db, cid, comanda["version"])
+        ok1 = comandas_repository.increment_version(db, cid, comanda["version"], 1)
+        ok2 = comandas_repository.increment_version(db, cid, comanda["version"], 1)
         db.commit()
 
         assert ok1 is True

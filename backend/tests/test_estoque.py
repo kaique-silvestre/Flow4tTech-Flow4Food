@@ -1,4 +1,5 @@
 import os
+from decimal import Decimal
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("JWT_SECRET", "test-secret-only-for-tests")
@@ -11,10 +12,16 @@ from sqlalchemy.orm import sessionmaker
 
 from src.api.dependencies import get_current_user, get_db
 from src.core.database import Base
+from src.core.errors import AppError, ErrorCode
 from src.main import app
 from src.models.audit_logs import AuditLog
+from src.models.ficha_tecnica import FichaTecnica
+from src.models.insumos import Insumo, UnidadeBase
 from src.models.movimentos_estoque import MovimentoEstoque
-from src.services import audit_service
+from src.models.produtos import Produto
+from src.repositories import estoque_repository
+from src.schemas.estoque import BaixaSemVendaRequest
+from src.services import audit_service, estoque_service
 
 _SQLITE_URL = "sqlite:///:memory:"
 _engine = create_engine(
@@ -185,6 +192,79 @@ def test_saldo_filtro_busca(crud_client):
     nomes = [s["nome"] for s in resp.json()["itens"]]
     assert "Coca Cola" in nomes
     assert "Fanta Laranja" not in nomes
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "payload"),
+    [
+        ("post", "/api/insumos", {"nome": "Caixa negativa", "unidade_base": "un", "quantidade_caixa": -1}),
+        ("put", "/api/insumos/999", {"nome": "Nível negativo", "unidade_base": "un", "nivel_critico": -1}),
+    ],
+)
+def test_insumo_rejeita_valores_negativos(crud_client, method, path, payload):
+    resp = getattr(crud_client, method)(path, json=payload)
+
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+@pytest.mark.parametrize("endpoint", [
+    "/api/estoque/movimentos?data_inicio=nao-e-uma-data",
+    "/api/estoque/movimentos-produtos?data_fim=2026-99-99",
+])
+def test_historicos_rejeitam_datas_malformadas_com_erro_de_validacao(crud_client, endpoint):
+    resp = crud_client.get(endpoint)
+
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_ajuste_de_ficha_trava_insumos_em_ordem_deterministica():
+    db = _TestingSession()
+    try:
+        produto = Produto(nome="Produto", preco_venda=Decimal("10"))
+        primeiro = Insumo(nome="Primeiro", unidade_base=UnidadeBase.UNIDADE)
+        segundo = Insumo(nome="Segundo", unidade_base=UnidadeBase.UNIDADE)
+        db.add_all([produto, primeiro, segundo])
+        db.flush()
+        # Insert in reverse order to prove that the locking order does not
+        # depend on ficha insertion order.
+        db.add_all([
+            FichaTecnica(produto_id=produto.id, insumo_id=segundo.id, quantidade=Decimal("1")),
+            FichaTecnica(produto_id=produto.id, insumo_id=primeiro.id, quantidade=Decimal("1")),
+        ])
+        db.commit()
+
+        locked_ids: list[int] = []
+        estoque_repository.ajustar_estoque_ficha_tecnica(
+            db,
+            produto.id,
+            Decimal("1"),
+            lambda insumo, _quantidade: locked_ids.append(insumo.id),
+        )
+
+        assert locked_ids == sorted(locked_ids)
+    finally:
+        db.close()
+
+
+def test_baixa_manual_defende_contra_insumo_de_outro_tenant():
+    db = _TestingSession()
+    try:
+        insumo = Insumo(nome="Insumo isolado", unidade_base=UnidadeBase.UNIDADE, tenant_id=2)
+        db.add(insumo)
+        db.commit()
+
+        with pytest.raises(AppError) as exc_info:
+            estoque_service.baixa_sem_venda(
+                db,
+                BaixaSemVendaRequest(item_id=insumo.id, quantidade=Decimal("1"), motivo="perda"),
+                tenant_id=1,
+            )
+
+        assert exc_info.value.code == ErrorCode.NOT_FOUND
+    finally:
+        db.close()
 
 
 # ---------------------------------------------------------------------------

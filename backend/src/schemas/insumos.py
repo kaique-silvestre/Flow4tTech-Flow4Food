@@ -10,7 +10,7 @@ class InsumoCreateRequest(BaseModel):
     nome: str = Field(..., min_length=1)
     categoria_id: Optional[int] = None
     unidade_base: UnidadeBase
-    quantidade_caixa: Optional[int] = None
+    quantidade_caixa: Optional[int] = Field(default=None, ge=0)
     ean: Optional[str] = None
 
 
@@ -18,8 +18,8 @@ class InsumoUpdateRequest(BaseModel):
     nome: str = Field(..., min_length=1)
     categoria_id: Optional[int] = None
     unidade_base: UnidadeBase
-    quantidade_caixa: Optional[int] = None
-    nivel_critico: Optional[Decimal] = None
+    quantidade_caixa: Optional[int] = Field(default=None, ge=0)
+    nivel_critico: Optional[Decimal] = Field(default=None, ge=0)
     ean: Optional[str] = None
 
 

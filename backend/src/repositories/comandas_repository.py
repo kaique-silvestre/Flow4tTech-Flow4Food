@@ -74,13 +74,18 @@ def get_by_id(db: Session, comanda_id: int) -> Optional[Comanda]:
     return db.query(Comanda).filter(Comanda.id == comanda_id).first()
 
 
-def increment_version(db: Session, comanda_id: int, version_esperada: int) -> bool:
+def increment_version(db: Session, comanda_id: int, version_esperada: int, tenant_id: int) -> bool:
     result: CursorResult = db.execute(  # type: ignore[assignment]
         text(
             "UPDATE comandas SET version = version + 1, updated_at = :now "
-            "WHERE id = :id AND version = :version"
+            "WHERE id = :id AND tenant_id = :tenant_id AND version = :version"
         ),
-        {"id": comanda_id, "version": version_esperada, "now": datetime.datetime.utcnow()},
+        {
+            "id": comanda_id,
+            "tenant_id": tenant_id,
+            "version": version_esperada,
+            "now": datetime.datetime.utcnow(),
+        },
     )
     db.expire_all()
     return result.rowcount > 0

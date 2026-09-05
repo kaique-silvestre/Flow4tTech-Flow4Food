@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, status
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import (
@@ -9,6 +9,7 @@ from src.api.dependencies import (
     require_feature,
     require_permission,
 )
+from src.core.limiter import limiter
 from src.schemas.estoque import (
     BaixaSemVendaRequest,
     InsumoCriticoResponse,
@@ -19,6 +20,8 @@ from src.schemas.estoque import (
 from src.services import audit_service, estoque_service
 
 router = APIRouter(dependencies=[Depends(require_feature("estoque")), Depends(require_permission("estoque"))])
+
+_BAIXA_RATE_LIMIT = "30/minute"
 
 
 @router.get("/criticos", response_model=list[InsumoCriticoResponse])
@@ -42,13 +45,20 @@ def get_saldo(
 
 
 @router.post("/baixa-sem-venda", status_code=status.HTTP_201_CREATED)
+@limiter.limit(_BAIXA_RATE_LIMIT)
 def baixa_sem_venda(
+    request: Request,
     data: BaixaSemVendaRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
     payload: dict = Depends(get_current_user),
 ) -> dict:
-    result = estoque_service.baixa_sem_venda(db, data, payload.get("user_id"))
+    result = estoque_service.baixa_sem_venda(
+        db,
+        data,
+        payload.get("user_id"),
+        payload.get("tenant_id"),
+    )
     background_tasks.add_task(
         audit_service.log_background,
         "estoque.baixa_sem_venda",

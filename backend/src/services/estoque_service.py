@@ -43,6 +43,20 @@ def _get_insumo(db: Session, insumo_id: int) -> Optional[Insumo]:
     return db.execute(select(Insumo).where(Insumo.id == insumo_id)).scalar_one_or_none()
 
 
+def _parse_optional_date(value: Optional[str], field: str) -> Optional[datetime.date]:
+    if value is None:
+        return None
+    try:
+        return datetime.date.fromisoformat(value)
+    except ValueError:
+        raise AppError(
+            ErrorCode.VALIDATION_ERROR,
+            f"{field} deve estar no formato AAAA-MM-DD",
+            field=field,
+            http_status=422,
+        ) from None
+
+
 def _build_movimento_response_from_insumo(
     mov: MovimentoEstoque, insumo: Optional[Insumo]
 ) -> MovimentoResponse:
@@ -132,14 +146,19 @@ def get_insumos_criticos(db: Session) -> list[InsumoCriticoResponse]:
 
 
 def baixa_sem_venda(
-    db: Session, data: BaixaSemVendaRequest, user_id: Optional[int] = None
+    db: Session,
+    data: BaixaSemVendaRequest,
+    user_id: Optional[int] = None,
+    tenant_id: Optional[int] = None,
 ) -> dict:
-    insumo = estoque_repository.get_insumo_for_update(db, data.item_id)
+    insumo = estoque_repository.get_insumo_for_update(db, data.item_id, tenant_id)
     if insumo is None:
         raise AppError(ErrorCode.NOT_FOUND, "Insumo não encontrado", http_status=404)
 
     novo_saldo = insumo.estoque_atual - data.quantidade
-    estoque_repository.update_estoque_e_custo(db, insumo.id, novo_saldo, insumo.custo_medio)
+    estoque_repository.update_estoque_e_custo(
+        db, insumo.id, novo_saldo, insumo.custo_medio, tenant_id
+    )
     mov = estoque_repository.registrar_movimento(
         db=db,
         insumo_id=insumo.id,
@@ -168,8 +187,8 @@ def get_historico(
     pagina: int = 1,
     por_pagina: int = 50,
 ) -> MovimentoListResponse:
-    di = datetime.date.fromisoformat(data_inicio) if data_inicio else None
-    df = datetime.date.fromisoformat(data_fim) if data_fim else None
+    di = _parse_optional_date(data_inicio, "data_inicio")
+    df = _parse_optional_date(data_fim, "data_fim")
 
     movimentos, total = estoque_repository.list_movimentos(
         db, item_id, tipo, di, df, pagina, por_pagina
@@ -199,11 +218,11 @@ def get_historico_produtos(
 
     if produto_id:
         q = q.filter(ItemComanda.produto_id == produto_id)
-    if data_inicio:
-        di = datetime.date.fromisoformat(data_inicio)
+    di = _parse_optional_date(data_inicio, "data_inicio")
+    df = _parse_optional_date(data_fim, "data_fim")
+    if di:
         q = q.filter(ItemComanda.created_at >= datetime.datetime(di.year, di.month, di.day))
-    if data_fim:
-        df = datetime.date.fromisoformat(data_fim)
+    if df:
         q = q.filter(ItemComanda.created_at < datetime.datetime(df.year, df.month, df.day) + datetime.timedelta(days=1))
 
     total = q.count()

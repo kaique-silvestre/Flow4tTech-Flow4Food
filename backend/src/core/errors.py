@@ -32,6 +32,7 @@ class ErrorCode(str, Enum):
     CONFLICT = "CONFLICT"
     FORBIDDEN = "FORBIDDEN"
     CAIXA_JA_FECHADO = "CAIXA_JA_FECHADO"
+    ESTOQUE_INSUFICIENTE = "ESTOQUE_INSUFICIENTE"
 
 
 class AppError(Exception):
