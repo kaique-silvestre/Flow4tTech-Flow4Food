@@ -24,6 +24,9 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ### Fixed
 
+- Fortalece observabilidade e isolamento RLS com pools dedicados, contexto de tenant rastreável, limpeza segura de conexões e redação de dados enviados ao Sentry — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-05
+- Impede alterações de estoque e versões de comandas entre tenants, valida dados de estoque e converte datas de histórico inválidas em erros de validação — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-05
+- Valida precisão monetária, registra eventos estruturados de caixa e mantém pagamentos em dinheiro e sangrias na mesma transação — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-05
 - Elimina N+1 na administração da plataforma e nas compras agendadas do dashboard, pagina cockpit e histórico de comandas, e transforma entradas inválidas de período/mês/ano em erros de domínio — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
 - Unifica a criação de tenants pelos painéis legado e JWT, provisionando perfis, administrador owner e assinatura trial no mesmo fluxo para garantir login no tenant recém-criado — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
 - Adiciona auditoria em `toggle_pago_comissao`/`delete_comissao` (com snapshot do valor removido) e bound checking (`ge=0`) em `ComissaoUpdateRequest.valor`; adiciona `CheckConstraint` no banco para `comissoes_garcom.percentual` (0-100); migra `garcons.nome` para unique constraint per-tenant (migration 0091, mesmo padrão da 0082 para categorias/insumos/system_users), tratando colisão como `AppError`/409 em vez de `IntegrityError` cru — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02

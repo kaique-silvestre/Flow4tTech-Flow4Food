@@ -1,10 +1,10 @@
-import contextlib
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from src.core.database import set_tenant_context
 from src.models.assinaturas import Assinatura
 from src.models.profiles import Profile, ProfilePermission
 from src.models.tenants import Tenant
@@ -55,8 +55,7 @@ def create_assinatura(db: Session, assinatura: Assinatura) -> Assinatura:
 
 def set_rls_tenant(db: Session, tenant_id: int) -> None:
     """Set app.tenant_id for RLS (session-scoped, survives commits)."""
-    with contextlib.suppress(Exception):
-        db.execute(text("SET app.tenant_id = :tid"), {"tid": str(tenant_id)})
+    set_tenant_context(db, tenant_id)
 
 
 def clone_profiles_from_seed(db: Session, new_tenant_id: int) -> list[Profile]:
@@ -65,8 +64,9 @@ def clone_profiles_from_seed(db: Session, new_tenant_id: int) -> list[Profile]:
     SET LOCAL app.tenant_id=1 before SELECT so PostgreSQL RLS allows reading seed profiles.
     """
     now = datetime.now(timezone.utc)
-    with contextlib.suppress(Exception):
-        db.execute(text("SET app.tenant_id = '1'"))
+    # This must fail loudly: continuing without the seed tenant RLS context can
+    # silently provision a tenant without its required profiles.
+    set_tenant_context(db, 1)
 
     seed_profiles = (
         db.query(Profile)

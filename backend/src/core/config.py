@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5173"
     SUPERADMIN_TOKEN: str = Field("", description="Static bearer token for /admin/ routes")
     DATABASE_URL_PLATFORM: str = Field(..., description="Separate DB URL for platform engine (isolated role, no RLS)")
+    DB_POOL_SIZE: int = Field(5, ge=1, description="Persistent connections kept per application pool")
+    DB_MAX_OVERFLOW: int = Field(10, ge=0, description="Temporary connections allowed above pool size")
+    DB_POOL_TIMEOUT: int = Field(30, ge=1, description="Seconds to wait for a database connection")
 
     @property
     def cors_origins_list(self) -> list[str]:

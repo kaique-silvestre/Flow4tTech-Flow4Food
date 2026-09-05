@@ -1,9 +1,16 @@
 import datetime
+from contextlib import suppress
 
+import sentry_sdk
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, JobExecutionEvent
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import text
 
-from src.core.database import SessionLocal
+from src.core.database import (
+    SchedulerSessionLocal,
+    clear_tenant_rls_context,
+    set_tenant_rls_context,
+)
 from src.core.logging import get_logger
 from src.repositories import (
     compras_repository,
@@ -18,6 +25,20 @@ log = get_logger(__name__)
 _scheduler = BackgroundScheduler()
 
 
+def _log_job_outcome(event: JobExecutionEvent) -> None:
+    """Expose every scheduled execution and report failures to Sentry."""
+    if event.exception is not None:
+        log.error(
+            "scheduler_job_failed",
+            job_id=event.job_id,
+            error_type=type(event.exception).__name__,
+            exc_info=(type(event.exception), event.exception, event.traceback),
+        )
+        sentry_sdk.capture_exception(event.exception)
+        return
+    log.info("scheduler_job_completed", job_id=event.job_id)
+
+
 def _tenant_ids(db) -> list[int]:
     """Return active tenant IDs. tenants table has no RLS — always accessible."""
     rows = db.execute(text("SELECT id FROM tenants WHERE status = 'ativo'")).fetchall()
@@ -25,17 +46,15 @@ def _tenant_ids(db) -> list[int]:
 
 
 def _set_tenant_context(db, tenant_id: int) -> None:
-    db.execute(text("SET ROLE app_user"))
-    db.execute(text("SET app.tenant_id = :tid"), {"tid": str(tenant_id)})
+    set_tenant_rls_context(db, tenant_id)
 
 
 def _clear_tenant_context(db) -> None:
-    db.execute(text("RESET ROLE"))
-    db.execute(text("SET app.tenant_id = ''"))
+    clear_tenant_rls_context(db)
 
 
 def _verificar_entregas_previstas() -> None:
-    db = SessionLocal()
+    db = SchedulerSessionLocal()
     try:
         hoje = datetime.date.today()
         total_compras = 0
@@ -58,10 +77,8 @@ def _verificar_entregas_previstas() -> None:
             # Guarantee RLS context cleanup even if the loop above raises partway
             # through, so a failed job never leaves the session's role/tenant_id
             # set for whoever reuses this connection from the pool.
-            try:
+            with suppress(Exception):
                 db.rollback()
-            except Exception:
-                pass
             try:
                 _clear_tenant_context(db)
             except Exception:
@@ -75,7 +92,7 @@ def _verificar_entregas_previstas() -> None:
 
 
 def _atualizar_contas_vencidas() -> None:
-    db = SessionLocal()
+    db = SchedulerSessionLocal()
     try:
         total = 0
         try:
@@ -86,10 +103,8 @@ def _atualizar_contas_vencidas() -> None:
             # Guarantee RLS context cleanup even if the loop above raises partway
             # through, so a failed job never leaves the session's role/tenant_id
             # set for whoever reuses this connection from the pool.
-            try:
+            with suppress(Exception):
                 db.rollback()
-            except Exception:
-                pass
             try:
                 _clear_tenant_context(db)
             except Exception:
@@ -102,7 +117,7 @@ def _atualizar_contas_vencidas() -> None:
 
 
 def _limpar_revoked_tokens() -> None:
-    db = SessionLocal()
+    db = SchedulerSessionLocal()
     try:
         deleted = revoked_tokens_repository.delete_expired(db)
         log.info("scheduler_revoked_tokens_limpos", total=deleted)
@@ -113,7 +128,7 @@ def _limpar_revoked_tokens() -> None:
 
 
 def _limpar_refresh_tokens() -> None:
-    db = SessionLocal()
+    db = SchedulerSessionLocal()
     try:
         deleted = refresh_tokens_repository.delete_expired(db)
         log.info("scheduler_refresh_tokens_limpos", total=deleted)
@@ -124,7 +139,7 @@ def _limpar_refresh_tokens() -> None:
 
 
 def _marcar_assinaturas_vencidas() -> None:
-    db = SessionLocal()
+    db = SchedulerSessionLocal()
     try:
         total = billing_service.marcar_assinaturas_vencidas(db)
         log.info("scheduler_assinaturas_vencidas", total=total)
@@ -135,6 +150,7 @@ def _marcar_assinaturas_vencidas() -> None:
 
 
 def start() -> None:
+    _scheduler.add_listener(_log_job_outcome, EVENT_JOB_ERROR | EVENT_JOB_EXECUTED)
     _scheduler.add_job(_verificar_entregas_previstas, "cron", hour=8, minute=0, id="entregas_previstas")
     _scheduler.add_job(_atualizar_contas_vencidas, "cron", hour=8, minute=5, id="contas_vencidas")
     _scheduler.add_job(_limpar_revoked_tokens, "interval", hours=1, id="revoked_tokens_cleanup")

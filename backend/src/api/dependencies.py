@@ -3,14 +3,20 @@ from datetime import timezone
 from typing import Annotated, Optional
 
 import jwt
+import structlog
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.exceptions import InvalidTokenError
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.core.config import get_settings
-from src.core.database import _tenant_ctx, get_db, get_platform_db  # noqa: F401
+from src.core.database import (  # noqa: F401
+    _tenant_ctx,
+    get_db,
+    get_platform_db,
+    set_tenant_rls_context,
+)
 from src.models.assinaturas import Assinatura
 from src.models.platform_settings import PlatformSettings
 from src.repositories import platform_admins_repository, revoked_tokens_repository
@@ -107,15 +113,18 @@ async def get_tenant_db(
     _bind = getattr(db, "bind", None)
     _dialect = getattr(getattr(_bind, "dialect", None), "name", "")
     is_pg = tenant_id is not None and _dialect == "postgresql"
+    if tenant_id is not None:
+        structlog.contextvars.bind_contextvars(tenant_id=tenant_id)
     if is_pg:
         _tenant_ctx.tenant_id = tenant_id
-        db.execute(text("SET ROLE app_user"))
-        db.execute(text("SET app.tenant_id = :tid"), {"tid": str(tenant_id)})
+        set_tenant_rls_context(db, tenant_id)
     try:
         yield db
     finally:
         if is_pg:
             _tenant_ctx.tenant_id = None
+        if tenant_id is not None:
+            structlog.contextvars.unbind_contextvars("tenant_id")
 
 
 def require_permission(screen: str):

@@ -3,6 +3,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from src.core.database import clear_tenant_rls_context
 from src.core.errors import AppError, ErrorCode
 from src.core.logging import get_logger
 from src.models.assinaturas import Assinatura
@@ -143,10 +144,8 @@ def criar_tenant(
         db.commit()
         # Clean up RLS context so the connection returns clean to the pool.
         # tenants and assinaturas tables have no RLS, so refresh works without context.
-        from sqlalchemy import text as _text
         try:
-            db.execute(_text("RESET ROLE"))
-            db.execute(_text("SET app.tenant_id = ''"))
+            clear_tenant_rls_context(db)
         except Exception:
             logger.warning("tenant_rls_cleanup_failed", tenant_id=tenant.id, exc_info=True)
         db.refresh(tenant)
