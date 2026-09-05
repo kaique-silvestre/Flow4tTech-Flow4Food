@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 from src.core.errors import AppError, ErrorCode
 from src.models.caixa import TipoMovimentoCaixa
 from src.models.metodos_pagamento import MetodoPagamento
-from src.repositories import caixa_repository, contas_pagar_repository, notificacoes_repository
+from src.repositories import contas_pagar_repository, notificacoes_repository
+from src.schemas.caixa import MovimentoCaixaRequest
 from src.schemas.contas_pagar_schemas import (
     ContaPagarResponse,
     ContasPagarPageResponse,
@@ -16,6 +17,7 @@ from src.schemas.contas_pagar_schemas import (
     NotificacaoResponse,
     PagarContaRequest,
 )
+from src.services import caixa_service
 from src.services.shared import get_fornecedor_nome as _fornecedor_nome
 
 
@@ -109,20 +111,24 @@ def pagar_conta(
         db.flush()
 
         if metodo is not None and metodo.tipo == "dinheiro":
-            sessao = caixa_repository.get_sessao_aberta(db)
-            if sessao is not None and user_id is not None:
-                fornecedor_nome = _fornecedor_nome(db, conta.fornecedor_id)
-                motivo = f"Pagamento de conta a pagar #{conta.id}"
-                if fornecedor_nome:
-                    motivo = f"{motivo} - {fornecedor_nome}"
-                caixa_repository.criar_movimento(
-                    db,
-                    sessao_id=sessao.id,
-                    tipo=TipoMovimentoCaixa.SANGRIA.value,
-                    valor=conta.valor,
-                    motivo=motivo,
-                    user_id=user_id,
-                )
+            if user_id is not None:
+                try:
+                    caixa_service.registrar_movimento(
+                        db,
+                        MovimentoCaixaRequest(
+                            tipo=TipoMovimentoCaixa.SANGRIA.value,
+                            valor=conta.valor,
+                            motivo=f"Pagamento de conta a pagar #{conta.id}",
+                        ),
+                        user_id,
+                        commit=False,
+                    )
+                except AppError as exc:
+                    # A cash payment can be registered independently from an
+                    # open till. Preserve the existing behavior of not
+                    # creating a movement in that case.
+                    if exc.code != ErrorCode.NOT_FOUND:
+                        raise
 
         db.commit()
     except Exception:

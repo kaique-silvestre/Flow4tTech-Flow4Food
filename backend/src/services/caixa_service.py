@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
+from src.core.logging import get_logger
 from src.models.caixa import CaixaSessao, TipoMovimentoCaixa
 from src.repositories import caixa_repository
 from src.schemas.caixa import (
@@ -13,6 +14,8 @@ from src.schemas.caixa import (
     FecharCaixaRequest,
     MovimentoCaixaRequest,
 )
+
+logger = get_logger(__name__)
 
 
 def _build_sessao_response(db: Session, sessao: CaixaSessao) -> CaixaSessaoResponse:
@@ -53,6 +56,12 @@ def abrir_caixa(db: Session, body: AbrirCaixaRequest, user_id: int) -> CaixaSess
             http_status=409,
         ) from None
     db.refresh(sessao)
+    logger.info(
+        "caixa_aberto",
+        sessao_id=sessao.id,
+        user_id=user_id,
+        valor_abertura=str(sessao.valor_abertura),
+    )
     return _build_sessao_response(db, sessao)
 
 
@@ -93,11 +102,21 @@ def fechar_caixa(
         )
     db.commit()
     db.refresh(sessao_fechada)
+    log_context = {
+        "sessao_id": sessao_fechada.id,
+        "user_id": user_id,
+        "valor_informado": str(sessao_fechada.valor_informado),
+        "valor_esperado": str(sessao_fechada.valor_esperado),
+        "diferenca": str(sessao_fechada.diferenca),
+    }
+    logger.info("caixa_fechado", **log_context)
+    if sessao_fechada.diferenca is not None and sessao_fechada.diferenca != 0:
+        logger.warning("caixa_fechado_com_divergencia", **log_context)
     return _build_sessao_response(db, sessao_fechada)
 
 
 def registrar_movimento(
-    db: Session, body: MovimentoCaixaRequest, user_id: int
+    db: Session, body: MovimentoCaixaRequest, user_id: int, *, commit: bool = True
 ) -> CaixaMovimentoResponse:
     # Locks the session row so a concurrent `fechar_caixa` can't close the
     # session between this check and the insert below, which would let the
@@ -117,8 +136,20 @@ def registrar_movimento(
         motivo=body.motivo,
         user_id=user_id,
     )
-    db.commit()
+    if commit:
+        db.commit()
+    else:
+        db.flush()
     db.refresh(mov)
+    if commit:
+        logger.info(
+            "caixa_movimento_registrado",
+            movimento_id=mov.id,
+            sessao_id=mov.sessao_id,
+            user_id=user_id,
+            tipo=mov.tipo,
+            valor=str(mov.valor),
+        )
     return CaixaMovimentoResponse.model_validate(mov)
 
 

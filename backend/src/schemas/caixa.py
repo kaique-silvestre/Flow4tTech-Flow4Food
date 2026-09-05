@@ -6,17 +6,17 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class AbrirCaixaRequest(BaseModel):
-    valor_abertura: Decimal = Field(..., ge=0)
+    valor_abertura: Decimal = Field(..., ge=0, max_digits=10, decimal_places=2)
 
 
 class FecharCaixaRequest(BaseModel):
-    valor_informado: Decimal = Field(..., ge=0)
+    valor_informado: Decimal = Field(..., ge=0, max_digits=10, decimal_places=2)
     observacao: Optional[str] = None
 
 
 class MovimentoCaixaRequest(BaseModel):
     tipo: Literal["sangria", "suprimento"]
-    valor: Decimal = Field(..., gt=0)
+    valor: Decimal = Field(..., gt=0, max_digits=10, decimal_places=2)
     motivo: str = Field(..., min_length=1)
 
 

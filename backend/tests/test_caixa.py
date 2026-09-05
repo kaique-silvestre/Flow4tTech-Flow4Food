@@ -1,5 +1,7 @@
 import os
+from datetime import date
 from decimal import Decimal
+from types import SimpleNamespace
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("JWT_SECRET", "test-secret-only-for-tests-32chars!!")
@@ -16,7 +18,8 @@ from src.core.errors import AppError, ErrorCode
 from src.main import app
 from src.repositories import caixa_repository
 from src.schemas.caixa import FecharCaixaRequest
-from src.services import caixa_service
+from src.schemas.contas_pagar_schemas import PagarContaRequest
+from src.services import caixa_service, contas_pagar_service
 
 _engine = create_engine(
     "sqlite:///:memory:",
@@ -173,6 +176,107 @@ def test_fechar_caixa_calcula_diferenca(client):
     assert Decimal(data["valor_esperado"]) == Decimal("120.00")
     assert Decimal(data["valor_informado"]) == Decimal("115.00")
     assert Decimal(data["diferenca"]) == Decimal("-5.00")
+
+
+def test_fechar_caixa_com_divergencia_emite_warning_estruturado(client, monkeypatch):
+    class _Logger:
+        def __init__(self):
+            self.calls: list[tuple[str, dict]] = []
+
+        def info(self, _event: str, **_kwargs):
+            pass
+
+        def warning(self, event: str, **kwargs):
+            self.calls.append((event, kwargs))
+
+    logger = _Logger()
+    monkeypatch.setattr(caixa_service, "logger", logger)
+    client.post("/api/caixa/abrir", json={"valor_abertura": "100.00"})
+
+    response = client.post("/api/caixa/fechar", json={"valor_informado": "95.00"})
+
+    assert response.status_code == 200, response.text
+    assert logger.calls == [
+        (
+            "caixa_fechado_com_divergencia",
+            {
+                "sessao_id": response.json()["id"],
+                "user_id": 1,
+                "valor_informado": "95.00",
+                "valor_esperado": "100.00",
+                "diferenca": "-5.00",
+            },
+        )
+    ]
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"valor_abertura": "100000000.00"},
+        {"valor_abertura": "10.001"},
+    ],
+)
+def test_abrir_caixa_rejeita_valor_fora_da_precisao_monetaria(client, body):
+    response = client.post("/api/caixa/abrir", json=body)
+
+    assert response.status_code == 422, response.text
+
+
+def test_pagamento_em_dinheiro_registra_sangria_pela_camada_caixa(monkeypatch):
+    conta = SimpleNamespace(
+        id=42,
+        status="pendente",
+        data_pagamento=None,
+        metodo_pagamento_id=None,
+        observacao=None,
+        valor=Decimal("25.00"),
+    )
+    metodo = SimpleNamespace(tipo="dinheiro", ativo=True)
+
+    class _Db:
+        def execute(self, _statement):
+            return SimpleNamespace(scalar_one_or_none=lambda: metodo)
+
+        def flush(self):
+            pass
+
+        def commit(self):
+            pass
+
+        def rollback(self):
+            pass
+
+        def refresh(self, _obj):
+            pass
+
+    calls: list[tuple] = []
+    monkeypatch.setattr(
+        contas_pagar_service.contas_pagar_repository, "get_by_id", lambda *_: conta
+    )
+    monkeypatch.setattr(contas_pagar_service, "_to_response", lambda *_: conta)
+    monkeypatch.setattr(
+        caixa_service,
+        "registrar_movimento",
+        lambda *args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    result = contas_pagar_service.pagar_conta(
+        _Db(),
+        conta.id,
+        PagarContaRequest(data_pagamento=date.today(), metodo_pagamento_id=1),
+        user_id=7,
+    )
+
+    assert result is conta
+    assert len(calls) == 1
+    args, kwargs = calls[0]
+    _, movimento, user_id = args
+    assert movimento.tipo == "sangria"
+    assert movimento.valor == Decimal("25.00")
+    assert movimento.motivo == "Pagamento de conta a pagar #42"
+    assert user_id == 7
+    assert kwargs == {"commit": False}
 
 
 def test_fechar_sem_sessao_retorna_404(client):
