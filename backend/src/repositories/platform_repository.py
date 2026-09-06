@@ -4,8 +4,10 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import delete, func, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from src.core.errors import AppError, ErrorCode
 from src.models.assinaturas import Assinatura, AssinaturaHistory
 from src.models.platform_admin import PlatformAdmin
 from src.models.platform_settings import PlatformSettings
@@ -13,6 +15,18 @@ from src.models.profiles import Profile, ProfilePermission
 from src.models.system_users import SystemUser
 from src.models.tenant_features import TenantFeature
 from src.models.tenants import Tenant
+
+
+def _is_email_unique_violation(error: IntegrityError) -> bool:
+    """Detecta se o IntegrityError foi causado pela unique constraint
+    `uq_system_users_tenant_email` (email duplicado dentro do mesmo tenant).
+
+    Postgres (psycopg2): pgcode '23505' (unique_violation) + inspeção textual
+    pra distinguir da constraint de email. SQLite (testes): sem pgcode, cai
+    direto pra inspeção textual da mensagem.
+    """
+    msg = str(error.orig).lower()
+    return "email" in msg
 
 
 def list_tenants(
@@ -452,6 +466,46 @@ def update_tenant(
     return get_tenant_detail(db, tenant_id)
 
 
+def _commit_tenant_user_or_raise_conflict(db: Session) -> None:
+    """Commits a `SystemUser` create/update, translating a duplicate-email
+    `IntegrityError` (`uq_system_users_tenant_email`) into an `AppError`
+    instead of letting it bubble up as a raw 500.
+    """
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        if _is_email_unique_violation(exc):
+            raise AppError(
+                code=ErrorCode.CONFLICT,
+                message="Já existe um usuário com este email neste tenant",
+                field="email",
+                http_status=409,
+            ) from None
+        raise
+
+
+def _validate_profile_belongs_to_tenant(db: Session, tenant_id: int, profile_id: int | None) -> None:
+    """Garante que `profile_id` pertence ao mesmo tenant do usuário sendo criado/atualizado.
+
+    Sem essa checagem, um `profile_id` de outro tenant seria aceito e vinculado ao
+    usuário — vazamento de permissões entre tenants (o perfil de outro tenant pode
+    ter telas/permissões que este tenant não deveria ter).
+    """
+    if profile_id is None:
+        return
+    exists = db.execute(
+        select(Profile.id).where(Profile.id == profile_id, Profile.tenant_id == tenant_id)
+    ).scalar_one_or_none()
+    if exists is None:
+        raise AppError(
+            code=ErrorCode.VALIDATION_ERROR,
+            message="Perfil não pertence a este tenant",
+            field="profile_id",
+            http_status=422,
+        )
+
+
 def create_tenant_user(
     db: Session,
     tenant_id: int,
@@ -462,6 +516,7 @@ def create_tenant_user(
     profile_id: int | None,
     is_active: bool = True,
 ) -> dict:
+    _validate_profile_belongs_to_tenant(db, tenant_id, profile_id)
     now = datetime.now(timezone.utc)
     user = SystemUser(
         tenant_id=tenant_id,
@@ -475,7 +530,7 @@ def create_tenant_user(
         updated_at=now,
     )
     db.add(user)
-    db.commit()
+    _commit_tenant_user_or_raise_conflict(db)
     db.refresh(user)
     profile_name = None
     if user.profile_id:
@@ -509,6 +564,8 @@ def update_tenant_user(
     ).scalar_one_or_none()
     if user is None:
         return None
+    if profile_id is not None:
+        _validate_profile_belongs_to_tenant(db, tenant_id, profile_id)
     if name is not None:
         user.name = name
     if username is not None:
@@ -522,7 +579,7 @@ def update_tenant_user(
     if is_active is not None:
         user.is_active = is_active
     user.updated_at = datetime.now(timezone.utc)
-    db.commit()
+    _commit_tenant_user_or_raise_conflict(db)
     db.refresh(user)
     profile_name = None
     if user.profile_id:

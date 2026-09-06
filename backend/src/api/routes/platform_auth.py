@@ -1,19 +1,22 @@
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, status
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import require_platform_admin
 from src.core.database import get_platform_db
-from src.core.errors import AppError
+from src.core.errors import AppError, ErrorCode
 from src.core.limiter import limiter
+from src.core.logging import get_logger
 from src.repositories import platform_repository, revoked_tokens_repository
 from src.schemas.tenants import TenantCreate
 from src.services import audit_service, platform_auth_service
 from src.services.auth_service import create_access_token, hash_password
 from src.services.tenant_service import criar_tenant as provision_tenant
+
+logger = get_logger(__name__)
 
 
 class PlatformLoginRequest(BaseModel):
@@ -136,6 +139,7 @@ def _decode_platform_admin_id(access_token: str) -> Optional[int]:
         )
         return payload.get("platform_admin_id")
     except Exception:
+        logger.warning("platform_admin_id_decode_failed", exc_info=True)
         return None
 
 
@@ -238,7 +242,7 @@ def get_tenant_cockpit(
 ) -> CockpitMetricsItem:
     row = platform_repository.get_tenant_cockpit_metrics(db, tenant_id)
     if row is None:
-        raise HTTPException(status_code=404, detail="Tenant não encontrado")
+        raise AppError(code=ErrorCode.NOT_FOUND, message="Tenant não encontrado", http_status=404)
     return CockpitMetricsItem(**row)
 
 
@@ -475,7 +479,7 @@ def get_tenant_detail(
 ) -> TenantDetail:
     detail = platform_repository.get_tenant_detail(db, tenant_id)
     if detail is None:
-        raise HTTPException(status_code=404, detail="Tenant não encontrado")
+        raise AppError(code=ErrorCode.NOT_FOUND, message="Tenant não encontrado", http_status=404)
     return TenantDetail(**detail)
 
 
@@ -503,7 +507,7 @@ def update_tenant(
         max_users=body.max_users,
     )
     if detail is None:
-        raise HTTPException(status_code=404, detail="Tenant não encontrado")
+        raise AppError(code=ErrorCode.NOT_FOUND, message="Tenant não encontrado", http_status=404)
     background_tasks.add_task(
         audit_service.log_background,
         "platform.tenant.update",
@@ -647,7 +651,7 @@ def update_platform_user(
         is_active=body.is_active,
     )
     if user is None:
-        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=404)
     background_tasks.add_task(
         audit_service.log_background,
         "platform.tenant_user.update",
@@ -714,7 +718,7 @@ def update_tenant_profile(
         is_active=body.is_active,
     )
     if row is None:
-        raise HTTPException(status_code=404, detail="Perfil não encontrado")
+        raise AppError(code=ErrorCode.NOT_FOUND, message="Perfil não encontrado", http_status=404)
     background_tasks.add_task(
         audit_service.log_background,
         "platform.profile.update",
@@ -803,7 +807,7 @@ def impersonate_user(
         select(SystemUser).where(SystemUser.id == user_id, SystemUser.tenant_id == tenant_id)
     ).scalar_one_or_none()
     if user is None:
-        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=404)
 
     perms = db.execute(
         select(UserPermission.screen).where(UserPermission.user_id == user_id)

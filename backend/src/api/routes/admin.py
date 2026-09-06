@@ -1,10 +1,11 @@
 import hmac
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from sqlalchemy.orm import Session
 
 from src.core.config import get_settings
 from src.core.database import get_db
+from src.core.errors import AppError, ErrorCode
 from src.core.limiter import limiter
 from src.schemas.billing import (
     AssinaturaUpdate,
@@ -41,18 +42,20 @@ def require_superadmin(request: Request) -> None:
     """
     settings = get_settings()
     if not settings.SUPERADMIN_TOKEN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Superadmin não configurado",
+        raise AppError(
+            code=ErrorCode.FORBIDDEN,
+            message="Superadmin não configurado",
+            http_status=403,
         )
     auth_header = request.headers.get("Authorization") or ""
     scheme, _, token = auth_header.partition(" ")
     if scheme.lower() != "bearer" or not token or not hmac.compare_digest(
         token, settings.SUPERADMIN_TOKEN
     ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Acesso negado — token superadmin inválido",
+        raise AppError(
+            code=ErrorCode.FORBIDDEN,
+            message="Acesso negado — token superadmin inválido",
+            http_status=403,
         )
 
 
@@ -71,9 +74,10 @@ def get_admin_identifier(request: Request) -> str:
     """
     value = request.headers.get("X-Admin-Identifier")
     if not value or not value.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Header X-Admin-Identifier é obrigatório para ações administrativas",
+        raise AppError(
+            code=ErrorCode.VALIDATION_ERROR,
+            message="Header X-Admin-Identifier é obrigatório para ações administrativas",
+            http_status=400,
         )
     return value.strip()
 

@@ -172,17 +172,6 @@ def require_feature(feature_key: str):
     return _check
 
 
-def require_active_subscription(payload: dict = Depends(get_current_user)) -> dict:
-    # Not used by any production route — check_subscription (uses get_tenant_db) is the
-    # live, DB-backed check actually wired into routes. This one trusts the JWT's
-    # subscription_status claim, which can be up to 15min stale. Kept for its dedicated
-    # test coverage (tests/test_issue5_billing.py); do not depend on this in new routes.
-    sub_status = payload.get("subscription_status", "trial")
-    if sub_status not in {"ativa", "trial"}:
-        raise HTTPException(status_code=402, detail="Assinatura vencida ou suspensa")
-    return payload
-
-
 def require_platform_admin(
     credentials: Annotated[Optional[HTTPAuthorizationCredentials], Depends(_bearer)],
     db: Session = Depends(get_platform_db),
@@ -216,4 +205,4 @@ def require_platform_admin(
     return payload
 
 
-__all__ = ["get_db", "get_tenant_db", "get_current_user", "check_subscription", "require_permission", "require_feature", "require_active_subscription", "require_platform_admin"]  # noqa: E501
+__all__ = ["get_db", "get_tenant_db", "get_current_user", "check_subscription", "require_permission", "require_feature", "require_platform_admin"]  # noqa: E501

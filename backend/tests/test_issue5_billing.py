@@ -7,21 +7,15 @@ os.environ.setdefault("JWT_SECRET", "test-secret-only-for-tests-32chars!!")
 os.environ.setdefault("ENV", "test")
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from sqlalchemy import StaticPool, create_engine
 from sqlalchemy.orm import sessionmaker
 
-import jwt
-from fastapi import Depends
-from src.api.dependencies import get_current_user, get_db, require_active_subscription
 from src.core.database import Base
 from src.models import billing as _billing_models  # ensure tables are created  # noqa: F401
 from src.models.assinaturas import Assinatura
 from src.models.tenants import Tenant
 from src.repositories import billing_repository
 
-_JWT_SECRET = "test-secret-only-for-tests-32chars!!"
 _SQLITE_URL = "sqlite:///:memory:"
 _engine = create_engine(_SQLITE_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool)
 _Session = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
@@ -32,89 +26,6 @@ def _setup_db():
     Base.metadata.create_all(_engine)
     yield
     Base.metadata.drop_all(_engine)
-
-
-def _override_db():
-    db = _Session()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-def _make_token(payload: dict, exp_minutes: int = 60) -> str:
-    data = {**payload, "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=exp_minutes)}
-    return jwt.encode(data, _JWT_SECRET, algorithm="HS256")
-
-
-@pytest.fixture
-def subscription_client():
-    app = FastAPI()
-
-    @app.get("/protected")
-    def _protected(user: dict = require_active_subscription):
-        return {"ok": True}
-
-    app.dependency_overrides[get_db] = _override_db
-    return TestClient(app)
-
-
-# --- require_active_subscription tests ---
-
-def test_require_active_sub_passes_for_ativa():
-    app = FastAPI()
-
-    @app.get("/protected")
-    def _protected(payload: dict = Depends(require_active_subscription)):
-        return {"ok": True, "status": payload.get("subscription_status")}
-
-    app.dependency_overrides[get_db] = _override_db
-    client = TestClient(app)
-    token = _make_token({"user_id": 1, "tenant_id": 1, "subscription_status": "ativa"})
-    resp = client.get("/protected", headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code == 200
-
-
-def test_require_active_sub_passes_for_trial():
-    app = FastAPI()
-
-    @app.get("/protected")
-    def _protected(payload: dict = Depends(require_active_subscription)):
-        return {"ok": True}
-
-    app.dependency_overrides[get_db] = _override_db
-    client = TestClient(app)
-    token = _make_token({"user_id": 1, "tenant_id": 1, "subscription_status": "trial"})
-    resp = client.get("/protected", headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code == 200
-
-
-def test_require_active_sub_blocks_vencida():
-    app = FastAPI()
-
-    @app.get("/protected")
-    def _protected(payload: dict = Depends(require_active_subscription)):
-        return {"ok": True}
-
-    app.dependency_overrides[get_db] = _override_db
-    client = TestClient(app)
-    token = _make_token({"user_id": 1, "tenant_id": 1, "subscription_status": "vencida"})
-    resp = client.get("/protected", headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code == 402
-
-
-def test_require_active_sub_blocks_suspensa():
-    app = FastAPI()
-
-    @app.get("/protected")
-    def _protected(payload: dict = Depends(require_active_subscription)):
-        return {"ok": True}
-
-    app.dependency_overrides[get_db] = _override_db
-    client = TestClient(app)
-    token = _make_token({"user_id": 1, "tenant_id": 1, "subscription_status": "suspensa"})
-    resp = client.get("/protected", headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code == 402
 
 
 # --- billing_repository tests ---

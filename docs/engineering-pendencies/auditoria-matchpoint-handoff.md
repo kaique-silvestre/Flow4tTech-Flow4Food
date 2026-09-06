@@ -88,7 +88,20 @@ Cobriu parte da seção 4.2 nos módulos **core/database+deps+scheduler** (pool 
 
 **Seção 4.2 (MÉDIO/BAIXO): comandas, comissões de garçom e nfe/compras zerados.** Restam: relatórios/dashboard (agregação Python + validação data_inicio>data_fim), platform_admin resto, resíduo dos módulos core/database+estoque+caixa (ver "batch extra" acima — ainda não conferido item-a-item), frontend operacional, frontend platform resto.
 
-Próxima prioridade: Onda 10 (seção 5) — relatórios/dashboard + platform_admin resto + resíduo do batch extra.
+### Onda 10 concluída em 2026-09-06 (3 subagentes `implementer` em paralelo)
+
+- **relatórios/dashboard** (2/2, mas item 2 já estava resolvido): 6 agregações Python→SQL `GROUP BY` (`dashboard_repository.py`, helper `_bucket_case` portável SQLite/Postgres); validação `data_inicio>data_fim`/teto 366 dias já existia de onda anterior, confirmado.
+- **platform_admin resto** (6/6): `IntegrityError`→`AppError`/409 em CNPJ/email duplicado; `HTTPException` cru→`AppError` em `admin.py`/`platform_auth.py`; log da exceção engolida em `_decode_platform_admin_id`; `profile_id` validado contra `tenant_id`; `announcements.py` confirmado seguro sem RLS (isolamento Python correto, só documentado); timing side-channel de login corrigido (bcrypt dummy-hash).
+- **resíduo core/database+estoque** (3/5 corrigidos, 2 já resolvidos): RLS adicionado em `tenant_features` (migration 0092); `require_active_subscription` código morto removido; `get_assinatura_by_tenant` desduplicado (canônico em `billing_repository.py`). `ajustar_estoque_ficha_tecnica` já tinha `ORDER BY insumo_id`; `platform_engine` já usava `_engine_options` com pool — ambos não eram mais gaps reais.
+- Validação pós-merge (orquestrador): backend `420 passed, 4 skipped, 0 failed`; mypy 2 erros pré-existentes inalterados; frontend não tocado nesta onda.
+
+**Seção 4.2 (MÉDIO/BAIXO): relatórios/dashboard, platform_admin e core/database+estoque residuais zerados.**
+
+Itens do "core/database" da seção 4.2 ainda não verificados/resolvidos (não cobertos pelas ondas 9/10, avaliar se ainda são gaps reais antes de montar ticket): `contextlib.suppress(Exception)` mascarando falha de RLS em `tenant_repository.py`; `increment_version` sem predicado `tenant_id` (defesa em profundidade); lógica de bloqueio de assinatura em `dependencies.py` em vez de `services/billing_service.py`; nível de log fixo INFO; SET ROLE/RESET triplicado sem helper compartilhado entre `database.py`/`dependencies.py`/`scheduler.py`.
+
+Restam inteiramente intocados: **frontend operacional** (8 itens) e **frontend platform resto** (8 itens) — seção 4.2, ondas 11/12 da seção 5.
+
+Próxima prioridade: Onda 11 — frontend operacional (JWT em localStorage, cache TanStack, Zod, formatCurrency, clock tick) + frontend platform resto (JWT decode dup, ConfirmDialog, React.memo) + os 5 itens residuais de core/database listados acima.
 
 ## 3. Como o trabalho foi organizado (pra você replicar)
 

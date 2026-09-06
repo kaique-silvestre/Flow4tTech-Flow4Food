@@ -2,7 +2,7 @@ import datetime
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, case, func, select
 from sqlalchemy.orm import Session
 
 from src.models.comandas import Comanda, StatusComanda
@@ -33,12 +33,22 @@ def _now_utc() -> datetime.datetime:
     return datetime.datetime.utcnow()
 
 
-def _local_date(dt_utc: datetime.datetime) -> datetime.date:
-    return dt_utc.replace(tzinfo=datetime.timezone.utc).astimezone(TZ).date()
+def _bucket_case(column, boundaries: list[datetime.datetime]):
+    """Expressão SQL que mapeia `column` pro índice do bucket [boundaries[i], boundaries[i+1]).
 
-
-def _local_hour(dt_utc: datetime.datetime) -> int:
-    return dt_utc.replace(tzinfo=datetime.timezone.utc).astimezone(TZ).hour
+    Evita `AT TIME ZONE`/funções específicas de dialect: os limites (já em UTC,
+    calculados via `_day_utc_range`/equivalente) carregam a conversão de fuso
+    horário, então a comparação em si é portável entre SQLite e Postgres.
+    Usado pra empurrar `GROUP BY`/`func.sum` pro SQL em vez de somar linha a
+    linha em Python.
+    """
+    return case(
+        *[
+            (and_(column >= boundaries[i], column < boundaries[i + 1]), i)
+            for i in range(len(boundaries) - 1)
+        ],
+        else_=None,
+    )
 
 
 def comandas_fechadas_hoje(db: Session) -> list[Comanda]:
@@ -64,15 +74,22 @@ def cmv_hoje(db: Session, comanda_ids: list[int]) -> Decimal:
 def faturamento_por_hora_hoje(db: Session, comanda_ids: list[int]) -> list[dict]:
     if not comanda_ids:
         return [{"hora": h, "faturamento": Decimal("0")} for h in range(24)]
+    today = _today_sp()
+    hour_starts = [
+        datetime.datetime.combine(today, datetime.time(hour=h), tzinfo=TZ)
+        .astimezone(datetime.timezone.utc)
+        .replace(tzinfo=None)
+        for h in range(24)
+    ]
+    hour_starts.append(hour_starts[0] + datetime.timedelta(days=1))
+    bucket = _bucket_case(Comanda.data_fechamento, hour_starts)
     rows = db.execute(
-        select(Comanda.data_fechamento, Comanda.total).where(Comanda.id.in_(comanda_ids))
+        select(bucket.label("hora"), func.sum(Comanda.total).label("faturamento"))
+        .where(Comanda.id.in_(comanda_ids))
+        .group_by(bucket)
     ).all()
-    buckets = [Decimal("0")] * 24
-    for r in rows:
-        if r.data_fechamento:
-            hora = _local_hour(r.data_fechamento)
-            buckets[hora] += r.total or Decimal("0")
-    return [{"hora": h, "faturamento": buckets[h]} for h in range(24)]
+    fat_by_bucket = {int(r.hora): (r.faturamento or Decimal("0")) for r in rows if r.hora is not None}
+    return [{"hora": h, "faturamento": fat_by_bucket.get(h, Decimal("0"))} for h in range(24)]
 
 
 def top_10_produtos_30d(db: Session) -> list[dict]:
@@ -112,28 +129,35 @@ def top_10_produtos_30d(db: Session) -> list[dict]:
     ]
 
 
+def _day_boundaries(inicio: datetime.date, fim: datetime.date) -> list[datetime.datetime]:
+    """Limites UTC de cada dia local (`America/Sao_Paulo`) entre `inicio` e `fim`, inclusive.
+
+    `boundaries[i]` é o início (UTC) do dia `inicio + i`; o último elemento é o
+    início do dia seguinte a `fim`, usado como limite superior exclusivo.
+    """
+    n_dias = (fim - inicio).days + 1
+    return [_day_utc_range(inicio + datetime.timedelta(days=i))[0] for i in range(n_dias + 1)]
+
+
 def faturamento_ultimos_30d(db: Session) -> list[dict]:
     today = _today_sp()
     start_date = today - datetime.timedelta(days=29)
-    start, _ = _day_utc_range(start_date)
-    _, end = _day_utc_range(today)
+    day_starts = _day_boundaries(start_date, today)
+    bucket = _bucket_case(Comanda.data_fechamento, day_starts)
     rows = db.execute(
-        select(Comanda.data_fechamento, Comanda.total).where(
+        select(bucket.label("dia"), func.sum(Comanda.total).label("faturamento"))
+        .where(
             Comanda.status == StatusComanda.FECHADA.value,
-            Comanda.data_fechamento >= start,
-            Comanda.data_fechamento <= end,
+            Comanda.data_fechamento >= day_starts[0],
+            Comanda.data_fechamento < day_starts[-1],
         )
+        .group_by(bucket)
     ).all()
-    dia_map: dict[datetime.date, Decimal] = {}
-    for r in rows:
-        if r.data_fechamento:
-            d = _local_date(r.data_fechamento)
-            dia_map[d] = dia_map.get(d, Decimal("0")) + (r.total or Decimal("0"))
-    result = []
-    for i in range(30):
-        d = start_date + datetime.timedelta(days=i)
-        result.append({"data": d, "faturamento": dia_map.get(d, Decimal("0"))})
-    return result
+    fat_by_bucket = {int(r.dia): (r.faturamento or Decimal("0")) for r in rows if r.dia is not None}
+    return [
+        {"data": start_date + datetime.timedelta(days=i), "faturamento": fat_by_bucket.get(i, Decimal("0"))}
+        for i in range(30)
+    ]
 
 
 def heatmap_mes_atual(db: Session) -> list[dict]:
@@ -143,56 +167,50 @@ def heatmap_mes_atual(db: Session) -> list[dict]:
         ultimo = datetime.date(today.year + 1, 1, 1) - datetime.timedelta(days=1)
     else:
         ultimo = datetime.date(today.year, today.month + 1, 1) - datetime.timedelta(days=1)
-    start, _ = _day_utc_range(primeiro)
-    _, end = _day_utc_range(ultimo)
+    day_starts = _day_boundaries(primeiro, ultimo)
+    bucket = _bucket_case(Comanda.data_fechamento, day_starts)
     rows = db.execute(
-        select(Comanda.data_fechamento, Comanda.total).where(
+        select(bucket.label("dia"), func.sum(Comanda.total).label("faturamento"))
+        .where(
             Comanda.status == StatusComanda.FECHADA.value,
-            Comanda.data_fechamento >= start,
-            Comanda.data_fechamento <= end,
+            Comanda.data_fechamento >= day_starts[0],
+            Comanda.data_fechamento < day_starts[-1],
         )
+        .group_by(bucket)
     ).all()
-    dia_map: dict[datetime.date, Decimal] = {}
-    for r in rows:
-        if r.data_fechamento:
-            d = _local_date(r.data_fechamento)
-            dia_map[d] = dia_map.get(d, Decimal("0")) + (r.total or Decimal("0"))
-    result = []
-    d = primeiro
-    while d <= ultimo:
-        result.append({"data": d, "faturamento": dia_map.get(d, Decimal("0"))})
-        d += datetime.timedelta(days=1)
-    return result
+    fat_by_bucket = {int(r.dia): (r.faturamento or Decimal("0")) for r in rows if r.dia is not None}
+    return [
+        {"data": primeiro + datetime.timedelta(days=i), "faturamento": fat_by_bucket.get(i, Decimal("0"))}
+        for i in range(len(day_starts) - 1)
+    ]
 
 
 def historico_periodo(db: Session, inicio: datetime.date, fim: datetime.date) -> list[dict]:
-    start_utc, _ = _day_utc_range(inicio)
-    _, end_utc = _day_utc_range(fim)
+    day_starts = _day_boundaries(inicio, fim)
+    bucket = _bucket_case(Comanda.data_fechamento, day_starts)
     rows_fat = db.execute(
-        select(Comanda.data_fechamento, Comanda.total).where(
+        select(bucket.label("dia"), func.sum(Comanda.total).label("faturamento"))
+        .where(
             Comanda.status == StatusComanda.FECHADA.value,
-            Comanda.data_fechamento >= start_utc,
-            Comanda.data_fechamento <= end_utc,
+            Comanda.data_fechamento >= day_starts[0],
+            Comanda.data_fechamento < day_starts[-1],
         )
+        .group_by(bucket)
     ).all()
-    fat_map: dict[datetime.date, Decimal] = {}
-    for r in rows_fat:
-        if r.data_fechamento:
-            d = _local_date(r.data_fechamento)
-            fat_map[d] = fat_map.get(d, Decimal("0")) + (r.total or Decimal("0"))
+    fat_map = {
+        inicio + datetime.timedelta(days=int(r.dia)): (r.faturamento or Decimal("0"))
+        for r in rows_fat
+        if r.dia is not None
+    }
     rows_compras = db.execute(
-        select(Compra.data_compra, Compra.total).where(
-            Compra.data_compra >= inicio,
-            Compra.data_compra <= fim,
-        )
+        select(Compra.data_compra, func.sum(Compra.total).label("total"))
+        .where(Compra.data_compra >= inicio, Compra.data_compra <= fim)
+        .group_by(Compra.data_compra)
     ).all()
-    compras_map: dict[datetime.date, Decimal] = {}
-    for rc in rows_compras:
-        if rc.data_compra:
-            compras_map[rc.data_compra] = compras_map.get(rc.data_compra, Decimal("0")) + (rc.total or Decimal("0"))
+    compras_map = {r.data_compra: (r.total or Decimal("0")) for r in rows_compras}
     result = []
-    current = inicio
-    while current <= fim:
+    for i in range(len(day_starts) - 1):
+        current = inicio + datetime.timedelta(days=i)
         result.append(
             {
                 "data": current,
@@ -200,39 +218,35 @@ def historico_periodo(db: Session, inicio: datetime.date, fim: datetime.date) ->
                 "total_compras": compras_map.get(current, Decimal("0")),
             }
         )
-        current += datetime.timedelta(days=1)
     return result
 
 
 def resumo_anual(db: Session, ano: int) -> list[dict]:
-    inicio = datetime.date(ano, 1, 1)
-    fim = datetime.date(ano, 12, 31)
-    start_utc, _ = _day_utc_range(inicio)
-    _, end_utc = _day_utc_range(fim)
+    month_starts = [_day_utc_range(datetime.date(ano, m, 1))[0] for m in range(1, 13)]
+    month_starts.append(_day_utc_range(datetime.date(ano + 1, 1, 1))[0])
+    bucket = _bucket_case(Comanda.data_fechamento, month_starts)
     rows_fat = db.execute(
-        select(Comanda.data_fechamento, Comanda.total).where(
+        select(bucket.label("mes"), func.sum(Comanda.total).label("faturamento"))
+        .where(
             Comanda.status == StatusComanda.FECHADA.value,
-            Comanda.data_fechamento >= start_utc,
-            Comanda.data_fechamento <= end_utc,
+            Comanda.data_fechamento >= month_starts[0],
+            Comanda.data_fechamento < month_starts[-1],
         )
+        .group_by(bucket)
     ).all()
-    fat_map: dict[int, Decimal] = {}
-    for r in rows_fat:
-        if r.data_fechamento:
-            mes = _local_date(r.data_fechamento).month
-            fat_map[mes] = fat_map.get(mes, Decimal("0")) + (r.total or Decimal("0"))
+    fat_map = {int(r.mes) + 1: (r.faturamento or Decimal("0")) for r in rows_fat if r.mes is not None}
+
+    mes_expr = func.extract("month", Compra.data_compra)
     rows_compras = db.execute(
-        select(Compra.data_compra, Compra.total).where(
-            Compra.data_compra >= inicio,
-            Compra.data_compra <= fim,
+        select(mes_expr.label("mes"), func.sum(Compra.total).label("total"))
+        .where(
+            Compra.data_compra >= datetime.date(ano, 1, 1),
+            Compra.data_compra <= datetime.date(ano, 12, 31),
         )
+        .group_by(mes_expr)
     ).all()
-    compras_map: dict[int, Decimal] = {}
-    for rc in rows_compras:
-        if rc.data_compra:
-            compras_map[rc.data_compra.month] = (
-                compras_map.get(rc.data_compra.month, Decimal("0")) + (rc.total or Decimal("0"))
-            )
+    compras_map = {int(r.mes): (r.total or Decimal("0")) for r in rows_compras}
+
     return [
         {
             "mes": m,
@@ -251,14 +265,14 @@ def faturamento_mes(db: Session, ano: int, mes: int) -> Decimal:
         ultimo = datetime.date(ano, mes + 1, 1) - datetime.timedelta(days=1)
     start, _ = _day_utc_range(primeiro)
     _, end = _day_utc_range(ultimo)
-    rows = db.execute(
-        select(Comanda.total).where(
+    total = db.execute(
+        select(func.sum(Comanda.total)).where(
             Comanda.status == StatusComanda.FECHADA.value,
             Comanda.data_fechamento >= start,
             Comanda.data_fechamento <= end,
         )
-    ).scalars().all()
-    return sum((r or Decimal("0") for r in rows), Decimal("0"))
+    ).scalar()
+    return total or Decimal("0")
 
 
 def insumos_abaixo_critico(db: Session) -> list[dict]:

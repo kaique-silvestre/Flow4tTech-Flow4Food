@@ -11,6 +11,21 @@ from src.repositories import announcements_repository
 
 router = APIRouter()
 
+# NOTE: this router uses `get_platform_db` (no RLS) on purpose — announcements
+# live in a platform-wide table (`platform_announcements`) that isn't owned by
+# any single tenant, so there is no tenant-scoped RLS policy to apply here.
+# Isolation instead comes from explicit `tenant_id` filtering in Python/SQL,
+# done in every repository call below:
+#   - `list_active_for_user` / `is_visible_to_tenant` only return an
+#     announcement when `target == "all"` OR the announcement has an
+#     `AnnouncementTarget` row for the caller's own `tenant_id` (see
+#     `announcements_repository.py`).
+#   - `mark_read` scopes the write by `user_id` (each user belongs to exactly
+#     one tenant), so a user cannot mark another tenant's read-state.
+# Verified during the platform_admin MÉDIO/BAIXO audit pass (2026-09) — no
+# cross-tenant leak found; keep the explicit `tenant_id`/`user_id` filters
+# above if this repository is ever touched again.
+
 
 class AnnouncementItem(BaseModel):
     id: int

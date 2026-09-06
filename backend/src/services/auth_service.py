@@ -16,13 +16,14 @@ from src.core.errors import AppError, ErrorCode
 from src.core.logging import get_logger
 from src.models.system_users import PasswordReset
 from src.repositories import refresh_tokens_repository
+from src.repositories.billing_repository import get_assinatura_by_tenant
 from src.repositories.password_reset_repository import (
     create_reset,
     get_reset_by_token,
     get_valid_reset,
     invalidate_user_resets,
 )
-from src.repositories.tenant_repository import get_assinatura_by_tenant, set_rls_tenant
+from src.repositories.tenant_repository import set_rls_tenant
 from src.repositories.users_repository import (
     get_user_by_email_global,
     get_user_by_id,

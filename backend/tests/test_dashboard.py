@@ -313,3 +313,194 @@ def test_dashboard_comandas_abertas_lista(c):
     by_id = {c_item["id"]: c_item for c_item in lista}
     assert by_id[comanda1["id"]]["qtd_itens"] == 2
     assert by_id[comanda2["id"]]["qtd_itens"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Regressão: agregações de dashboard_repository via GROUP BY em SQL
+# (caracterizam o comportamento atual antes/depois de trocar loop Python por
+# GROUP BY/func.sum no SQLAlchemy — devem continuar batendo byte-a-byte).
+# ---------------------------------------------------------------------------
+
+
+def _comanda_fechada(db: Session, dt_utc: datetime.datetime, total: str, identificacao="Mesa X"):
+    from src.models.comandas import Comanda, StatusComanda
+
+    comanda = Comanda(
+        tenant_id=1,
+        identificacao=identificacao,
+        tipo_identificacao="mesa",
+        garcom_id=1,
+        status=StatusComanda.FECHADA.value,
+        total=Decimal(total),
+        data_fechamento=dt_utc,
+    )
+    db.add(comanda)
+    db.flush()
+    return comanda
+
+
+def _compra(db: Session, data_compra: datetime.date, total: str):
+    from src.models.compras import Compra
+
+    compra = Compra(tenant_id=1, data_compra=data_compra, total=Decimal(total), status="confirmado")
+    db.add(compra)
+    db.flush()
+    return compra
+
+
+def test_faturamento_ultimos_30d_agrega_por_dia_local():
+    from zoneinfo import ZoneInfo
+
+    from src.repositories import dashboard_repository as dr
+
+    TZ = ZoneInfo("America/Sao_Paulo")
+    today_sp = datetime.datetime.now(TZ).date()
+
+    db: Session = _TestingSession()
+    try:
+        # Duas comandas no mesmo dia local de hoje (23:00 UTC = 20:00 SP e 02:00 UTC = 23:00 SP do dia anterior em UTC)
+        _comanda_fechada(db, datetime.datetime(today_sp.year, today_sp.month, today_sp.day, 23, 0, 0), "40.00")
+        # Comanda 29 dias atrás (limite inferior da janela) às 03:00 UTC local (~00:00 SP)
+        d_29 = today_sp - datetime.timedelta(days=29)
+        _comanda_fechada(db, datetime.datetime(d_29.year, d_29.month, d_29.day, 3, 0, 1), "10.00")
+        # Comanda fora da janela (31 dias atrás) — não deve aparecer em nenhum bucket
+        d_fora = today_sp - datetime.timedelta(days=31)
+        _comanda_fechada(db, datetime.datetime(d_fora.year, d_fora.month, d_fora.day, 12, 0, 0), "999.00")
+        db.commit()
+
+        result = dr.faturamento_ultimos_30d(db)
+
+        assert len(result) == 30
+        assert result[0]["data"] == d_29
+        assert result[-1]["data"] == today_sp
+        by_date = {r["data"]: r["faturamento"] for r in result}
+        assert by_date[today_sp] == Decimal("40.00")
+        assert by_date[d_29] == Decimal("10.00")
+        total_geral = sum(by_date.values(), Decimal("0"))
+        assert total_geral == Decimal("50.00")
+    finally:
+        db.close()
+
+
+def test_heatmap_mes_atual_agrega_por_dia_do_mes():
+    from zoneinfo import ZoneInfo
+
+    from src.repositories import dashboard_repository as dr
+
+    TZ = ZoneInfo("America/Sao_Paulo")
+    today_sp = datetime.datetime.now(TZ).date()
+    primeiro = datetime.date(today_sp.year, today_sp.month, 1)
+
+    db: Session = _TestingSession()
+    try:
+        _comanda_fechada(db, datetime.datetime(primeiro.year, primeiro.month, primeiro.day, 15, 0, 0), "25.00")
+        _comanda_fechada(db, datetime.datetime(today_sp.year, today_sp.month, today_sp.day, 15, 0, 0), "35.00")
+        db.commit()
+
+        result = dr.heatmap_mes_atual(db)
+
+        by_date = {r["data"]: r["faturamento"] for r in result}
+        assert by_date[primeiro] == Decimal("25.00")
+        assert by_date[today_sp] == Decimal("35.00")
+        assert result[0]["data"] == primeiro
+    finally:
+        db.close()
+
+
+def test_historico_periodo_agrega_faturamento_e_compras():
+    from src.repositories import dashboard_repository as dr
+
+    db: Session = _TestingSession()
+    try:
+        inicio = datetime.date(2025, 3, 1)
+        fim = datetime.date(2025, 3, 5)
+        # dentro do período (03/03 às 14:00 UTC = 11:00 SP)
+        _comanda_fechada(db, datetime.datetime(2025, 3, 3, 14, 0, 0), "70.00")
+        # exatamente na fronteira final (05/03 às 23:59 SP = 06/03 02:59 UTC)
+        _comanda_fechada(db, datetime.datetime(2025, 3, 6, 2, 59, 0), "30.00")
+        # fora do período (06/03 04:00 UTC = 01:00 SP do dia 06 -> fora)
+        _comanda_fechada(db, datetime.datetime(2025, 3, 6, 4, 0, 0), "999.00")
+        _compra(db, datetime.date(2025, 3, 3), "15.00")
+        _compra(db, datetime.date(2025, 3, 3), "5.00")
+        db.commit()
+
+        result = dr.historico_periodo(db, inicio, fim)
+
+        assert [r["data"] for r in result] == [
+            datetime.date(2025, 3, d) for d in range(1, 6)
+        ]
+        by_date = {r["data"]: r for r in result}
+        assert by_date[datetime.date(2025, 3, 3)]["faturamento"] == Decimal("70.00")
+        assert by_date[datetime.date(2025, 3, 3)]["total_compras"] == Decimal("20.00")
+        assert by_date[datetime.date(2025, 3, 5)]["faturamento"] == Decimal("30.00")
+        assert by_date[datetime.date(2025, 3, 1)]["faturamento"] == Decimal("0")
+        assert by_date[datetime.date(2025, 3, 1)]["total_compras"] == Decimal("0")
+    finally:
+        db.close()
+
+
+def test_resumo_anual_agrega_por_mes():
+    from src.repositories import dashboard_repository as dr
+
+    db: Session = _TestingSession()
+    try:
+        _comanda_fechada(db, datetime.datetime(2025, 1, 15, 14, 0, 0), "100.00")
+        _comanda_fechada(db, datetime.datetime(2025, 6, 15, 14, 0, 0), "200.00")
+        # fronteira: 31/12 23:59 SP = 01/01/2026 02:59 UTC — não deve entrar em 2025
+        _comanda_fechada(db, datetime.datetime(2026, 1, 1, 2, 59, 0), "50.00")
+        _compra(db, datetime.date(2025, 1, 10), "40.00")
+        _compra(db, datetime.date(2025, 6, 20), "60.00")
+        db.commit()
+
+        result = dr.resumo_anual(db, 2025)
+
+        assert len(result) == 12
+        by_mes = {r["mes"]: r for r in result}
+        assert by_mes[1]["faturamento"] == Decimal("100.00")
+        assert by_mes[1]["total_compras"] == Decimal("40.00")
+        assert by_mes[6]["faturamento"] == Decimal("200.00")
+        assert by_mes[6]["total_compras"] == Decimal("60.00")
+        assert by_mes[2]["faturamento"] == Decimal("0")
+        assert by_mes[2]["total_compras"] == Decimal("0")
+    finally:
+        db.close()
+
+
+def test_faturamento_mes_soma_periodo():
+    from src.repositories import dashboard_repository as dr
+
+    db: Session = _TestingSession()
+    try:
+        _comanda_fechada(db, datetime.datetime(2025, 4, 10, 14, 0, 0), "100.00")
+        _comanda_fechada(db, datetime.datetime(2025, 4, 20, 14, 0, 0), "50.00")
+        _comanda_fechada(db, datetime.datetime(2025, 5, 1, 14, 0, 0), "999.00")
+        db.commit()
+
+        assert dr.faturamento_mes(db, 2025, 4) == Decimal("150.00")
+        assert dr.faturamento_mes(db, 2025, 3) == Decimal("0")
+    finally:
+        db.close()
+
+
+def test_faturamento_por_hora_hoje_agrega_por_hora_local():
+    from zoneinfo import ZoneInfo
+
+    from src.repositories import dashboard_repository as dr
+
+    TZ = ZoneInfo("America/Sao_Paulo")
+    today_sp = datetime.datetime.now(TZ).date()
+
+    db: Session = _TestingSession()
+    try:
+        c1 = _comanda_fechada(db, datetime.datetime(today_sp.year, today_sp.month, today_sp.day, 23, 0, 0), "50.00")
+        c2 = _comanda_fechada(db, datetime.datetime(today_sp.year, today_sp.month, today_sp.day, 23, 30, 0), "25.00")
+        db.commit()
+
+        result = dr.faturamento_por_hora_hoje(db, [c1.id, c2.id])
+
+        assert len(result) == 24
+        by_hora = {r["hora"]: r["faturamento"] for r in result}
+        assert by_hora[20] == Decimal("75.00")
+        assert by_hora[23] == Decimal("0")
+    finally:
+        db.close()

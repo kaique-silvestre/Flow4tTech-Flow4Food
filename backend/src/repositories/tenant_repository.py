@@ -42,10 +42,6 @@ def list_tenants_with_assinaturas(db: Session) -> list[tuple[Tenant, Optional[As
     )
 
 
-def get_assinatura_by_tenant(db: Session, tenant_id: int) -> Optional[Assinatura]:
-    return db.query(Assinatura).filter(Assinatura.tenant_id == tenant_id).first()
-
-
 def create_assinatura(db: Session, assinatura: Assinatura) -> Assinatura:
     db.add(assinatura)
     db.flush()

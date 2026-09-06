@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.core.database import clear_tenant_rls_context
@@ -9,11 +10,11 @@ from src.core.logging import get_logger
 from src.models.assinaturas import Assinatura
 from src.models.system_users import SystemUser
 from src.models.tenants import Tenant
+from src.repositories.billing_repository import get_assinatura_by_tenant
 from src.repositories.tenant_repository import (
     clone_profiles_from_seed,
     create_assinatura,
     create_tenant,
-    get_assinatura_by_tenant,
     get_tenant_by_id,
     list_tenants_with_assinaturas,
     set_rls_tenant,
@@ -153,6 +154,20 @@ def criar_tenant(
     except AppError:
         db.rollback()
         raise
+    except IntegrityError as exc:
+        db.rollback()
+        if _is_cnpj_unique_violation(exc):
+            raise AppError(
+                code=ErrorCode.CONFLICT,
+                message="CNPJ já cadastrado",
+                field="cnpj",
+                http_status=409,
+            ) from None
+        raise AppError(
+            code=ErrorCode.CONFLICT,
+            message="Dados do tenant conflitam com um cadastro existente",
+            http_status=409,
+        ) from None
     except Exception as exc:
         db.rollback()
         raise AppError(
@@ -162,6 +177,17 @@ def criar_tenant(
         ) from exc
 
     return _to_response(tenant, assinatura)
+
+
+def _is_cnpj_unique_violation(error: IntegrityError) -> bool:
+    """Detecta se o IntegrityError foi causado pela unique constraint de `tenants.cnpj`.
+
+    Postgres (psycopg2): usa o pgcode '23505' (unique_violation) + inspeção textual
+    pra distinguir de outras colisões (ex.: email/username, tratados antes do INSERT).
+    SQLite (testes): sem pgcode, cai direto pra inspeção textual da mensagem.
+    """
+    msg = str(error.orig).lower()
+    return "cnpj" in msg
 
 
 def get_tenant(db: Session, tenant_id: int) -> TenantResponse:
