@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     DB_POOL_SIZE: int = Field(5, ge=1, description="Persistent connections kept per application pool")
     DB_MAX_OVERFLOW: int = Field(10, ge=0, description="Temporary connections allowed above pool size")
     DB_POOL_TIMEOUT: int = Field(30, ge=1, description="Seconds to wait for a database connection")
+    LOG_LEVEL: str = Field("INFO", description="Root logging level (DEBUG, INFO, WARNING, ERROR)")
 
     @property
     def cors_origins_list(self) -> list[str]:

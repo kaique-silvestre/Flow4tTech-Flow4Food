@@ -1,11 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useComprovante } from "./useComprovante";
-import { formatQuantidade, parseApiDate } from "@/lib/format";
-
-const brl = (value: number | null | undefined) =>
-  value != null
-    ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
-    : null;
+import { formatCurrency, formatQuantidade, parseApiDate } from "@/lib/format";
 
 const fmtData = (iso: string | null | undefined) => {
   if (!iso) return "—";
@@ -53,7 +48,7 @@ export function ComprovantePage() {
   const descontoLabel = data.desconto_percentual != null
     ? `-${data.desconto_percentual}%`
     : data.desconto_valor != null
-    ? `-${brl(data.desconto_valor)}`
+    ? `-${formatCurrency(data.desconto_valor)}`
     : null;
 
   return (
@@ -158,7 +153,7 @@ export function ComprovantePage() {
                   <span className="text-gray-500"> (cortesia)</span>
                 )}
               </span>
-              <span className="whitespace-nowrap">{brl(item.subtotal)}</span>
+              <span className="whitespace-nowrap">{formatCurrency(item.subtotal)}</span>
             </div>
           ))}
         </div>
@@ -167,7 +162,7 @@ export function ComprovantePage() {
         <div className="mb-3 border-b pb-3 text-xs">
           <div className="flex justify-between">
             <span>Subtotal</span>
-            <span>{brl(data.subtotal)}</span>
+            <span>{formatCurrency(data.subtotal)}</span>
           </div>
           {temDesconto && descontoLabel && (
             <div className="flex justify-between text-gray-600">
@@ -177,7 +172,7 @@ export function ComprovantePage() {
           )}
           <div className="flex justify-between font-bold text-sm mt-1">
             <span>TOTAL</span>
-            <span>{brl(data.total ?? data.subtotal)}</span>
+            <span>{formatCurrency(data.total ?? data.subtotal)}</span>
           </div>
         </div>
 
@@ -188,17 +183,17 @@ export function ComprovantePage() {
               <div key={i}>
                 <div className="flex justify-between">
                   <span>{p.metodo_nome}</span>
-                  <span>{brl(p.valor)}</span>
+                  <span>{formatCurrency(p.valor)}</span>
                 </div>
                 {p.troco != null && p.troco > 0 && (
                   <>
                     <div className="flex justify-between text-gray-600 pl-2">
                       <span>Valor recebido</span>
-                      <span>{brl(p.valor_nota)}</span>
+                      <span>{formatCurrency(p.valor_nota)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600 pl-2">
                       <span>Troco</span>
-                      <span>{brl(p.troco)}</span>
+                      <span>{formatCurrency(p.troco)}</span>
                     </div>
                   </>
                 )}

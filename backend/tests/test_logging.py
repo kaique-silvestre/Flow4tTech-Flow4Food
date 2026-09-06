@@ -68,3 +68,19 @@ def test_configured_renderers_do_not_expose_sensitive_event_or_bound_context(
     assert "[REDACTED]" in rendered
     assert "login_attempt" in rendered
     assert "safe-request-id" in rendered
+
+
+@pytest.mark.parametrize(
+    "log_level, expected",
+    [("DEBUG", logging.DEBUG), ("WARNING", logging.WARNING), ("info", logging.INFO)],
+)
+def test_configure_logging_applies_log_level_argument(log_level: str, expected: int) -> None:
+    configure_logging("dev", log_level=log_level)
+
+    assert logging.root.level == expected
+
+
+def test_configure_logging_defaults_to_info_level() -> None:
+    configure_logging("dev")
+
+    assert logging.root.level == logging.INFO

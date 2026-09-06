@@ -76,13 +76,24 @@ def redact_sensitive_data(
     return _redact_sensitive_values(event_dict)
 
 
-def configure_logging(env: str = "dev") -> None:
-    """Configure structlog with JSON output and request_id context vars."""
+def configure_logging(env: str = "dev", log_level: str = "INFO") -> None:
+    """Configure structlog with JSON output and request_id context vars.
+
+    ``log_level`` is read from the ``LOG_LEVEL`` env var by callers (see
+    ``core/config.Settings.LOG_LEVEL``) so verbosity can be raised in staging/
+    prod without a code change. Falls back to INFO for unknown values.
+    """
+    level = getattr(logging, log_level.upper(), logging.INFO)
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,
-        level=logging.INFO,
+        level=level,
     )
+    # basicConfig() is a no-op for the stream/format setup once a handler is
+    # already attached to the root logger (e.g. the first call in a process,
+    # or a test harness that pre-installs its own handler) — but the level
+    # must still take effect on every call, so set it explicitly.
+    logging.root.setLevel(level)
 
     processors: list[Any] = [
         structlog.contextvars.merge_contextvars,

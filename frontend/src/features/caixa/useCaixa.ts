@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/toast";
-import { api, type ApiErrorBody } from "@/lib/api";
+import { api } from "@/lib/api";
+import { getApiErrorCode, getApiErrorMessage, getApiErrorStatus } from "@/lib/apiError";
 
 export interface CaixaMovimento {
   id: number;
@@ -36,8 +37,7 @@ export function useSessaoAberta() {
         const r = await api.get<CaixaSessao>("/api/caixa/sessao");
         return r.data;
       } catch (err: unknown) {
-        const status = (err as { response?: { status?: number } })?.response?.status;
-        if (status === 404) return null;
+        if (getApiErrorStatus(err) === 404) return null;
         throw err;
       }
     },
@@ -55,12 +55,10 @@ export function useAbrirCaixa() {
       toast.success("Caixa aberto");
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: ApiErrorBody } };
-      const code = axiosErr?.response?.data?.error?.code;
-      if (code === "SESSAO_JA_ABERTA") {
+      if (getApiErrorCode(err) === "SESSAO_JA_ABERTA") {
         toast.error("Já existe uma sessão de caixa aberta");
       } else {
-        toast.error(axiosErr?.response?.data?.error?.message ?? "Erro ao abrir caixa");
+        toast.error(getApiErrorMessage(err, "Erro ao abrir caixa"));
       }
     },
   });
@@ -74,10 +72,7 @@ export function useFecharCaixa() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["caixa"] });
     },
-    onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.message;
-      toast.error(msg ?? "Erro ao fechar caixa");
-    },
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, "Erro ao fechar caixa")),
   });
 }
 
@@ -91,9 +86,6 @@ export function useRegistrarMovimento() {
       const label = vars.tipo === "sangria" ? "Sangria" : "Suprimento";
       toast.success(`${label} registrado`);
     },
-    onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.message;
-      toast.error(msg ?? "Erro ao registrar movimento");
-    },
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, "Erro ao registrar movimento")),
   });
 }

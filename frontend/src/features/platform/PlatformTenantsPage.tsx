@@ -1,23 +1,15 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useTenants, useUpdateAssinatura, useCreateTenant, type TenantListItem } from "./usePlatformApi";
+import {
+  SUBSCRIPTION_STATUS_OPTIONS,
+  SUBSCRIPTION_STATUS_LABELS as STATUS_LABELS,
+  SUBSCRIPTION_STATUS_COLORS as STATUS_COLORS,
+} from "./subscriptionStatus";
 
-const STATUS_OPTIONS = ["", "trial", "ativa", "suspensa", "cancelada"] as const;
-
-const STATUS_LABELS: Record<string, string> = {
-  trial: "Trial",
-  ativa: "Ativa",
-  suspensa: "Suspensa",
-  cancelada: "Cancelada",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  trial: "bg-yellow-100 text-yellow-800",
-  ativa: "bg-green-100 text-green-800",
-  suspensa: "bg-red-100 text-red-800",
-  cancelada: "bg-gray-100 text-gray-600",
-};
+const STATUS_OPTIONS = ["", ...SUBSCRIPTION_STATUS_OPTIONS] as const;
 
 function CreateTenantModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [nomeFantasia, setNomeFantasia] = useState("");
@@ -153,21 +145,84 @@ function CreateTenantModal({ open, onClose }: { open: boolean; onClose: () => vo
   );
 }
 
+type PendingStatusChange = { tenant: TenantListItem; newStatus: "ativa" | "suspensa" };
+
+const TenantRow = memo(function TenantRow({
+  tenant,
+  onOpen,
+  onRequestStatusChange,
+}: {
+  tenant: TenantListItem;
+  onOpen: (id: number) => void;
+  onRequestStatusChange: (change: PendingStatusChange) => void;
+}) {
+  return (
+    <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => onOpen(tenant.id)}>
+      <td className="px-4 py-3 font-medium text-gray-900">{tenant.nome_fantasia}</td>
+      <td className="px-4 py-3 text-gray-500">{tenant.cnpj ?? "—"}</td>
+      <td className="px-4 py-3 text-gray-500">
+        {tenant.qtd_usuarios ?? 0}/{tenant.max_users}
+      </td>
+      <td className="px-4 py-3">
+        {tenant.status_assinatura ? (
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[tenant.status_assinatura] ?? ""}`}>
+            {STATUS_LABELS[tenant.status_assinatura] ?? tenant.status_assinatura}
+          </span>
+        ) : (
+          <span className="text-gray-400">—</span>
+        )}
+      </td>
+      <td className="px-4 py-3 text-gray-500">
+        {tenant.data_vencimento ? new Date(tenant.data_vencimento).toLocaleDateString("pt-BR") : "—"}
+      </td>
+      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+        <div className="flex gap-2">
+          {tenant.status_assinatura !== "ativa" && (
+            <button
+              onClick={() => onRequestStatusChange({ tenant, newStatus: "ativa" })}
+              className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
+            >
+              Ativar
+            </button>
+          )}
+          {tenant.status_assinatura !== "suspensa" && (
+            <button
+              onClick={() => onRequestStatusChange({ tenant, newStatus: "suspensa" })}
+              className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+            >
+              Suspender
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+});
+
 export function PlatformTenantsPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<PendingStatusChange | null>(null);
   const { data, isLoading } = useTenants(statusFilter || undefined, page);
   const tenants = data?.items ?? [];
   const updateAssinatura = useUpdateAssinatura();
   const navigate = useNavigate();
 
-  function handleStatusChange(tenant: TenantListItem, newStatus: string) {
+  function confirmStatusChange() {
+    if (!pendingStatusChange) return;
+    const { tenant, newStatus } = pendingStatusChange;
     updateAssinatura.mutate(
       { tenantId: tenant.id, status: newStatus },
       {
-        onSuccess: () => toast.success(`Assinatura de ${tenant.nome_fantasia} atualizada`),
-        onError: () => toast.error("Erro ao atualizar assinatura"),
+        onSuccess: () => {
+          toast.success(`Assinatura de ${tenant.nome_fantasia} atualizada`);
+          setPendingStatusChange(null);
+        },
+        onError: () => {
+          toast.error("Erro ao atualizar assinatura");
+          setPendingStatusChange(null);
+        },
       }
     );
   }
@@ -213,51 +268,12 @@ export function PlatformTenantsPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {tenants.map((t) => (
-                <tr
+                <TenantRow
                   key={t.id}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => void navigate(`/platform/tenants/${t.id}`)}
-                >
-                  <td className="px-4 py-3 font-medium text-gray-900">{t.nome_fantasia}</td>
-                  <td className="px-4 py-3 text-gray-500">{t.cnpj ?? "—"}</td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {t.qtd_usuarios ?? 0}/{t.max_users}
-                  </td>
-                  <td className="px-4 py-3">
-                    {t.status_assinatura ? (
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[t.status_assinatura] ?? ""}`}>
-                        {STATUS_LABELS[t.status_assinatura] ?? t.status_assinatura}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {t.data_vencimento
-                      ? new Date(t.data_vencimento).toLocaleDateString("pt-BR")
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex gap-2">
-                      {t.status_assinatura !== "ativa" && (
-                        <button
-                          onClick={() => handleStatusChange(t, "ativa")}
-                          className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
-                        >
-                          Ativar
-                        </button>
-                      )}
-                      {t.status_assinatura !== "suspensa" && (
-                        <button
-                          onClick={() => handleStatusChange(t, "suspensa")}
-                          className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
-                        >
-                          Suspender
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                  tenant={t}
+                  onOpen={(id) => void navigate(`/platform/tenants/${id}`)}
+                  onRequestStatusChange={setPendingStatusChange}
+                />
               ))}
               {tenants.length === 0 && (
                 <tr>
@@ -294,6 +310,24 @@ export function PlatformTenantsPage() {
       )}
 
       <CreateTenantModal open={modalOpen} onClose={() => setModalOpen(false)} />
+
+      <ConfirmDialog
+        open={pendingStatusChange !== null}
+        title={
+          pendingStatusChange?.newStatus === "suspensa"
+            ? `Suspender assinatura de ${pendingStatusChange.tenant.nome_fantasia}?`
+            : `Reativar assinatura de ${pendingStatusChange?.tenant.nome_fantasia}?`
+        }
+        description={
+          pendingStatusChange?.newStatus === "suspensa"
+            ? "Os usuários dessa empresa perderão acesso ao sistema imediatamente."
+            : "Os usuários dessa empresa voltarão a ter acesso ao sistema."
+        }
+        confirmLabel={pendingStatusChange?.newStatus === "suspensa" ? "Suspender" : "Ativar"}
+        isPending={updateAssinatura.isPending}
+        onConfirm={confirmStatusChange}
+        onCancel={() => setPendingStatusChange(null)}
+      />
     </div>
   );
 }

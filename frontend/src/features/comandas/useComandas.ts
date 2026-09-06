@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/lib/toast";
-import { api, type ApiErrorBody } from "@/lib/api";
+import { api } from "@/lib/api";
+import { getApiErrorMessage, getApiErrorStatus } from "@/lib/apiError";
 import type { ProdutoResponse } from "@/features/cadastros/produtos/useProdutos";
 import type { CancelarItemValues, LancarItemValues, NovaComandaValues } from "./comandaSchemas";
 
@@ -53,13 +54,11 @@ export interface ComandaResponse {
 }
 
 export function handle409(err: unknown, comanda_id: number | string, qc: ReturnType<typeof useQueryClient>) {
-  const axiosErr = err as { response?: { status?: number; data?: ApiErrorBody } };
-  if (axiosErr?.response?.status === 409) {
+  if (getApiErrorStatus(err) === 409) {
     toast.error("Comanda alterada por outro usuário, recarregue");
     qc.invalidateQueries({ queryKey: ["comandas", comanda_id] });
   } else {
-    const msg = axiosErr?.response?.data?.error?.message;
-    toast.error(msg ?? "Erro ao processar operação");
+    toast.error(getApiErrorMessage(err, "Erro ao processar operação"));
   }
 }
 
@@ -98,10 +97,7 @@ export function useAbrirComanda() {
       qc.invalidateQueries({ queryKey: ["comandas"] });
       navigate(`/vendas/comandas/${data.id}`);
     },
-    onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.message;
-      toast.error(msg ?? "Erro ao abrir comanda");
-    },
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, "Erro ao abrir comanda")),
   });
 }
 
@@ -246,10 +242,7 @@ export function useCancelarComanda(comanda_id: number | string, version: number)
       navigate("/vendas/comandas");
       toast.success("Comanda cancelada.");
     },
-    onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: ApiErrorBody } })?.response?.data?.error?.message;
-      toast.error(msg ?? "Erro ao cancelar comanda");
-    },
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, "Erro ao cancelar comanda")),
   });
 }
 

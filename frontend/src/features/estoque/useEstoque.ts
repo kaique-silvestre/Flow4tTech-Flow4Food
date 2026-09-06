@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/toast";
 import { api } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/apiError";
 import type { BaixaSemVendaFormValues } from "./estoqueSchemas";
 
 export interface SaldoItemResponse {
@@ -168,9 +169,6 @@ export function useBaixaSemVenda() {
         toast.success("Baixa registrada.");
       }
     },
-    onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
-      toast.error(msg ?? "Erro ao registrar baixa.");
-    },
+    onError: (err: unknown) => toast.error(getApiErrorMessage(err, "Erro ao registrar baixa.")),
   });
 }

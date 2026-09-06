@@ -6,7 +6,8 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
-export function formatCurrency(value: number | string): string {
+export function formatCurrency(value: number | string | null | undefined): string {
+  if (value == null) return "—";
   return currencyFormatter.format(Number(value));
 }
 

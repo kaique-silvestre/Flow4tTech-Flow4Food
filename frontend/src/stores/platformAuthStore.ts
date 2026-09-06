@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { decodeJwtPayload } from "@/lib/jwt";
 
 export interface PlatformUser {
   admin_id: number;
@@ -9,15 +10,9 @@ export interface PlatformUser {
 }
 
 function parsePlatformJwt(token: string): PlatformUser | null {
-  try {
-    const base64 = token.split(".")[1];
-    const json = atob(base64.replace(/-/g, "+").replace(/_/g, "/"));
-    const payload = JSON.parse(json) as PlatformUser;
-    if (!payload.platform_admin) return null;
-    return payload;
-  } catch {
-    return null;
-  }
+  const payload = decodeJwtPayload<PlatformUser>(token);
+  if (!payload || !payload.platform_admin) return null;
+  return payload;
 }
 
 interface PlatformAuthState {

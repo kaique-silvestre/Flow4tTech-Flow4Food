@@ -5,7 +5,12 @@ export const aplicarDescontoSchema = z
     tipo: z.enum(["percentual", "valor"]),
     valor: z.coerce.number().positive("Valor deve ser positivo"),
   })
-  .refine((d) => d.valor > 0, { message: "Informe um valor de desconto", path: ["valor"] });
+  .refine((d) => d.valor > 0, { message: "Informe um valor de desconto", path: ["valor"] })
+  // Espelha o limite do backend (AplicarDescontoRequest.desconto_percentual: Field(ge=0, le=100)).
+  .refine((d) => d.tipo !== "percentual" || d.valor <= 100, {
+    message: "Desconto percentual não pode passar de 100%",
+    path: ["valor"],
+  });
 
 export type AplicarDescontoValues = z.infer<typeof aplicarDescontoSchema>;
 

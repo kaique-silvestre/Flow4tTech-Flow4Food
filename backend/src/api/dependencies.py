@@ -1,5 +1,4 @@
 from collections.abc import AsyncGenerator
-from datetime import timezone
 from typing import Annotated, Optional
 
 import jwt
@@ -20,6 +19,7 @@ from src.core.database import (  # noqa: F401
 from src.models.assinaturas import Assinatura
 from src.models.platform_settings import PlatformSettings
 from src.repositories import platform_admins_repository, revoked_tokens_repository
+from src.services import billing_service
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -53,7 +53,6 @@ def check_subscription(
     payload: dict = Depends(get_current_user),
 ) -> dict:
     """Block access for tenants with suspended/cancelled/expired subscriptions."""
-    from datetime import datetime
     tenant_id = payload.get("tenant_id")
     if not tenant_id:
         return payload
@@ -62,19 +61,17 @@ def check_subscription(
     ).scalar_one_or_none()
     if assinatura is None:
         return payload
-    now = datetime.now(timezone.utc)
-    dv = assinatura.data_vencimento
-    if dv is not None and dv.tzinfo is None:
-        dv = dv.replace(tzinfo=timezone.utc)
-    trial_expired = assinatura.status == "trial" and dv is not None and dv < now
-    if assinatura.status in {"suspensa", "cancelada"} or trial_expired:
+    block = billing_service.evaluate_subscription_block(
+        assinatura.status, assinatura.data_vencimento
+    )
+    if block is not None:
         setting = db.execute(
             select(PlatformSettings).where(PlatformSettings.key == "contact_email")
         ).scalar_one_or_none()
         contact = setting.value if setting else "contato@flow4tech.com.br"
         raise HTTPException(
             status_code=402,
-            detail={"code": "SUBSCRIPTION_BLOCKED", "status": assinatura.status, "contact": contact},
+            detail={"code": "SUBSCRIPTION_BLOCKED", "status": block["status"], "contact": contact},
         )
     return payload
 

@@ -1,13 +1,11 @@
-import axios from "axios";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type ApiErrorBody } from "@/lib/api";
+import { api } from "@/lib/api";
+import { getApiErrorMessage, getApiErrorStatus } from "@/lib/apiError";
 import { toast } from "@/lib/toast";
 
 function conflictMsg(err: unknown, fallback: string): string {
-  if (axios.isAxiosError(err) && err.response?.status === 409) {
-    return (err.response.data as ApiErrorBody)?.error?.message ?? "Já existe um insumo com este nome";
-  }
-  return fallback;
+  const conflictFallback = getApiErrorStatus(err) === 409 ? "Já existe um insumo com este nome" : fallback;
+  return getApiErrorMessage(err, conflictFallback);
 }
 
 export interface InsumoResponse {

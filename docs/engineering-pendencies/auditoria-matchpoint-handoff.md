@@ -101,7 +101,22 @@ Itens do "core/database" da seção 4.2 ainda não verificados/resolvidos (não 
 
 Restam inteiramente intocados: **frontend operacional** (8 itens) e **frontend platform resto** (8 itens) — seção 4.2, ondas 11/12 da seção 5.
 
-Próxima prioridade: Onda 11 — frontend operacional (JWT em localStorage, cache TanStack, Zod, formatCurrency, clock tick) + frontend platform resto (JWT decode dup, ConfirmDialog, React.memo) + os 5 itens residuais de core/database listados acima.
+### Onda 11 concluída em 2026-09-06 (2 subagentes `implementer` em paralelo)
+
+- **frontend operacional** (6/7, 1 mitigado sem migrar): cache TanStack limpo em login/logout, Zod 0-100 em desconto, erro de API padronizado (`getApiErrorMessage`/`Code`/`Status`), taxa de serviço extraída, `formatCurrency` deduplicado, `ElapsedTime` memoizado isolando o tick de 1s. **JWT em `localStorage` não migrado** — decisão documentada: exigiria mudança coordenada no backend (cookie httpOnly), fora de escopo de ticket frontend-only; mitigado via cache clear.
+- **frontend platform resto** (8/8): decode JWT consolidado (`lib/jwt.ts`), constantes de status de assinatura centralizadas, hook `useUpdateTenantWithAssinatura`, `RequireAuth`/`RequirePlatformAuth` deduplicados via `authGuard.ts`, `baseURL` do axios em uso, `authHeaders()` migrado pra interceptor, `ConfirmDialog` em suspender/reativar, `React.memo` em linhas de tenants/cockpit.
+- **resíduo core/database** (2/5 corrigidos, 3 já resolvidos): `check_subscription` extraído pra `billing_service.evaluate_subscription_block`; `LOG_LEVEL` configurável via env var. `contextlib.suppress`/`increment_version`/triplicação de SET ROLE já não existiam mais — verificados no código atual, não eram mais gaps reais.
+- Validação pós-merge (orquestrador): backend `431 passed, 4 skipped, 0 failed`, mypy 2 erros pré-existentes inalterados; frontend `type-check`/`lint`/`build` limpos, `vitest run` 50/50.
+
+**Seção 4.2 (MÉDIO/BAIXO): frontend operacional, frontend platform e core/database residual zerados**, exceto a decisão documentada de não migrar JWT storage (risco/escopo, não uma omissão).
+
+## 6. Estado final (2026-09-06)
+
+Todo o backlog rastreável de CRÍTICO até BAIXO da auditoria original (seção 1) está fechado, salvo:
+- Decisões humanas pendentes da seção 2 (itens 1-4 — RLS bypass de `admin.py`, Redis pro rate limiter, proxy headers, scheduler sem `_tenant_ctx`) — aguardando decisão de produto/infra, não são bugs esquecidos.
+- JWT em `localStorage` (onda 11) — decisão documentada, não implementada por exigir mudança de backend coordenada.
+
+Se uma nova auditoria ou achado surgir, trate como um item novo, não como reabertura deste documento — este handoff cumpriu seu papel de continuidade entre as ondas 6-11.
 
 ## 3. Como o trabalho foi organizado (pra você replicar)
 

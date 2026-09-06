@@ -1,22 +1,29 @@
+import { useState } from "react";
 import axios from "axios";
 import type { AxiosError, InternalAxiosRequestConfig } from "axios";
 import * as Sentry from "@sentry/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePlatformAuthStore } from "@/stores/platformAuthStore";
+import { decodeJwtPayload } from "@/lib/jwt";
 
 const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export const platformApi = axios.create({ baseURL: BASE, withCredentials: true });
 
-function isPlatformAdminToken(token: string): boolean {
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))) as {
-      platform_admin?: boolean;
-    };
-    return payload.platform_admin === true;
-  } catch {
-    return false;
+// Attaches the platform-admin bearer token to every request made through
+// this client, so call sites no longer need to pass `headers: authHeaders()`
+// individually (that pattern used to be repeated on ~20 calls below).
+platformApi.interceptors.request.use((config) => {
+  const token = usePlatformAuthStore.getState().token;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
+  return config;
+});
+
+function isPlatformAdminToken(token: string): boolean {
+  const payload = decodeJwtPayload<{ platform_admin?: boolean }>(token);
+  return payload?.platform_admin === true;
 }
 
 let refreshingPlatformToken = false;
@@ -67,11 +74,6 @@ platformApi.interceptors.response.use(
     return Promise.reject(err);
   }
 );
-
-function authHeaders() {
-  const token = usePlatformAuthStore.getState().token;
-  return { Authorization: `Bearer ${token}` };
-}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -187,8 +189,7 @@ export function useTenants(statusFilter?: string, page = 1, pageSize = 50) {
     queryKey: ["platform-tenants", statusFilter, page, pageSize],
     queryFn: async () => {
       const params = { ...(statusFilter ? { status: statusFilter } : {}), page, page_size: pageSize };
-      const { data } = await platformApi.get(`${BASE}/api/platform/tenants`, {
-        headers: authHeaders(),
+      const { data } = await platformApi.get(`/api/platform/tenants`, {
         params,
       });
       return data as PageResponse<TenantListItem>;
@@ -200,9 +201,7 @@ export function useTenantDetail(tenantId: number | null) {
   return useQuery<TenantDetail>({
     queryKey: ["platform-tenant-detail", tenantId],
     queryFn: async () => {
-      const { data } = await platformApi.get(`${BASE}/api/platform/tenants/${tenantId}`, {
-        headers: authHeaders(),
-      });
+      const { data } = await platformApi.get(`/api/platform/tenants/${tenantId}`);
       return data;
     },
     enabled: tenantId !== null,
@@ -224,9 +223,7 @@ export function useCreateTenant() {
       admin_email: string;
       admin_password: string;
     }) => {
-      const { data } = await platformApi.post(`${BASE}/api/platform/tenants`, body, {
-        headers: authHeaders(),
-      });
+      const { data } = await platformApi.post(`/api/platform/tenants`, body);
       return data as TenantListItem;
     },
     onSuccess: () => {
@@ -249,9 +246,7 @@ export function useUpdateTenant() {
       telefone?: string;
       max_users?: number;
     }) => {
-      const { data } = await platformApi.patch(`${BASE}/api/platform/tenants/${tenantId}`, body, {
-        headers: authHeaders(),
-      });
+      const { data } = await platformApi.patch(`/api/platform/tenants/${tenantId}`, body);
       return data as TenantDetail;
     },
     onSuccess: (_data, vars) => {
@@ -268,9 +263,8 @@ export function useUpdateAssinatura() {
   return useMutation({
     mutationFn: async ({ tenantId, status }: { tenantId: number; status: string }) => {
       const { data } = await platformApi.patch(
-        `${BASE}/api/platform/tenants/${tenantId}/assinatura`,
-        { status },
-        { headers: authHeaders() }
+        `/api/platform/tenants/${tenantId}/assinatura`,
+        { status }
       );
       return data;
     },
@@ -293,9 +287,8 @@ export function useUpdateAssinaturaFull() {
       data_vencimento?: string | null;
     }) => {
       const { data } = await platformApi.patch(
-        `${BASE}/api/platform/tenants/${tenantId}/assinatura/full`,
-        { status, data_vencimento: data_vencimento ?? null },
-        { headers: authHeaders() }
+        `/api/platform/tenants/${tenantId}/assinatura/full`,
+        { status, data_vencimento: data_vencimento ?? null }
       );
       return data;
     },
@@ -307,13 +300,66 @@ export function useUpdateAssinaturaFull() {
   });
 }
 
+/** Saves tenant data and, only when the subscription actually changed
+ * (status differs from `currentStatus`, or a new `data_vencimento` was
+ * given), also patches the subscription. Used by the tenant detail "Dados &
+ * Assinatura" tab, which edits both in a single form/save action. */
+export function useUpdateTenantWithAssinatura() {
+  const updateTenant = useUpdateTenant();
+  const updateAssinatura = useUpdateAssinaturaFull();
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  function mutate(
+    args: {
+      tenantId: number;
+      nome_fantasia?: string;
+      cnpj?: string;
+      endereco?: string;
+      telefone?: string;
+      max_users?: number;
+      currentStatus?: string | null;
+      status: string;
+      data_vencimento?: string | null;
+    },
+    options?: { onSuccess?: () => void; onError?: () => void }
+  ) {
+    setIsSuccess(false);
+    const { tenantId, currentStatus, status, data_vencimento, ...tenantBody } = args;
+    const finish = () => {
+      setIsSuccess(true);
+      options?.onSuccess?.();
+    };
+    updateTenant.mutate(
+      { tenantId, ...tenantBody },
+      {
+        onSuccess: () => {
+          if (status !== (currentStatus ?? "") || data_vencimento) {
+            updateAssinatura.mutate(
+              { tenantId, status, data_vencimento: data_vencimento || null },
+              { onSuccess: finish, onError: options?.onError }
+            );
+          } else {
+            finish();
+          }
+        },
+        onError: options?.onError,
+      }
+    );
+  }
+
+  return {
+    mutate,
+    isPending: updateTenant.isPending || updateAssinatura.isPending,
+    isSuccess,
+  };
+}
+
 export function useAssinaturaHistory(tenantId: number | null) {
   return useQuery<AssinaturaHistoryItem[]>({
     queryKey: ["platform-assinatura-history", tenantId],
     queryFn: async () => {
       const { data } = await platformApi.get(
-        `${BASE}/api/platform/tenants/${tenantId}/assinatura/historico`,
-        { headers: authHeaders() }
+        `/api/platform/tenants/${tenantId}/assinatura/historico`
       );
       return data;
     },
@@ -327,9 +373,7 @@ export function useTenantUsers(tenantId: number | null) {
   return useQuery<TenantUserItem[]>({
     queryKey: ["platform-tenant-users", tenantId],
     queryFn: async () => {
-      const { data } = await platformApi.get(`${BASE}/api/platform/tenants/${tenantId}/users`, {
-        headers: authHeaders(),
-      });
+      const { data } = await platformApi.get(`/api/platform/tenants/${tenantId}/users`);
       return data;
     },
     enabled: tenantId !== null,
@@ -352,9 +396,8 @@ export function useCreateTenantUser() {
       is_active?: boolean;
     }) => {
       const { data } = await platformApi.post(
-        `${BASE}/api/platform/tenants/${tenantId}/users`,
-        body,
-        { headers: authHeaders() }
+        `/api/platform/tenants/${tenantId}/users`,
+        body
       );
       return data as TenantUserItem;
     },
@@ -383,9 +426,8 @@ export function useUpdateTenantUser() {
       is_active?: boolean;
     }) => {
       const { data } = await platformApi.patch(
-        `${BASE}/api/platform/tenants/${tenantId}/users/${userId}`,
-        body,
-        { headers: authHeaders() }
+        `/api/platform/tenants/${tenantId}/users/${userId}`,
+        body
       );
       return data as TenantUserItem;
     },
@@ -400,9 +442,8 @@ export function useImpersonateUser() {
   return useMutation({
     mutationFn: async ({ tenantId, userId }: { tenantId: number; userId: number }) => {
       const { data } = await platformApi.post(
-        `${BASE}/api/platform/tenants/${tenantId}/users/${userId}/impersonate`,
-        {},
-        { headers: authHeaders() }
+        `/api/platform/tenants/${tenantId}/users/${userId}/impersonate`,
+        {}
       );
       return data as { access_token: string };
     },
@@ -416,8 +457,7 @@ export function useTenantProfiles(tenantId: number | null) {
     queryKey: ["platform-tenant-profiles", tenantId],
     queryFn: async () => {
       const { data } = await platformApi.get(
-        `${BASE}/api/platform/tenants/${tenantId}/profiles`,
-        { headers: authHeaders() }
+        `/api/platform/tenants/${tenantId}/profiles`
       );
       return data;
     },
@@ -440,9 +480,8 @@ export function useUpdateTenantProfile() {
       is_active?: boolean;
     }) => {
       const { data } = await platformApi.patch(
-        `${BASE}/api/platform/tenants/${tenantId}/profiles/${profileId}`,
-        { permissions, is_active },
-        { headers: authHeaders() }
+        `/api/platform/tenants/${tenantId}/profiles/${profileId}`,
+        { permissions, is_active }
       );
       return data as ProfileItem;
     },
@@ -459,8 +498,7 @@ export function useTenantFeatures(tenantId: number | null) {
     queryKey: ["platform-tenant-features", tenantId],
     queryFn: async () => {
       const { data } = await platformApi.get(
-        `${BASE}/api/platform/tenants/${tenantId}/features`,
-        { headers: authHeaders() }
+        `/api/platform/tenants/${tenantId}/features`
       );
       return data;
     },
@@ -479,9 +517,8 @@ export function useUpsertTenantFeatures() {
       features: Record<string, boolean>;
     }) => {
       const { data } = await platformApi.put(
-        `${BASE}/api/platform/tenants/${tenantId}/features`,
-        { features },
-        { headers: authHeaders() }
+        `/api/platform/tenants/${tenantId}/features`,
+        { features }
       );
       return data as FeatureItem[];
     },
@@ -497,9 +534,7 @@ export function usePlatformSettings() {
   return useQuery<PlatformSettingItem[]>({
     queryKey: ["platform-settings"],
     queryFn: async () => {
-      const { data } = await platformApi.get(`${BASE}/api/platform/settings`, {
-        headers: authHeaders(),
-      });
+      const { data } = await platformApi.get(`/api/platform/settings`);
       return data;
     },
   });
@@ -510,9 +545,8 @@ export function useUpdateSetting() {
   return useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
       const { data } = await platformApi.patch(
-        `${BASE}/api/platform/settings/${key}`,
-        { value },
-        { headers: authHeaders() }
+        `/api/platform/settings/${key}`,
+        { value }
       );
       return data as PlatformSettingItem;
     },
@@ -529,8 +563,7 @@ export function usePlatformCockpit(statusFilter?: string, page = 1, pageSize = 5
     queryKey: ["platform-cockpit", statusFilter, page, pageSize],
     queryFn: async () => {
       const params = { ...(statusFilter ? { status: statusFilter } : {}), page, page_size: pageSize };
-      const { data } = await platformApi.get(`${BASE}/api/platform/cockpit`, {
-        headers: authHeaders(),
+      const { data } = await platformApi.get(`/api/platform/cockpit`, {
         params,
       });
       return data as PageResponse<CockpitMetricsItem>;
@@ -543,8 +576,7 @@ export function useTenantCockpit(tenantId: number | null) {
     queryKey: ["platform-tenant-cockpit", tenantId],
     queryFn: async () => {
       const { data } = await platformApi.get(
-        `${BASE}/api/platform/tenants/${tenantId}/cockpit`,
-        { headers: authHeaders() }
+        `/api/platform/tenants/${tenantId}/cockpit`
       );
       return data;
     },
@@ -558,9 +590,7 @@ export function usePlatformAnnouncements() {
   return useQuery<AnnouncementItem[]>({
     queryKey: ["platform-announcements"],
     queryFn: async () => {
-      const { data } = await platformApi.get(`${BASE}/api/platform/announcements`, {
-        headers: authHeaders(),
-      });
+      const { data } = await platformApi.get(`/api/platform/announcements`);
       return data;
     },
   });
@@ -570,9 +600,7 @@ export function useCreateAnnouncement() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: AnnouncementCreate) => {
-      const { data } = await platformApi.post(`${BASE}/api/platform/announcements`, body, {
-        headers: authHeaders(),
-      });
+      const { data } = await platformApi.post(`/api/platform/announcements`, body);
       return data as AnnouncementItem;
     },
     onSuccess: () => {
@@ -625,9 +653,7 @@ export function useAuditLogs(filters: AuditLogFilters = {}) {
       if (filters.date_to) params.set("date_to", filters.date_to);
       if (filters.page != null) params.set("page", String(filters.page));
       if (filters.page_size != null) params.set("page_size", String(filters.page_size));
-      const { data } = await platformApi.get(`${BASE}/api/platform/audit-logs?${params.toString()}`, {
-        headers: authHeaders(),
-      });
+      const { data } = await platformApi.get(`/api/platform/audit-logs?${params.toString()}`);
       return data as AuditLogListResponse;
     },
   });

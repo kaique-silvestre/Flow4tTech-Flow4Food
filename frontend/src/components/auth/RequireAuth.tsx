@@ -1,15 +1,12 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { IMPERSONATION_SESSION_KEY } from "@/lib/impersonation";
+import { resolveAuthGuard } from "./authGuard";
 
 export function RequireAuth() {
-  const { token, user, clearToken } = useAuthStore();
-  const impersonationToken = sessionStorage.getItem(IMPERSONATION_SESSION_KEY);
+  const state = useAuthStore();
+  const hasImpersonation = sessionStorage.getItem(IMPERSONATION_SESSION_KEY) !== null;
 
-  if (!token && !impersonationToken) return <Navigate to="/login" replace />;
-  if (!user && !impersonationToken) {
-    clearToken();
-    return <Navigate to="/login" replace />;
-  }
+  if (!resolveAuthGuard(state, hasImpersonation)) return <Navigate to="/login" replace />;
   return <Outlet />;
 }

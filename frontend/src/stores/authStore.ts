@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { queryClient } from "@/lib/queryClient";
+import { decodeJwtPayload } from "@/lib/jwt";
 
 export interface AuthUser {
   user_id: number;
@@ -13,15 +15,9 @@ export interface AuthUser {
 }
 
 function parseJwtPayload(token: string): AuthUser | null {
-  try {
-    const base64 = token.split(".")[1];
-    const json = atob(base64.replace(/-/g, "+").replace(/_/g, "/"));
-    const payload = JSON.parse(json) as AuthUser;
-    if (!Array.isArray(payload.permissions)) return null;
-    return payload;
-  } catch {
-    return null;
-  }
+  const payload = decodeJwtPayload<AuthUser>(token);
+  if (!payload || !Array.isArray(payload.permissions)) return null;
+  return payload;
 }
 
 interface AuthState {
@@ -36,8 +32,17 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       token: null,
       user: null,
-      setToken: (t) => set({ token: t, user: parseJwtPayload(t) }),
-      clearToken: () => set({ token: null, user: null }),
+      setToken: (t) => {
+        // A PDV compartilhado pode ter outro usuário logado antes — sem isso,
+        // o cache do TanStack Query da sessão anterior fica visível por
+        // instantes até cada query revalidar.
+        queryClient.clear();
+        set({ token: t, user: parseJwtPayload(t) });
+      },
+      clearToken: () => {
+        queryClient.clear();
+        set({ token: null, user: null });
+      },
     }),
     {
       name: "auth",

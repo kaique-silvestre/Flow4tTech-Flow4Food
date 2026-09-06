@@ -4,7 +4,7 @@ import { toast } from "@/lib/toast";
 import {
   useTenantDetail,
   useUpdateTenant,
-  useUpdateAssinaturaFull,
+  useUpdateTenantWithAssinatura,
   useAssinaturaHistory,
   useTenantUsers,
   useCreateTenantUser,
@@ -19,15 +19,11 @@ import {
 } from "./usePlatformApi";
 import { openImpersonationSession } from "@/lib/impersonation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-
-const STATUS_OPTIONS = ["trial", "ativa", "suspensa", "cancelada"] as const;
-const STATUS_LABELS: Record<string, string> = { trial: "Trial", ativa: "Ativa", suspensa: "Suspensa", cancelada: "Cancelada" };
-const STATUS_COLORS: Record<string, string> = {
-  trial: "bg-yellow-100 text-yellow-800",
-  ativa: "bg-green-100 text-green-800",
-  suspensa: "bg-red-100 text-red-800",
-  cancelada: "bg-gray-100 text-gray-600",
-};
+import {
+  SUBSCRIPTION_STATUS_OPTIONS as STATUS_OPTIONS,
+  SUBSCRIPTION_STATUS_LABELS as STATUS_LABELS,
+  SUBSCRIPTION_STATUS_COLORS as STATUS_COLORS,
+} from "./subscriptionStatus";
 
 const AVAILABLE_FEATURES = [
   "dashboard",
@@ -64,8 +60,7 @@ type Tab = "dados" | "usuarios" | "perfis" | "features";
 function DadosTab({ tenantId }: { tenantId: number }) {
   const { data: detail, isLoading } = useTenantDetail(tenantId);
   const { data: history = [] } = useAssinaturaHistory(tenantId);
-  const updateTenant = useUpdateTenant();
-  const updateAssinatura = useUpdateAssinaturaFull();
+  const updateTenantWithAssinatura = useUpdateTenantWithAssinatura();
   const [editing, setEditing] = useState(false);
   const [nomeFantasia, setNomeFantasia] = useState("");
   const [cnpj, setCnpj] = useState("");
@@ -89,20 +84,20 @@ function DadosTab({ tenantId }: { tenantId: number }) {
   }
 
   function handleSave() {
-    updateTenant.mutate(
-      { tenantId, nome_fantasia: nomeFantasia, cnpj: cnpj || undefined, endereco: endereco || undefined, telefone: telefone || undefined, max_users: maxUsers },
+    updateTenantWithAssinatura.mutate(
       {
-        onSuccess: () => {
-          if (status !== detail!.status_assinatura || dataVencimento) {
-            updateAssinatura.mutate(
-              { tenantId, status, data_vencimento: dataVencimento || null },
-              { onSuccess: () => { toast.success("Salvo"); setEditing(false); }, onError: () => toast.error("Erro ao salvar assinatura") }
-            );
-          } else {
-            toast.success("Salvo");
-            setEditing(false);
-          }
-        },
+        tenantId,
+        nome_fantasia: nomeFantasia,
+        cnpj: cnpj || undefined,
+        endereco: endereco || undefined,
+        telefone: telefone || undefined,
+        max_users: maxUsers,
+        currentStatus: detail!.status_assinatura,
+        status,
+        data_vencimento: dataVencimento,
+      },
+      {
+        onSuccess: () => { toast.success("Salvo"); setEditing(false); },
         onError: () => toast.error("Erro ao salvar"),
       }
     );
@@ -185,7 +180,7 @@ function DadosTab({ tenantId }: { tenantId: number }) {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={handleSave}
-                disabled={updateTenant.isPending || updateAssinatura.isPending}
+                disabled={updateTenantWithAssinatura.isPending}
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 Salvar

@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/lib/toast";
-import { api, type ApiErrorBody } from "@/lib/api";
+import { api } from "@/lib/api";
+import { getApiErrorCode, getApiErrorMessage, getApiErrorStatus } from "@/lib/apiError";
 import { handle409, type ComandaResponse } from "./useComandas";
 import type { AplicarDescontoValues, FecharComandaValues } from "./fechamentoSchemas";
 
@@ -59,19 +60,17 @@ export function useFecharComanda(comanda_id: number | string) {
       }
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { status?: number; data?: ApiErrorBody } };
-      if (axiosErr?.response?.status === 409) {
+      if (getApiErrorStatus(err) === 409) {
         handle409(err, comanda_id, qc);
         return;
       }
-      const code = axiosErr?.response?.data?.error?.code;
-      const msg = axiosErr?.response?.data?.error?.message;
+      const code = getApiErrorCode(err);
       if (code === "PAGAMENTO_NAO_BATE") {
         toast.error("Soma dos pagamentos não confere com o total");
       } else if (code === "PESSOAS_INSUFICIENTES") {
         toast.error("Cadastre ao menos 2 pessoas na comanda para dividir por pessoa");
       } else {
-        toast.error(msg ?? "Erro ao fechar comanda");
+        toast.error(getApiErrorMessage(err, "Erro ao fechar comanda"));
       }
     },
   });

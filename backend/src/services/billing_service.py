@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+from typing import Optional
+
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
@@ -10,6 +13,35 @@ from src.schemas.billing import (
     PlanoInfo,
 )
 from src.schemas.tenants import AssinaturaInfo
+
+_BLOCKED_STATUSES = {"suspensa", "cancelada"}
+
+
+def evaluate_subscription_block(
+    status: str, data_vencimento: Optional[datetime]
+) -> Optional[dict]:
+    """Decide whether a subscription should block access.
+
+    Pure business rule — no DB/FastAPI dependency — extracted out of
+    api/dependencies.check_subscription so the "what counts as blocked" logic
+    lives with the rest of billing. The DB fetch and HTTPException raising
+    stay in dependencies.py: check_subscription is wired into a Depends()
+    chain (get_current_user -> check_subscription -> get_tenant_db) and
+    moving the session lookup there too would mean either duplicating that
+    chain here or making this module depend on FastAPI's Depends, which
+    isn't worth it for a two-line query.
+
+    Returns a dict with the blocking status (for the 402 detail payload) or
+    None if the subscription is fine.
+    """
+    now = datetime.now(timezone.utc)
+    dv = data_vencimento
+    if dv is not None and dv.tzinfo is None:
+        dv = dv.replace(tzinfo=timezone.utc)
+    trial_expired = status == "trial" and dv is not None and dv < now
+    if status in _BLOCKED_STATUSES or trial_expired:
+        return {"status": status}
+    return None
 
 
 def listar_planos(db: Session) -> list[PlanoInfo]:

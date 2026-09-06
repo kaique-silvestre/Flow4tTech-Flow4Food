@@ -1,12 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useComanda } from "./useComandas";
 import { useEstabelecimento } from "@/features/configuracoes/useEstabelecimento";
-import { formatQuantidade, parseApiDate } from "@/lib/format";
-
-const brl = (value: number | null | undefined) =>
-  value != null
-    ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
-    : null;
+import { formatCurrency, formatQuantidade, parseApiDate } from "@/lib/format";
 
 const fmtData = (iso: string | null | undefined) => {
   if (!iso) return "—";
@@ -160,7 +155,7 @@ export function PreContaPage() {
                   {ic.pessoa_associada && <span className="text-gray-500"> [{ic.pessoa_associada}]</span>}
                   {ic.observacao && <span className="text-gray-500"> — {ic.observacao}</span>}
                 </span>
-                <span className="whitespace-nowrap">{brl(Number(ic.subtotal))}</span>
+                <span className="whitespace-nowrap">{formatCurrency(Number(ic.subtotal))}</span>
               </div>
             ))
           )}
@@ -169,11 +164,11 @@ export function PreContaPage() {
         <div className="mb-3 text-xs">
           <div className="flex justify-between">
             <span>Subtotal</span>
-            <span>{brl(Number(comanda.total_parcial))}</span>
+            <span>{formatCurrency(Number(comanda.total_parcial))}</span>
           </div>
           <div className="flex justify-between font-bold text-sm mt-1">
             <span>TOTAL PARCIAL</span>
-            <span>{brl(Number(comanda.total_parcial))}</span>
+            <span>{formatCurrency(Number(comanda.total_parcial))}</span>
           </div>
         </div>
 

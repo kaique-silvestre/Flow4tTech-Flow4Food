@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    configure_logging(settings.ENV)
+    configure_logging(settings.ENV, log_level=settings.LOG_LEVEL)
     init_sentry(settings.SENTRY_DSN_BACKEND, settings.ENV)
 
     app = FastAPI(

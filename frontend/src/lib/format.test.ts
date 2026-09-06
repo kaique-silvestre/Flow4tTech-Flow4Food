@@ -12,6 +12,11 @@ describe("formatCurrency", () => {
     expect(formatted).toMatch(/R\$/);
     expect(formatted).toMatch(/0,00/);
   });
+
+  it("returns a dash for null/undefined instead of throwing (comprovante/pré-conta share this formatter)", () => {
+    expect(formatCurrency(null)).toBe("—");
+    expect(formatCurrency(undefined)).toBe("—");
+  });
 });
 
 describe("formatDate", () => {

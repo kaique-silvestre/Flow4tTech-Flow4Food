@@ -10,7 +10,10 @@ import { formatCurrency, formatQuantidade } from "@/lib/format";
 import { useComanda } from "./useComandas";
 import { useFecharComanda, useMetodosPagamento } from "./useFechamento";
 import { fecharComandaSchema, type FecharComandaValues } from "./fechamentoSchemas";
+import { TAXA_SERVICO_PERCENTUAL } from "./constants";
 import AplicarDescontoModal from "./AplicarDescontoModal";
+
+const TAXA_SERVICO_FRACAO = TAXA_SERVICO_PERCENTUAL / 100;
 
 export default function FechamentoPage() {
   const { id } = useParams<{ id: string }>();
@@ -64,7 +67,7 @@ export default function FechamentoPage() {
     : (comanda.desconto_valor ?? 0);
   const totalComDesconto = subtotal - desconto;
   const baseTotal = comanda.saldo_pendente ?? totalComDesconto;
-  const taxa = taxaServico ? Number((baseTotal * 0.1).toFixed(2)) : 0;
+  const taxa = taxaServico ? Number((baseTotal * TAXA_SERVICO_FRACAO).toFixed(2)) : 0;
   const totalComTaxa = Number((baseTotal + taxa).toFixed(2));
   const totalPago = pagamentos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
   const bate = Math.abs(totalPago - totalComTaxa) <= 0.01;
@@ -124,7 +127,7 @@ export default function FechamentoPage() {
           )}
           {taxaServico && taxa > 0 && (
             <div className="flex justify-between text-sm text-blue-600">
-              <span>Taxa de serviço (10%)</span>
+              <span>Taxa de serviço ({TAXA_SERVICO_PERCENTUAL}%)</span>
               <span>+{formatCurrency(taxa)}</span>
             </div>
           )}
@@ -145,7 +148,7 @@ export default function FechamentoPage() {
                 onChange={(e) => {
                   field.onChange(e.target.checked);
                   const newBase = baseTotal;
-                  const newTaxa = e.target.checked ? Number((newBase * 0.1).toFixed(2)) : 0;
+                  const newTaxa = e.target.checked ? Number((newBase * TAXA_SERVICO_FRACAO).toFixed(2)) : 0;
                   setValue("pagamentos.0.valor", Number((newBase + newTaxa).toFixed(2)));
                 }}
                 className="h-4 w-4 accent-blue-600"
@@ -153,7 +156,7 @@ export default function FechamentoPage() {
             )}
           />
           <Label htmlFor="taxa_servico" className="text-sm cursor-pointer">
-            Incluir 10% taxa de serviço para o garçom
+            Incluir {TAXA_SERVICO_PERCENTUAL}% taxa de serviço para o garçom
           </Label>
         </div>
         <Button variant="outline" size="sm" onClick={() => setDescontoOpen(true)}>

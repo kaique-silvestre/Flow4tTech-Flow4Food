@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ElapsedTime } from "@/components/ElapsedTime";
 import { useGarcons } from "@/features/cadastros/garcons/useGarcons";
 import { useProdutos } from "@/features/cadastros/produtos/useProdutos";
 import { useCategorias, flattenCategorias } from "@/features/cadastros/categorias/useCategorias";
@@ -102,28 +103,6 @@ export function ComandaAbertaPage() {
 
   const reopenComanda = useReopenComanda(comanda_id, comanda?.version ?? 0);
   const cancelarComanda = useCancelarComanda(comanda_id, comanda?.version ?? 0);
-
-  const [now, setNow] = useState(() => Date.now());
-  const comandaStatus = comanda?.status;
-  useEffect(() => {
-    if (!comandaStatus || comandaStatus === "fechada") return;
-    const id = setInterval(() => setNow(Date.now()), 1_000);
-    return () => clearInterval(id);
-  }, [comandaStatus]);
-
-  function parseUtc(iso: string): number {
-    const s = iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z";
-    return new Date(s).getTime();
-  }
-
-  function formatTempo(iso: string): string {
-    const ms = now - parseUtc(iso);
-    const totalMin = Math.floor(ms / 60_000);
-    if (totalMin < 60) return `${totalMin} min`;
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    return `${h}h ${m}min`;
-  }
 
   const itemSelecionadoObj = itemSelecionado != null
     ? todosProdutos.find((i) => i.id === itemSelecionado) ?? null
@@ -422,7 +401,9 @@ export function ComandaAbertaPage() {
                     ✏
                   </button>
                 )}
-                <span>· Aberta há {formatTempo(comanda.created_at)}</span>
+                <span>
+                  · Aberta há <ElapsedTime since={comanda.created_at} />
+                </span>
               </div>
             </div>
           </div>

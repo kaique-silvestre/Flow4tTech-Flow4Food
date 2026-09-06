@@ -1,21 +1,12 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { usePlatformCockpit, type CockpitMetricsItem } from "./usePlatformApi";
+import {
+  SUBSCRIPTION_STATUS_OPTIONS,
+  SUBSCRIPTION_STATUS_LABELS as STATUS_LABELS,
+  SUBSCRIPTION_STATUS_COLORS as STATUS_COLORS,
+} from "./subscriptionStatus";
 
-const STATUS_OPTIONS = ["", "trial", "ativa", "suspensa", "cancelada"] as const;
-
-const STATUS_LABELS: Record<string, string> = {
-  trial: "Trial",
-  ativa: "Ativa",
-  suspensa: "Suspensa",
-  cancelada: "Cancelada",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  trial: "bg-yellow-100 text-yellow-800",
-  ativa: "bg-green-100 text-green-800",
-  suspensa: "bg-red-100 text-red-800",
-  cancelada: "bg-gray-100 text-gray-600",
-};
+const STATUS_OPTIONS = ["", ...SUBSCRIPTION_STATUS_OPTIONS] as const;
 
 type SortKey = keyof Pick<
   CockpitMetricsItem,
@@ -47,6 +38,32 @@ function renderCell(key: SortKey, row: CockpitMetricsItem) {
   if (key === "faturamento_mes") return fmtBRL(row[key]);
   return fmtNum(row[key]);
 }
+
+const CockpitRow = memo(function CockpitRow({ row }: { row: CockpitMetricsItem }) {
+  return (
+    <tr className="hover:bg-gray-50">
+      <td className="px-4 py-3">
+        <div className="font-medium text-gray-900">{row.nome_fantasia}</div>
+        <div className="text-xs text-gray-400">{row.cnpj ?? "—"}</div>
+      </td>
+      <td className="px-4 py-3">
+        {row.status_assinatura ? (
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[row.status_assinatura] ?? ""}`}>
+            {STATUS_LABELS[row.status_assinatura] ?? row.status_assinatura}
+          </span>
+        ) : (
+          <span className="text-gray-400">—</span>
+        )}
+      </td>
+      <td className="px-4 py-3 text-gray-500">{fmtDate(row.ultimo_login)}</td>
+      {COLUMNS.map(({ key }) => (
+        <td key={key} className="px-4 py-3 text-gray-700">
+          {renderCell(key, row)}
+        </td>
+      ))}
+    </tr>
+  );
+});
 
 export function PlatformCockpitPage() {
   const [statusFilter, setStatusFilter] = useState("");
@@ -92,29 +109,7 @@ export function PlatformCockpitPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {rows.map((t) => (
-                <tr key={t.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{t.nome_fantasia}</div>
-                    <div className="text-xs text-gray-400">{t.cnpj ?? "—"}</div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {t.status_assinatura ? (
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[t.status_assinatura] ?? ""}`}
-                      >
-                        {STATUS_LABELS[t.status_assinatura] ?? t.status_assinatura}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">{fmtDate(t.ultimo_login)}</td>
-                  {COLUMNS.map(({ key }) => (
-                    <td key={key} className="px-4 py-3 text-gray-700">
-                      {renderCell(key, t)}
-                    </td>
-                  ))}
-                </tr>
+                <CockpitRow key={t.id} row={t} />
               ))}
               {rows.length === 0 && (
                 <tr>
