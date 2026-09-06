@@ -365,3 +365,131 @@ def test_cancelar_comanda_gera_log_de_auditoria(c):
         assert len(logs) == 1
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# ErrorCode correto para item já cancelado (conflito de estado, não NOT_FOUND)
+# ---------------------------------------------------------------------------
+
+
+def test_cancelar_item_ja_cancelado_retorna_conflict_nao_not_found(c):
+    garcom = _criar_garcom(c)
+    item = _criar_item(c, preco="10.00")
+    comanda = _abrir_comanda(c, garcom["id"])
+    cid = comanda["id"]
+
+    r = _lancar_item(c, cid, item["id"], comanda["version"])
+    item_comanda_id = r["itens_ativos"][0]["id"]
+
+    resp1 = c.post(
+        f"/api/comandas/{cid}/itens/{item_comanda_id}/cancelar",
+        json={"motivo": "erro_lancamento", "version": r["version"]},
+    )
+    assert resp1.status_code == 200, resp1.text
+
+    resp2 = c.post(
+        f"/api/comandas/{cid}/itens/{item_comanda_id}/cancelar",
+        json={"motivo": "erro_lancamento", "version": resp1.json()["version"]},
+    )
+    assert resp2.status_code == 409, resp2.text
+    assert resp2.json()["error"]["code"] == "CONFLICT"
+
+
+def test_editar_item_ja_cancelado_retorna_conflict_nao_not_found(c):
+    garcom = _criar_garcom(c)
+    item = _criar_item(c, preco="10.00")
+    comanda = _abrir_comanda(c, garcom["id"])
+    cid = comanda["id"]
+
+    r = _lancar_item(c, cid, item["id"], comanda["version"])
+    item_comanda_id = r["itens_ativos"][0]["id"]
+
+    resp1 = c.post(
+        f"/api/comandas/{cid}/itens/{item_comanda_id}/cancelar",
+        json={"motivo": "erro_lancamento", "version": r["version"]},
+    )
+    assert resp1.status_code == 200, resp1.text
+
+    resp2 = c.patch(
+        f"/api/comandas/{cid}/itens/{item_comanda_id}",
+        json={"quantidade": 2, "version": resp1.json()["version"]},
+    )
+    assert resp2.status_code == 409, resp2.text
+    assert resp2.json()["error"]["code"] == "CONFLICT"
+
+
+# ---------------------------------------------------------------------------
+# Auditoria: abrir_comanda / patch_comanda / lancar_item / editar_item
+# ---------------------------------------------------------------------------
+
+
+def test_abrir_comanda_gera_log_de_auditoria(c):
+    garcom = _criar_garcom(c)
+    comanda = _abrir_comanda(c, garcom["id"])
+
+    db: Session = _TestingSession()
+    try:
+        logs = db.query(AuditLog).filter(
+            AuditLog.action == "comanda.abrir", AuditLog.entity_id == comanda["id"]
+        ).all()
+        assert len(logs) == 1
+    finally:
+        db.close()
+
+
+def test_patch_comanda_gera_log_de_auditoria(c):
+    garcom = _criar_garcom(c)
+    comanda = _abrir_comanda(c, garcom["id"])
+    cid = comanda["id"]
+
+    resp = _patch(c, cid, version=comanda["version"], identificacao="Mesa 9")
+    assert resp.status_code == 200, resp.text
+
+    db: Session = _TestingSession()
+    try:
+        logs = db.query(AuditLog).filter(AuditLog.action == "comanda.patch", AuditLog.entity_id == cid).all()
+        assert len(logs) == 1
+    finally:
+        db.close()
+
+
+def test_lancar_item_gera_log_de_auditoria(c):
+    garcom = _criar_garcom(c)
+    item = _criar_item(c, preco="10.00")
+    comanda = _abrir_comanda(c, garcom["id"])
+    cid = comanda["id"]
+
+    r = _lancar_item(c, cid, item["id"], comanda["version"])
+
+    db: Session = _TestingSession()
+    try:
+        logs = db.query(AuditLog).filter(AuditLog.action == "comanda.item.lancar", AuditLog.entity_id == cid).all()
+        assert len(logs) == 1
+    finally:
+        db.close()
+    _ = r
+
+
+def test_editar_item_gera_log_de_auditoria(c):
+    garcom = _criar_garcom(c)
+    item = _criar_item(c, preco="10.00")
+    comanda = _abrir_comanda(c, garcom["id"])
+    cid = comanda["id"]
+
+    r = _lancar_item(c, cid, item["id"], comanda["version"])
+    item_comanda_id = r["itens_ativos"][0]["id"]
+
+    resp = c.patch(
+        f"/api/comandas/{cid}/itens/{item_comanda_id}",
+        json={"quantidade": 2, "version": r["version"]},
+    )
+    assert resp.status_code == 200, resp.text
+
+    db: Session = _TestingSession()
+    try:
+        logs = db.query(AuditLog).filter(
+            AuditLog.action == "comanda.item.editar", AuditLog.entity_id == item_comanda_id
+        ).all()
+        assert len(logs) == 1
+    finally:
+        db.close()

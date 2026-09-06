@@ -42,6 +42,12 @@ from src.services import produtos_service
 
 logger = get_logger(__name__)
 
+# Taxa de serviço/comissão do garçom aplicada no fechamento de comanda quando
+# `taxa_servico=True` — usada tanto para calcular o total esperado de
+# pagamento quanto para o valor da comissão gerada.
+TAXA_SERVICO_PERCENTUAL = Decimal("10.00")
+_TAXA_SERVICO_MULTIPLICADOR = Decimal("1") + TAXA_SERVICO_PERCENTUAL / Decimal("100")
+
 
 def _parse_pessoas(pessoas_json: Optional[str]) -> list[str]:
     if not pessoas_json:
@@ -49,7 +55,9 @@ def _parse_pessoas(pessoas_json: Optional[str]) -> list[str]:
     try:
         return json.loads(pessoas_json)
     except (json.JSONDecodeError, TypeError):
-        logger.warning("comanda_pessoas_parse_failed", pessoas_json=pessoas_json, exc_info=True)
+        # Não loga o valor bruto de `pessoas_json` — pode conter nome/telefone
+        # de cliente. Só metadados não-sensíveis (tamanho da string).
+        logger.warning("comanda_pessoas_parse_failed", pessoas_json_length=len(str(pessoas_json)))
         return []
 
 
@@ -280,6 +288,12 @@ def abrir_comanda(db: Session, data: ComandaCreateRequest) -> ComandaResponse:
     )
     db.commit()
     db.refresh(comanda)
+    logger.info(
+        "comanda_aberta",
+        comanda_id=comanda.id,
+        tenant_id=comanda.tenant_id,
+        garcom_id=data.garcom_id,
+    )
     return _build_response(db, comanda)
 
 
@@ -298,10 +312,15 @@ def list_comandas_abertas(db: Session, busca: Optional[str] = None) -> list[Coma
 def list_comandas_fechadas(
     db: Session,
     busca: Optional[str] = None,
-    data_inicio: Optional[datetime.datetime] = None,
-    data_fim: Optional[datetime.datetime] = None,
+    data_inicio: Optional[datetime.date] = None,
+    data_fim: Optional[datetime.date] = None,
 ) -> list[ComandaResponse]:
-    comandas = comandas_repository.list_fechadas(db, busca, data_inicio, data_fim)
+    """Filtra comandas fechadas por período. `data_fim` é tratado como
+    inclusivo (até o último segundo do dia) — a conversão de `date` pra
+    o range de `datetime` usado na query fica aqui, não na camada de route."""
+    dt_inicio = datetime.datetime.combine(data_inicio, datetime.time.min) if data_inicio else None
+    dt_fim = datetime.datetime.combine(data_fim, datetime.time.max) if data_fim else None
+    comandas = comandas_repository.list_fechadas(db, busca, dt_inicio, dt_fim)
     return _build_responses(db, comandas)
 
 
@@ -357,6 +376,12 @@ def patch_comanda(db: Session, comanda_id: int, data: PatchComandaRequest) -> Co
     )
     db.commit()
     db.refresh(comanda)
+    logger.info(
+        "comanda_editada",
+        comanda_id=comanda_id,
+        tenant_id=comanda.tenant_id,
+        garcom_id=data.garcom_id,
+    )
     return _build_response(db, comanda)
 
 
@@ -413,6 +438,15 @@ def lancar_item(db: Session, comanda_id: int, data: LancarItemRequest) -> Comand
     )
     db.commit()
     comanda = comandas_repository.get_by_id(db, comanda_id)
+    log_kwargs = {
+        "comanda_id": comanda_id,
+        "tenant_id": comanda.tenant_id if comanda else None,  # type: ignore[union-attr]
+        "item_id": data.item_id,
+        "quantidade": str(data.quantidade),
+    }
+    logger.info("comanda_item_lancado", **log_kwargs)
+    if insuficientes:
+        logger.warning("comanda_item_lancado_estoque_insuficiente", insumos=insuficientes, **log_kwargs)
     response = _build_response(db, comanda)  # type: ignore[arg-type]
     response.estoque_insuficiente = insuficientes
     return response
@@ -434,7 +468,7 @@ def editar_item(
     if item_c is None or item_c.comanda_id != comanda_id:
         raise AppError(ErrorCode.NOT_FOUND, "Item não encontrado nesta comanda", http_status=404)
     if item_c.cancelado:
-        raise AppError(ErrorCode.NOT_FOUND, "Item já cancelado", http_status=400)
+        raise AppError(ErrorCode.CONFLICT, "Item já cancelado", http_status=409)
 
     ok = comandas_repository.increment_version(db, comanda_id, data.version, comanda.tenant_id)
     if not ok:
@@ -466,6 +500,14 @@ def editar_item(
     )
     db.commit()
     comanda = comandas_repository.get_by_id(db, comanda_id)
+    log_kwargs = {
+        "comanda_id": comanda_id,
+        "tenant_id": comanda.tenant_id if comanda else None,  # type: ignore[union-attr]
+        "item_comanda_id": item_comanda_id,
+    }
+    logger.info("comanda_item_editado", **log_kwargs)
+    if insuficientes:
+        logger.warning("comanda_item_editado_estoque_insuficiente", insumos=insuficientes, **log_kwargs)
     response = _build_response(db, comanda)  # type: ignore[arg-type]
     response.estoque_insuficiente = insuficientes
     return response
@@ -487,7 +529,7 @@ def cancelar_item(
     if item_c is None or item_c.comanda_id != comanda_id:
         raise AppError(ErrorCode.NOT_FOUND, "Item não encontrado nesta comanda", http_status=404)
     if item_c.cancelado:
-        raise AppError(ErrorCode.NOT_FOUND, "Item já cancelado", http_status=400)
+        raise AppError(ErrorCode.CONFLICT, "Item já cancelado", http_status=409)
 
     ok = comandas_repository.increment_version(db, comanda_id, data.version, comanda.tenant_id)
     if not ok:
@@ -513,6 +555,13 @@ def cancelar_item(
     )
     db.commit()
     comanda = comandas_repository.get_by_id(db, comanda_id)
+    logger.info(
+        "comanda_item_cancelado",
+        comanda_id=comanda_id,
+        tenant_id=comanda.tenant_id if comanda else None,  # type: ignore[union-attr]
+        item_comanda_id=item_comanda_id,
+        motivo=data.motivo.value,
+    )
     return _build_response(db, comanda)  # type: ignore[arg-type]
 
 
@@ -599,7 +648,7 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
     else:
         base_total: Decimal = comanda.saldo_pendente if comanda.saldo_pendente is not None else total_com_desconto
         esperado: Decimal = (
-            (base_total * Decimal("1.10")) if data.taxa_servico else base_total
+            (base_total * _TAXA_SERVICO_MULTIPLICADOR) if data.taxa_servico else base_total
         ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         if abs(total_pago - esperado) > Decimal("0.01"):
             raise AppError(
@@ -638,17 +687,34 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
         comandas_repository.fechar_comanda_repo(db, comanda_id, esperado)
 
     if not pagamento_parcial and data.taxa_servico and comanda.garcom_id is not None:
-        valor_comissao = (total_com_desconto * Decimal("0.10")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        valor_comissao = (
+            total_com_desconto * TAXA_SERVICO_PERCENTUAL / Decimal("100")
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         comissao = ComissaoGarcom(
             garcom_id=comanda.garcom_id,
             comanda_id=comanda_id,
             valor=valor_comissao,
-            percentual=Decimal("10.00"),
+            percentual=TAXA_SERVICO_PERCENTUAL,
+            created_at=datetime.datetime.now(datetime.timezone.utc),
         )
         db.add(comissao)
 
     db.commit()
     db.refresh(comanda)
+    logger.info(
+        "comanda_fechada",
+        comanda_id=comanda_id,
+        tenant_id=comanda.tenant_id,
+        modo_divisao=data.modo_divisao,
+        taxa_servico=bool(data.taxa_servico),
+    )
+    if itens_negativos:
+        logger.warning(
+            "comanda_fechada_com_estoque_negativo",
+            comanda_id=comanda_id,
+            tenant_id=comanda.tenant_id,
+            insumos=itens_negativos,
+        )
     response = _build_response(db, comanda)
     response.itens_negativos = itens_negativos
     return response
@@ -691,6 +757,7 @@ def cancelar_comanda(db: Session, comanda_id: int, data: CancelarComandaRequest)
     comandas_repository.add_evento(db, comanda_id, TipoEvento.COMANDA_EDITADA, {"cancelada": True})
     db.commit()
     db.refresh(comanda)
+    logger.info("comanda_cancelada", comanda_id=comanda_id, tenant_id=comanda.tenant_id)
     return _build_response(db, comanda)
 
 

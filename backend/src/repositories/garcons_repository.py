@@ -3,6 +3,7 @@ from typing import Optional
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from src.models.comissoes_garcom import ComissaoGarcom
 from src.models.garcons import Garcom
 from src.schemas.garcons import GarcomCreateRequest, GarcomUpdateRequest
 
@@ -44,3 +45,10 @@ def update(db: Session, garcom_id: int, data: GarcomUpdateRequest) -> Optional[G
     db.commit()
     db.refresh(obj)
     return obj
+
+
+def get_comissao_for_update(db: Session, comissao_id: int) -> Optional[ComissaoGarcom]:
+    """Busca a comissão travando a linha (`SELECT ... FOR UPDATE`) para o restante da
+    transação, evitando TOCTOU entre a leitura e a escrita subsequente."""
+    stmt = select(ComissaoGarcom).where(ComissaoGarcom.id == comissao_id)
+    return db.execute(stmt.with_for_update()).scalar_one_or_none()

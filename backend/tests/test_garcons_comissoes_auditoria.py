@@ -156,3 +156,74 @@ def test_update_comissao_aceita_valor_zero(crud_client):
 
     resp = crud_client.patch(f"/api/garcons/comissoes/{comissao_id}", json={"valor": 0})
     assert resp.status_code == 200, resp.text
+
+
+def test_get_garcom_stats_404_quando_garcom_nao_existe(crud_client):
+    resp = crud_client.get("/api/garcons/999999/stats")
+    assert resp.status_code == 404, resp.text
+
+
+def test_update_comissao_nao_duplica_query_de_leitura(crud_client):
+    from sqlalchemy import event
+
+    comissao_id = _criar_comissao()
+
+    selects: list[str] = []
+
+    def _on_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+        normalized = statement.strip().lower()
+        if normalized.startswith("select") and "comissoes_garcom" in normalized:
+            selects.append(statement)
+
+    event.listen(_engine, "before_cursor_execute", _on_cursor_execute)
+    try:
+        resp = crud_client.patch(f"/api/garcons/comissoes/{comissao_id}", json={"valor": "15.00"})
+    finally:
+        event.remove(_engine, "before_cursor_execute", _on_cursor_execute)
+
+    assert resp.status_code == 200, resp.text
+    # Antes da correção: 1 SELECT na route (pra montar o snapshot de auditoria) + 1 SELECT
+    # no service (pra validar/aplicar) + 1 SELECT do `db.refresh` pós-commit = 3.
+    # Depois da correção: só a leitura com lock (reaproveitada pela route) + o refresh = 2.
+    assert len(selects) == 2, f"esperava 2 SELECTs em comissoes_garcom, obteve {len(selects)}: {selects}"
+
+
+def _assert_log_evento_com_tenant_e_user(caplog, evento: str) -> None:
+    """Encontra `evento` nos registros de `garcons_service` e confirma que veio com
+    `tenant_id`/`user_id` bindados (achado: structlog do módulo sem essas chaves)."""
+    import json
+
+    eventos = [r for r in caplog.records if r.name == "src.services.garcons_service"]
+    assert eventos, "esperava pelo menos um log estruturado em garcons_service"
+
+    for record in eventos:
+        payload = json.loads(record.getMessage())
+        if payload.get("event") == evento:
+            assert payload.get("tenant_id") == 1
+            assert payload.get("user_id") == 1
+            return
+    pytest.fail(f"log '{evento}' não encontrado ou sem tenant_id/user_id: {eventos}")
+
+
+def test_update_comissao_loga_tenant_id_e_user_id(crud_client, caplog):
+    import logging
+
+    comissao_id = _criar_comissao()
+
+    with caplog.at_level(logging.INFO, logger="src.services.garcons_service"):
+        resp = crud_client.patch(f"/api/garcons/comissoes/{comissao_id}", json={"valor": "20.00"})
+
+    assert resp.status_code == 200, resp.text
+    _assert_log_evento_com_tenant_e_user(caplog, "comissao_valor_atualizada")
+
+
+def test_toggle_pago_comissao_loga_tenant_id_e_user_id(crud_client, caplog):
+    import logging
+
+    comissao_id = _criar_comissao()
+
+    with caplog.at_level(logging.INFO, logger="src.services.garcons_service"):
+        resp = crud_client.patch(f"/api/garcons/comissoes/{comissao_id}/toggle-pago")
+
+    assert resp.status_code == 200, resp.text
+    _assert_log_evento_com_tenant_e_user(caplog, "comissao_pago_alternado")

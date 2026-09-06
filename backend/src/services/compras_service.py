@@ -51,6 +51,33 @@ def _reverter_custo_medio(
     return (numerador / novo_estoque).quantize(Decimal("0.0001"))
 
 
+def _aplicar_entrada_estoque(
+    db: Session,
+    insumo: Insumo,
+    quantidade: Decimal,
+    custo_unitario: Decimal,
+    compra_id: int,
+) -> None:
+    """Aplica a entrada de uma compra no estoque: recalcula o custo médio
+    ponderado, atualiza o saldo do insumo e registra o movimento. Usado tanto
+    pela entrada imediata (compra 'imediata'/'a_prazo') quanto pela confirmação
+    de recebimento de uma compra 'agendada' — mantém a fórmula em um só lugar."""
+    novo_custo_medio = _calcular_custo_medio(
+        insumo.estoque_atual, insumo.custo_medio, quantidade, custo_unitario
+    )
+    novo_estoque = insumo.estoque_atual + quantidade
+    estoque_repository.update_estoque_e_custo(db, insumo.id, novo_estoque, novo_custo_medio)
+    estoque_repository.registrar_movimento(
+        db=db,
+        insumo_id=insumo.id,
+        tipo=TipoMovimento.ENTRADA,
+        quantidade=quantidade,
+        custo_unitario=custo_unitario,
+        saldo_apos=novo_estoque,
+        compra_id=compra_id,
+    )
+
+
 def _mover_estoque_itens(db: Session, compra_id: int) -> list[ItemCompraResponse]:
     itens = compras_repository.get_itens_compra(db, compra_id)
     itens_response = []
@@ -64,20 +91,7 @@ def _mover_estoque_itens(db: Session, compra_id: int) -> list[ItemCompraResponse
                 acao="confirmar_recebimento",
             )
             continue
-        novo_custo_medio = _calcular_custo_medio(
-            insumo.estoque_atual, insumo.custo_medio, item.quantidade, item.custo_unitario
-        )
-        novo_estoque = insumo.estoque_atual + item.quantidade
-        estoque_repository.update_estoque_e_custo(db, insumo.id, novo_estoque, novo_custo_medio)
-        estoque_repository.registrar_movimento(
-            db=db,
-            insumo_id=insumo.id,
-            tipo=TipoMovimento.ENTRADA,
-            quantidade=item.quantidade,
-            custo_unitario=item.custo_unitario,
-            saldo_apos=novo_estoque,
-            compra_id=compra_id,
-        )
+        _aplicar_entrada_estoque(db, insumo, item.quantidade, item.custo_unitario, compra_id)
         itens_response.append(
             ItemCompraResponse(
                 item_id=insumo.id,
@@ -140,20 +154,7 @@ def criar_compra(db: Session, data: CompraCreateRequest) -> CompraResponse:
 
             # Entrada imediata de estoque apenas para imediata e a_prazo
             if data.tipo_compra != "agendada":
-                novo_custo_medio = _calcular_custo_medio(
-                    insumo.estoque_atual, insumo.custo_medio, item_req.quantidade, custo_unitario
-                )
-                novo_estoque = insumo.estoque_atual + item_req.quantidade
-                estoque_repository.update_estoque_e_custo(db, insumo.id, novo_estoque, novo_custo_medio)
-                estoque_repository.registrar_movimento(
-                    db=db,
-                    insumo_id=insumo.id,
-                    tipo=TipoMovimento.ENTRADA,
-                    quantidade=item_req.quantidade,
-                    custo_unitario=custo_unitario,
-                    saldo_apos=novo_estoque,
-                    compra_id=compra.id,
-                )
+                _aplicar_entrada_estoque(db, insumo, item_req.quantidade, custo_unitario, compra.id)
 
             itens_response.append(
                 ItemCompraResponse(

@@ -93,20 +93,34 @@ if _settings.DATABASE_URL.startswith("postgresql"):
         cursor.close()
 
 
+def _is_sqlite(db: Session) -> bool:
+    return getattr(getattr(db.get_bind(), "dialect", None), "name", "") == "sqlite"
+
+
 def set_tenant_context(db: Session, tenant_id: int) -> None:
-    """Set the tenant variable and leave an auditable structured trace."""
+    """Set the tenant variable and leave an auditable structured trace.
+
+    No-op on SQLite — `SET app.tenant_id` is Postgres-specific RLS syntax and
+    errors on SQLite, which the test suite uses by default.
+    """
+    if _is_sqlite(db):
+        return
     db.execute(text("SET app.tenant_id = :tid"), {"tid": str(tenant_id)})
     log.info("tenant_context_set", tenant_id=tenant_id)
 
 
 def set_tenant_rls_context(db: Session, tenant_id: int) -> None:
     """Apply the restricted application role and tenant RLS context."""
+    if _is_sqlite(db):
+        return
     db.execute(text("SET ROLE app_user"))
     set_tenant_context(db, tenant_id)
 
 
 def clear_tenant_rls_context(db: Session) -> None:
     """Clear RLS state before a connection is reused by another workload."""
+    if _is_sqlite(db):
+        return
     db.execute(text("RESET ROLE"))
     db.execute(text("SET app.tenant_id = ''"))
     log.info("tenant_rls_context_cleared")

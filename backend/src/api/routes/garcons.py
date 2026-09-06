@@ -74,6 +74,8 @@ def get_garcom_stats(
     db: Session = Depends(get_tenant_db),
     _user: dict = Depends(get_current_user),
 ) -> GarcomStatsResponse:
+    garcons_service.get_garcom(db, garcom_id)
+
     total_comandas = db.execute(
         select(func.count()).select_from(Comanda).where(Comanda.garcom_id == garcom_id)
     ).scalar_one()
@@ -112,9 +114,13 @@ def update_comissao(
     db: Session = Depends(get_tenant_db),
     payload: dict = Depends(get_current_user),
 ) -> ComissaoResponse:
-    valor_anterior = db.get(ComissaoGarcom, comissao_id)
-    valor_antes = valor_anterior.valor if valor_anterior is not None else None
-    comissao = garcons_service.update_comissao(db, comissao_id, body.valor)
+    valor_antes, comissao = garcons_service.update_comissao(
+        db,
+        comissao_id,
+        body.valor,
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+    )
     background_tasks.add_task(
         audit_service.log_background,
         "comissao.valor.alterar",
@@ -122,7 +128,7 @@ def update_comissao(
         user_id=payload.get("user_id"),
         entity="ComissaoGarcom",
         entity_id=comissao_id,
-        before={"valor": str(valor_antes)} if valor_antes is not None else None,
+        before={"valor": str(valor_antes)},
         after={"valor": str(comissao.valor)},
         impersonated_by=payload.get("impersonated_by"),
     )
@@ -140,7 +146,12 @@ def toggle_pago_comissao(
 ) -> ComissaoResponse:
     pago_antes = db.get(ComissaoGarcom, comissao_id)
     estado_antes = pago_antes.pago if pago_antes is not None else None
-    comissao = garcons_service.toggle_pago_comissao(db, comissao_id)
+    comissao = garcons_service.toggle_pago_comissao(
+        db,
+        comissao_id,
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+    )
     background_tasks.add_task(
         audit_service.log_background,
         "comissao.pago.alternar",
@@ -175,7 +186,12 @@ def delete_comissao(
         if comissao_antes is not None
         else None
     )
-    garcons_service.delete_comissao(db, comissao_id)
+    garcons_service.delete_comissao(
+        db,
+        comissao_id,
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+    )
     background_tasks.add_task(
         audit_service.log_background,
         "comissao.remover",

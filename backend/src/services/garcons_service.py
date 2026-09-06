@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.core.errors import AppError, ErrorCode
+from src.core.logging import get_logger
 from src.models.comissoes_garcom import ComissaoGarcom
 from src.models.garcons import Garcom
 from src.repositories import garcons_repository
@@ -15,6 +16,8 @@ from src.schemas.garcons import (
     GarcomResponse,
     GarcomUpdateRequest,
 )
+
+logger = get_logger(__name__)
 
 
 def _is_nome_unique_violation(error: IntegrityError) -> bool:
@@ -86,35 +89,95 @@ def toggle_ativo_garcom(db: Session, garcom_id: int) -> Garcom:
     return obj
 
 
-def update_comissao(db: Session, comissao_id: int, valor: Decimal) -> ComissaoGarcom:
-    comissao = db.get(ComissaoGarcom, comissao_id)
+def update_comissao(
+    db: Session,
+    comissao_id: int,
+    valor: Decimal,
+    *,
+    tenant_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+) -> tuple[Decimal, ComissaoGarcom]:
+    """Atualiza o valor de uma comissão e retorna `(valor_antes, comissao)`.
+
+    A leitura trava a linha (`FOR UPDATE`) para o restante da transação, evitando que
+    duas chamadas concorrentes leiam o mesmo estado "não pago" e ambas apliquem seus
+    updates (TOCTOU). O valor anterior é devolvido para quem chama (ex.: auditoria)
+    reaproveitar, em vez de emitir uma segunda leitura da mesma linha.
+    """
+    comissao = garcons_repository.get_comissao_for_update(db, comissao_id)
     if comissao is None:
+        logger.warning(
+            "comissao_update_nao_encontrada",
+            tenant_id=tenant_id,
+            user_id=user_id,
+            comissao_id=comissao_id,
+        )
         raise AppError(ErrorCode.NOT_FOUND, "Comissão não encontrada", http_status=404)
     if comissao.pago:
+        logger.warning(
+            "comissao_update_rejeitada_ja_paga",
+            tenant_id=tenant_id,
+            user_id=user_id,
+            comissao_id=comissao_id,
+        )
         raise AppError(
             ErrorCode.CONFLICT,
             "Comissão já paga não pode ser alterada",
             http_status=409,
         )
+    valor_antes = comissao.valor
     comissao.valor = valor
     db.commit()
     db.refresh(comissao)
-    return comissao
+    logger.info(
+        "comissao_valor_atualizada",
+        tenant_id=tenant_id,
+        user_id=user_id,
+        comissao_id=comissao_id,
+        valor_antes=str(valor_antes),
+        valor_depois=str(valor),
+    )
+    return valor_antes, comissao
 
 
-def toggle_pago_comissao(db: Session, comissao_id: int) -> ComissaoGarcom:
+def toggle_pago_comissao(
+    db: Session,
+    comissao_id: int,
+    *,
+    tenant_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+) -> ComissaoGarcom:
     comissao = db.get(ComissaoGarcom, comissao_id)
     if comissao is None:
         raise AppError(ErrorCode.NOT_FOUND, "Comissão não encontrada", http_status=404)
     comissao.pago = not comissao.pago
     db.commit()
     db.refresh(comissao)
+    logger.info(
+        "comissao_pago_alternado",
+        tenant_id=tenant_id,
+        user_id=user_id,
+        comissao_id=comissao_id,
+        pago=comissao.pago,
+    )
     return comissao
 
 
-def delete_comissao(db: Session, comissao_id: int) -> None:
+def delete_comissao(
+    db: Session,
+    comissao_id: int,
+    *,
+    tenant_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+) -> None:
     comissao = db.get(ComissaoGarcom, comissao_id)
     if comissao is None:
         raise AppError(ErrorCode.NOT_FOUND, "Comissão não encontrada", http_status=404)
     db.delete(comissao)
     db.commit()
+    logger.info(
+        "comissao_removida",
+        tenant_id=tenant_id,
+        user_id=user_id,
+        comissao_id=comissao_id,
+    )

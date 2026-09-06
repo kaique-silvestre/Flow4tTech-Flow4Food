@@ -49,16 +49,46 @@ Detalhe do que cada commit resolveu (todos com testes passando, mypy limpo, suí
 3. **Proxy headers (`X-Forwarded-For`)**: rate limit hoje usa `get_remote_address` sem configurar proxy confiável — atrás do Railway, pode colapsar rate limit de todos tenants numa única chave (ou permitir spoofing se configurado errado). Não resolvido — precisa confirmar a config de rede do Railway antes de mexer.
 4. **`scheduler.py` não popula `_tenant_ctx`** (só faz `SET ROLE` direto). Hoje seguro porque nenhum job comita no meio do loop por tenant — risco late nte se isso mudar no futuro. Não mexido, só documentado.
 
-### Onda 6 concluída em 2026-09-02
+### Ondas 6-8 concluídas em 2026-09-02 (todo backlog CRÍTICO/ALTO da seção 4.1 fechado)
 
-Commit local: `51cf84a fix(platform): unifica provisioning e audita mutações JWT` (não enviado ao remoto).
+```
+d59616b fix(backend): keep cash payments transactional
+0467eaa fix(backend): enforce tenant isolation in stock flows
+fc0c1b9 fix(backend): strengthen tenant RLS observability
+412eab3 fix(platform): protege impersonação e pagina listagens
+185bc0d fix(platform,relatorios): pagina consultas e valida períodos
+0caccaa fix(platform): unifica provisioning e audita mutações JWT
+```
 
-- Unifica a criação JWT de tenant com `tenant_service.criar_tenant`, incluindo perfis clonados, usuário administrador owner e assinatura trial; o formulário da plataforma agora coleta as credenciais iniciais do administrador.
-- Adiciona auditoria às mutações JWT de plataforma e à criação de announcements, sem registrar senha crua.
-- Adiciona processor estruturado para redigir CPF, senhas, tokens e outras credenciais antes da renderização dos logs.
-- Validação integrada: `365 passed, 4 skipped`; type-check, lint e build do frontend passaram. Mypy mantém três erros preexistentes de incompatibilidade de middleware em `src/main.py` com as versões resolvidas neste ambiente.
+- **Onda 6** (`0caccaa`): unifica criação JWT de tenant com `tenant_service.criar_tenant` (CRÍTICO — duas superfícies admin resolvidas); auditoria em mutações JWT de plataforma e announcements; processor structlog de redação de PII (CPF/senha/token).
+- **Onda 7** (`185bc0d`): elimina N+1 em platform_admin (list tenants/perfis) e compras agendadas do dashboard; pagina cockpit e histórico de comandas; `mes`/`ano`/período malformado agora vira `AppError`/`ErrorCode` em vez de 500 cru.
+- **Onda 8** (`412eab3`): os 5 achados ALTO de frontend platform — token de impersonation fora da URL, refresh não pisa mais token ativo da aba impersonada, 401 tenta refresh antes de redirect (`usePlatformApi.ts` alinhado com `lib/api.ts`), interceptor Sentry em erro 5xx de ação admin, paginação server-side em tenants/cockpit.
 
-Próxima prioridade: Onda 7 da seção 5.
+**Seção 4.1 (CRÍTICO/ALTO): 0 itens restantes.**
+
+### Batch extra MÉDIO/BAIXO em 2026-09-05 (fora do plano original, adiantado)
+
+```
+fc0c1b9 fix(backend): strengthen tenant RLS observability
+0467eaa fix(backend): enforce tenant isolation in stock flows
+d59616b fix(backend): keep cash payments transactional
+```
+
+Cobriu parte da seção 4.2 nos módulos **core/database+deps+scheduler** (pool dedicado com `pool_size`/`max_overflow`/`pool_timeout`, `tenant_id` bindado ao structlog, log explícito de `SET ROLE`/`RESET ROLE`, `Sentry.before_send` com redação, scheduler com listener `EVENT_JOB_ERROR`/`EVENT_JOB_EXECUTED`), **estoque** (tenant_id explícito em queries, `ge=0` em `quantidade_caixa`/`nivel_critico`, data malformada em histórico vira erro de validação em vez de 500) e **caixa** (`Decimal` com `max_digits`/`decimal_places` no schema, structlog no fluxo de caixa, `contas_pagar_service` não acessa mais `caixa_repository` direto — pagamento em dinheiro + sangria na mesma transação).
+
+**Ainda não verificado item-a-item** se cobriu 100% da lista de cada módulo na seção 4.2 — alguns subitens desses 3 módulos (ex: `tenant_features` sem RLS, `require_active_subscription` morto, `get_assinatura_by_tenant` triplicado, ordem de lock em `ajustar_estoque_ficha_tecnica`, divergência de fechamento de caixa sem alerta) parecem não cobertos — checar ao montar ticket desses módulos de novo.
+
+### Onda 9 concluída em 2026-09-06 (3 subagentes `implementer` em paralelo, orquestrados via /loop dinâmico)
+
+- **comandas** (6/6): structlog em abrir/patch/lançar/editar/cancelar item; auditoria nas 4 mutações que faltavam; `ErrorCode.NOT_FOUND`→`CONFLICT` em conflito de estado; parsing de data movido pra service (422 em vez de 500); `TAXA_SERVICO_PERCENTUAL` extraída; `pessoas_json` bruto removido do log.
+- **comissões de garçom** (4/4): 404 em `get_garcom_stats`; `SELECT FOR UPDATE` corrige TOCTOU em `update_comissao`; query duplicada eliminada; `tenant_id`/`user_id` bindados no structlog.
+- **nfe/compras** (3/3): magic-bytes no upload de NFe; `_aplicar_entrada_estoque` elimina duplicação de custo médio ponderado; parser roda em threadpool com timeout.
+- **Bug real encontrado e corrigido pelo orquestrador durante validação da onda** (não estava no backlog da auditoria): `set_tenant_context`/`set_tenant_rls_context`/`clear_tenant_rls_context` (`core/database.py`) executavam `SET app.tenant_id`/`SET ROLE` incondicionalmente — `tenant_service.criar_tenant` (via `clone_profiles_from_seed`/`set_rls_tenant`, adicionados na unificação de provisioning da onda 6) não tinha o guard de dialect que `get_tenant_db` já tinha, quebrando 14 testes localmente em SQLite (CI usa Postgres real, ficou verde, mascarou o problema). Corrigido com guard `_is_sqlite` nos 3 pontos.
+- Validação: backend `411 passed, 4 skipped, 0 failed`; mypy 2 erros pré-existentes (mesmos de sempre, fora do diff); frontend type-check/lint limpos (onda não tocou frontend).
+
+**Seção 4.2 (MÉDIO/BAIXO): comandas, comissões de garçom e nfe/compras zerados.** Restam: relatórios/dashboard (agregação Python + validação data_inicio>data_fim), platform_admin resto, resíduo dos módulos core/database+estoque+caixa (ver "batch extra" acima — ainda não conferido item-a-item), frontend operacional, frontend platform resto.
+
+Próxima prioridade: Onda 10 (seção 5) — relatórios/dashboard + platform_admin resto + resíduo do batch extra.
 
 ## 3. Como o trabalho foi organizado (pra você replicar)
 
@@ -140,13 +170,14 @@ Agrupado por módulo. Todos com local exato no relatório original — se precis
 ## 5. Como continuar — instruções pro próximo agente
 
 1. Leia este documento inteiro antes de tocar em qualquer código.
-2. Rode `cd backend && source .venv/bin/activate && python -m pytest -q && python -m mypy src/` e `cd frontend && npm run type-check && npm run lint` pra confirmar que o estado atual (pós lote 5) está mesmo verde antes de começar — não assuma.
-3. Monte "ondas" (lotes) de até **3 tickets em paralelo**, escolhendo achados que não tocam nos mesmos arquivos. Sugestão de ordem pelas próximas ondas, seguindo a seção 4.1 (prioridade CRÍTICO/ALTO primeiro):
-   - **Onda 6**: (a) duas superfícies admin — CRÍTICO, ticket denso, considere rodar sozinho sem paralelismo dado o risco; (b) auditoria em `platform_auth.py`/`platform_announcements.py`; (c) processor de redação de PII no structlog (isolado, `core/logging.py`).
-   - **Onda 7**: (a) N+1 platform_admin (list tenants/perfis) + cockpit paginação/sargable; (b) N+1 fornecedor dashboard + paginação historico-comandas; (c) `AppError`/`ErrorCode` no módulo relatórios (mes/ano malformado).
-   - **Onda 8**: frontend platform — os 5 achados ALTO (impersonation token na URL, refresh silencioso, 401 hard redirect, Sentry interceptor, paginação tenants/cockpit). Pode valer separar em 2-3 tickets já que são vários arquivos do mesmo módulo frontend.
-   - **Ondas seguintes**: trabalhar a lista MÉDIO/BAIXO da seção 4.2, agrupando por módulo (cada módulo = ~1 ticket, já que tende a ser o mesmo conjunto de arquivos).
-4. Cada ticket: TDD completo (teste que falha → implementa → verde), rodar suíte + type-check antes de reportar como pronto, **não commitar** (você, orquestrador, commita no final da onda depois de validar tudo junto).
-5. Escrever `CHANGELOG.md` (formato em `AGENTS.md`) e commitar ao final de cada onda, com mensagem cobrindo os fixes daquela onda.
-6. Dar push só quando o usuário pedir.
-7. Manter uma lista de "feito"/"restante" igual a este documento e atualizá-la (ou pedir pra registrar como comentário/memória) conforme avança, pra a próxima transferência de contexto ser tão rica quanto esta.
+2. Rode `cd backend && source .venv/bin/activate && python -m pytest -q && python -m mypy src/` e `cd frontend && npm run type-check && npm run lint` pra confirmar que o estado atual está verde antes de começar — não assuma.
+3. Seção 4.1 (CRÍTICO/ALTO) está **zerada** — todo o backlog restante é seção 4.2 (MÉDIO/BAIXO), ~59 itens estimados em 7 módulos ainda intocados + resíduo em 3 módulos parcialmente cobertos (ver "batch extra" acima). Monte "ondas" de até **3 tickets em paralelo**, um módulo por ticket (evita conflito de arquivo):
+   - **Onda 9**: (a) comandas (audit gaps em abrir/patch/lançar/editar item, `ErrorCode.NOT_FOUND` usado incorretamente pra conflito de estado, taxa de serviço 10% hardcoded, `logger.warning` vazando `pessoas_json` bruto); (b) comissões de garçom (`get_garcom_stats` sem 404, TOCTOU em `update_comissao`, query duplicada, tenant_id/user_id não bindados no structlog); (c) nfe/compras (magic-bytes check no upload, fórmula de custo médio duplicada, parser síncrono sem timeout).
+   - **Onda 10**: (a) relatórios/dashboard (agregação em Python vs `GROUP BY`, padrão repetido 5x, sem validação `data_inicio > data_fim`/teto de amplitude); (b) platform_admin resto (`IntegrityError` não traduzido, rotas em `HTTPException` cru, `_decode_platform_admin_id` engole exceção, `profile_id`×`tenant_id` não validado, `announcements.py` sem RLS, `platform_engine` sem pool, timing side-channel no login); (c) resíduo dos módulos "batch extra" (`tenant_features` sem RLS, `require_active_subscription` morto, `get_assinatura_by_tenant` triplicado, ordem de lock em `ajustar_estoque_ficha_tecnica`, divergência de fechamento de caixa sem alerta/log — **conferir código antes de abrir ticket, pode já estar coberto**).
+   - **Onda 11**: frontend operacional (JWT em localStorage, cache TanStack não limpo no login/logout, schema Zod desconto 0-100, tratamento de erro inconsistente por hook, taxa 10% hardcoded frontend+backend, `formatCurrency` duplicado, tick de relógio sem memo).
+   - **Onda 12**: frontend platform resto (decode JWT duplicado, constantes de status duplicadas em 3 páginas, lógica de atualização de assinatura no componente, `RequireAuth`/`RequirePlatformAuth` duplicados, `baseURL` axios não usado, `authHeaders()` manual em vez de interceptor, `ConfirmDialog` ausente em suspender/reativar, tabelas sem `React.memo`).
+4. **Use `graphify query "<módulo/arquivo>"` antes de abrir cada ticket** pra navegar rápido entre pastas/relações em vez de ler arquivo por arquivo — `graphify-out/graph.json` já está atualizado (code-only, sem doc semântico por falta de LLM key; rodar `graphify . --update --code-only` de novo se novos arquivos de código aparecerem).
+5. Cada ticket: subagente `implementer`, TDD completo (teste que falha → implementa → verde), rodar suíte + type-check antes de reportar como pronto, **não commitar** (você, orquestrador, commita no final da onda depois de validar tudo junto).
+6. Escrever `CHANGELOG.md` (formato em `AGENTS.md`) e commitar ao final de cada onda, com mensagem cobrindo os fixes daquela onda.
+7. Dar push só quando o usuário pedir.
+8. Manter uma lista de "feito"/"restante" igual a este documento e atualizá-la conforme avança.

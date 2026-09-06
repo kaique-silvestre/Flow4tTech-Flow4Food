@@ -293,3 +293,80 @@ def test_cancelar_compra_loga_warning_quando_insumo_removido(crud_client, caplog
         rec.levelname == "WARNING" and "compra_item_insumo_ausente" in rec.message
         for rec in caplog.records
     )
+
+
+# ---------------------------------------------------------------------------
+# Upload de NFe — validação de conteúdo real (magic-bytes) e timeout
+# ---------------------------------------------------------------------------
+
+def test_importar_nfe_rejeita_conteudo_nao_xml_mesmo_com_extensao_xml(crud_client, monkeypatch):
+    """Renomear um arquivo qualquer para .xml (e falsificar o content-type) não
+    deve passar na validação: o conteúdo precisa começar de fato com um XML.
+    A checagem deve barrar ANTES de sequer tentar parsear — o parser nunca é chamado."""
+    from src.services import nfe_parser
+
+    def _parse_nao_deveria_ser_chamado(xml_bytes):
+        raise AssertionError("parse_nfe não deveria ser chamado para conteúdo não-XML")
+
+    monkeypatch.setattr(nfe_parser, "parse_nfe", _parse_nao_deveria_ser_chamado)
+
+    fake = b"\x89PNG\r\n\x1a\n" + b"nao e xml de verdade" * 10
+    resp = crud_client.post(
+        "/api/compras/importar-nfe",
+        files={"file": ("nota.xml", fake, "application/xml")},
+    )
+    assert resp.status_code == 400, resp.text
+
+
+def test_importar_nfe_aceita_xml_com_bom_e_espacos_antes_da_tag(crud_client, monkeypatch):
+    """XML válido pode vir com BOM UTF-8 ou espaços em branco antes do
+    primeiro '<' — isso não é malicioso e não deve ser barrado pela checagem
+    de magic-bytes (o parser deve ser alcançado normalmente)."""
+    import datetime
+
+    from src.services import nfe_parser
+
+    chamadas = []
+
+    def _fake_parse(xml_bytes):
+        chamadas.append(xml_bytes)
+        return nfe_parser.NFeData(
+            numero_nota="1",
+            data_emissao=datetime.date(2026, 1, 1),
+            cnpj_emitente="12345678000195",
+            nome_emitente="Fornecedor Teste",
+        )
+
+    monkeypatch.setattr(nfe_parser, "parse_nfe", _fake_parse)
+
+    xml = (
+        b"\xef\xbb\xbf   <?xml version=\"1.0\"?><NFe xmlns=\"http://www.portalfiscal.inf.br/nfe\">"
+        b"</NFe>"
+    )
+    crud_client.post(
+        "/api/compras/importar-nfe",
+        files={"file": ("nota.xml", xml, "application/xml")},
+    )
+    assert len(chamadas) == 1
+
+
+def test_importar_nfe_com_parser_lento_retorna_erro_em_vez_de_travar(crud_client, monkeypatch):
+    """Se o parsing da NFe travar/demorar além do limite, a rota deve
+    retornar um erro explícito em vez de bloquear a worker thread indefinidamente."""
+    import time
+
+    from src.services import nfe_parser
+
+    def _slow_parse(xml_bytes):
+        time.sleep(2)
+        raise AssertionError("não deveria completar — timeout deveria interromper antes")
+
+    monkeypatch.setattr(nfe_parser, "parse_nfe", _slow_parse)
+    monkeypatch.setattr("src.api.routes.compras.NFE_PARSE_TIMEOUT_SECONDS", 0.2)
+
+    xml = b"<?xml version=\"1.0\"?><NFe xmlns=\"http://www.portalfiscal.inf.br/nfe\"></NFe>"
+    resp = crud_client.post(
+        "/api/compras/importar-nfe",
+        files={"file": ("nota.xml", xml, "application/xml")},
+    )
+    assert resp.status_code == 408, resp.text

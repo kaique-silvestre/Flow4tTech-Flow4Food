@@ -260,6 +260,135 @@ def test_total_parcial_exclui_cancelados_e_cortesias(crud_client):
     assert Decimal(resp3.json()["total_parcial"]) == Decimal("0")
 
 
+def test_abrir_comanda_loga_evento_estruturado(crud_client, monkeypatch):
+    from src.services import comandas_service
+
+    calls = []
+    monkeypatch.setattr(
+        comandas_service.logger,
+        "info",
+        lambda event, **kwargs: calls.append((event, kwargs)),
+    )
+
+    garcom = _criar_garcom(crud_client)
+    comanda = _abrir_comanda(crud_client, garcom["id"])
+
+    eventos = [event for event, _ in calls]
+    assert "comanda_aberta" in eventos
+    kwargs = dict(calls[eventos.index("comanda_aberta")][1])
+    assert kwargs["comanda_id"] == comanda["id"]
+    assert "tenant_id" in kwargs
+
+
+def test_fechar_comanda_loga_evento_estruturado(crud_client, monkeypatch):
+    from src.services import comandas_service
+
+    calls = []
+    monkeypatch.setattr(
+        comandas_service.logger,
+        "info",
+        lambda event, **kwargs: calls.append((event, kwargs)),
+    )
+
+    garcom = _criar_garcom(crud_client)
+    item = _criar_item_vendavel(crud_client, preco="10.00")
+    metodo_resp = crud_client.post("/api/metodos-pagamento", json={"nome": "PIX"})
+    metodo = metodo_resp.json()
+    comanda = _abrir_comanda(crud_client, garcom["id"])
+    cid = comanda["id"]
+    r = _lancar_item(crud_client, cid, item["id"], comanda["version"]).json()
+
+    resp = crud_client.post(
+        f"/api/comandas/{cid}/fechar",
+        json={
+            "pagamentos": [{"metodo_id": metodo["id"], "valor": "10.00"}],
+            "modo_divisao": "sem_divisao",
+            "version": r["version"],
+        },
+    )
+    assert resp.status_code == 200, resp.text
+
+    eventos = [event for event, _ in calls]
+    assert "comanda_fechada" in eventos
+    kwargs = dict(calls[eventos.index("comanda_fechada")][1])
+    assert kwargs["comanda_id"] == cid
+
+
+def test_parse_pessoas_malformado_nao_loga_conteudo_bruto(monkeypatch):
+    """`pessoas_json` bruto pode conter nome de cliente — o log de warning de
+    parse malformado não deve incluir o valor bruto, só metadados não-sensíveis."""
+    from src.services import comandas_service
+
+    calls = []
+    monkeypatch.setattr(
+        comandas_service.logger,
+        "warning",
+        lambda event, **kwargs: calls.append((event, kwargs)),
+    )
+
+    raw = '{"nome": "Fulano de Tal, telefone (11) 99999-0000"'  # JSON malformado, contém PII
+    resultado = comandas_service._parse_pessoas(raw)
+
+    assert resultado == []
+    assert len(calls) == 1
+    _event, kwargs = calls[0]
+    assert "pessoas_json" not in kwargs
+    assert raw not in str(kwargs)
+
+
+def test_taxa_servico_percentual_e_constante_nomeada_de_10_por_cento():
+    from src.services import comandas_service
+
+    assert comandas_service.TAXA_SERVICO_PERCENTUAL == Decimal("10.00")
+
+
+def test_fechar_comanda_com_taxa_servico_cobra_10_por_cento_e_gera_comissao(crud_client):
+    garcom = _criar_garcom(crud_client)
+    item = _criar_item_vendavel(crud_client, preco="100.00")
+    metodo_resp = crud_client.post("/api/metodos-pagamento", json={"nome": "PIX"})
+    assert metodo_resp.status_code in (200, 201), metodo_resp.text
+    metodo = metodo_resp.json()
+    comanda = _abrir_comanda(crud_client, garcom["id"])
+    cid = comanda["id"]
+
+    r = _lancar_item(crud_client, cid, item["id"], comanda["version"]).json()
+
+    resp = crud_client.post(
+        f"/api/comandas/{cid}/fechar",
+        json={
+            "pagamentos": [{"metodo_id": metodo["id"], "valor": "110.00"}],
+            "modo_divisao": "sem_divisao",
+            "taxa_servico": True,
+            "version": r["version"],
+        },
+    )
+    assert resp.status_code == 200, resp.text
+
+    db = _TestingSession()
+    try:
+        from src.models.comissoes_garcom import ComissaoGarcom
+
+        comissao = db.query(ComissaoGarcom).filter(ComissaoGarcom.comanda_id == cid).one()
+        assert comissao.valor == Decimal("10.00")
+        assert comissao.percentual == Decimal("10.00")
+    finally:
+        db.close()
+
+
+def test_list_fechadas_data_malformada_retorna_erro_validacao(crud_client):
+    resp = crud_client.get("/api/comandas/fechadas?data_inicio=nao-e-uma-data")
+    assert resp.status_code in (400, 422), resp.text
+
+
+def test_list_fechadas_filtra_por_periodo(crud_client):
+    garcom = _criar_garcom(crud_client)
+    _abrir_comanda(crud_client, garcom["id"])
+
+    resp = crud_client.get("/api/comandas/fechadas?data_inicio=2020-01-01&data_fim=2020-01-31")
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == []
+
+
 def test_top_itens(crud_client):
     garcom = _criar_garcom(crud_client)
     item = _criar_item_vendavel(crud_client, nome="Cerveja")

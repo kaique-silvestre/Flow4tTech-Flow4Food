@@ -1,3 +1,4 @@
+import concurrent.futures
 from typing import Optional
 
 from fastapi import (
@@ -33,6 +34,18 @@ router = APIRouter(dependencies=[Depends(require_feature("compras")), Depends(re
 
 NFE_MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5MB
 NFE_ALLOWED_CONTENT_TYPES = {"application/xml", "text/xml"}
+NFE_PARSE_TIMEOUT_SECONDS = 10
+_NFE_BOM = b"\xef\xbb\xbf"
+_NFE_PARSE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="nfe-parse")
+
+
+def _looks_like_xml(data: bytes) -> bool:
+    """Magic-bytes check: extensão/content-type são só metadados enviados pelo
+    cliente (trivialmente falsificáveis) — aqui confirmamos que o conteúdo
+    de fato começa com um documento XML antes de investir em parsing."""
+    body = data[len(_NFE_BOM):] if data.startswith(_NFE_BOM) else data
+    stripped = body.lstrip()
+    return stripped.startswith(b"<")
 
 
 @router.post("/importar-nfe", response_model=NFeImportResponse)
@@ -67,7 +80,22 @@ def importar_nfe(
         chunks.append(chunk)
     xml_bytes = b"".join(chunks)
 
-    data = nfe_parser.parse_nfe(xml_bytes)
+    if not _looks_like_xml(xml_bytes):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Arquivo deve ser um XML de NFe válido.",
+        )
+
+    future = _NFE_PARSE_EXECUTOR.submit(nfe_parser.parse_nfe, xml_bytes)
+    try:
+        data = future.result(timeout=NFE_PARSE_TIMEOUT_SECONDS)
+    except concurrent.futures.TimeoutError:
+        future.cancel()
+        raise HTTPException(
+            status_code=status.HTTP_408_REQUEST_TIMEOUT,
+            detail="Tempo excedido ao processar o XML da NFe.",
+        ) from None
+
     return nfe_match_service.match_nfe(db, data)
 
 

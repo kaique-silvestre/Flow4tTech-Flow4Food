@@ -1,3 +1,4 @@
+import datetime
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
@@ -24,26 +25,32 @@ router = APIRouter(dependencies=[Depends(require_feature("comandas")), Depends(r
 @router.post("", response_model=ComandaResponse, status_code=201)
 def abrir_comanda(
     body: ComandaCreateRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
+    payload: dict = Depends(get_current_user),
 ) -> ComandaResponse:
-    return comandas_service.abrir_comanda(db, body)  # type: ignore[return-value]
+    result = comandas_service.abrir_comanda(db, body)  # type: ignore[return-value]
+    background_tasks.add_task(
+        audit_service.log_background,
+        "comanda.abrir",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="Comanda",
+        entity_id=result.id,
+        after={"identificacao": body.identificacao, "garcom_id": body.garcom_id},
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.get("/fechadas", response_model=list[ComandaResponse])
 def list_fechadas(
     busca: Optional[str] = Query(None),
-    data_inicio: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
-    data_fim: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
+    data_inicio: Optional[datetime.date] = Query(None),
+    data_fim: Optional[datetime.date] = Query(None),
     db: Session = Depends(get_tenant_db),
 ) -> list[ComandaResponse]:
-    import datetime as dt
-    dt_inicio = dt.datetime.strptime(data_inicio, "%Y-%m-%d") if data_inicio else None
-    dt_fim = (
-        dt.datetime.strptime(data_fim, "%Y-%m-%d") + dt.timedelta(days=1) - dt.timedelta(seconds=1)
-        if data_fim
-        else None
-    )
-    return comandas_service.list_comandas_fechadas(db, busca, dt_inicio, dt_fim)  # type: ignore[return-value]
+    return comandas_service.list_comandas_fechadas(db, busca, data_inicio, data_fim)  # type: ignore[return-value]
 
 
 @router.get("/count-abertas", response_model=int)
@@ -66,9 +73,22 @@ def list_comandas(
 def patch_comanda(
     comanda_id: int,
     body: PatchComandaRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
+    payload: dict = Depends(get_current_user),
 ) -> ComandaResponse:
-    return comandas_service.patch_comanda(db, comanda_id, body)  # type: ignore[return-value]
+    result = comandas_service.patch_comanda(db, comanda_id, body)  # type: ignore[return-value]
+    background_tasks.add_task(
+        audit_service.log_background,
+        "comanda.patch",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="Comanda",
+        entity_id=comanda_id,
+        after={"identificacao": body.identificacao, "garcom_id": body.garcom_id},
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.get("/{comanda_id}", response_model=ComandaResponse)
@@ -83,9 +103,22 @@ def get_comanda(
 def lancar_item(
     comanda_id: int,
     body: LancarItemRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
+    payload: dict = Depends(get_current_user),
 ) -> ComandaResponse:
-    return comandas_service.lancar_item(db, comanda_id, body)  # type: ignore[return-value]
+    result = comandas_service.lancar_item(db, comanda_id, body)  # type: ignore[return-value]
+    background_tasks.add_task(
+        audit_service.log_background,
+        "comanda.item.lancar",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="Comanda",
+        entity_id=comanda_id,
+        after={"item_id": body.item_id, "quantidade": str(body.quantidade)},
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.patch("/{comanda_id}/itens/{item_id}", response_model=ComandaResponse)
@@ -93,9 +126,26 @@ def editar_item(
     comanda_id: int,
     item_id: int,
     body: EditarItemRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_tenant_db),
+    payload: dict = Depends(get_current_user),
 ) -> ComandaResponse:
-    return comandas_service.editar_item(db, comanda_id, item_id, body)  # type: ignore[return-value]
+    result = comandas_service.editar_item(db, comanda_id, item_id, body)  # type: ignore[return-value]
+    background_tasks.add_task(
+        audit_service.log_background,
+        "comanda.item.editar",
+        tenant_id=payload.get("tenant_id"),
+        user_id=payload.get("user_id"),
+        entity="ComandaItem",
+        entity_id=item_id,
+        after={
+            "quantidade": str(body.quantidade) if body.quantidade is not None else None,
+            "pessoa_associada": body.pessoa_associada,
+            "observacao": body.observacao,
+        },
+        impersonated_by=payload.get("impersonated_by"),
+    )
+    return result
 
 
 @router.post("/{comanda_id}/itens/{item_id}/cancelar", response_model=ComandaResponse)
