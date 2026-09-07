@@ -1,7 +1,8 @@
 # Orchestration tracker — restructure issues (auto, one-by-one via subagent)
 
-Sidebar excluído (em andamento manual). Ordem por dependência: cardapio (Table primitive)
-desbloqueia cadastros e gestao-usuarios. dashboard/relatorios ainda sem issues quebradas.
+Ordem por dependência: cardapio (Table primitive) desbloqueia cadastros e gestao-usuarios.
+dashboard/relatorios ainda sem issues quebradas. Sidebar (Fase F) iniciada a pedido explícito
+do usuário, com rounds paralelos quando os tickets não compartilham arquivo (ver Fase F).
 
 Regra: 1 issue por rodada de subagente. Commit por issue. Marcar [x] aqui e no arquivo da issue
 ao concluir. CHANGELOG.md sempre atualizado (Autor: Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>).
@@ -45,6 +46,16 @@ ao concluir. CHANGELOG.md sempre atualizado (Autor: Kaique Gonzaga Silvestre <ka
 - [ ] gerar issues a partir de spec.md
 - [ ] (issues a preencher aqui após quebra)
 
+## Fase F — sidebar-restructure (rounds paralelos quando não há conflito de arquivo)
+- [x] 01-tenant-name-jwt (commit 646a25f) — backend, sem dependência
+- [x] 02-nav-groups-headings (commit e8e12b0) — frontend navConfig/Sidebar, sem dependência
+- [ ] 03-empresa-block (depende de 01) — frontend authStore/Sidebar/subscriptionStatus
+- [ ] 04-accordion-inline (depende de 02) — frontend Sidebar
+- [ ] 05-nav-search-filter (depende de 02) — frontend navConfig/Sidebar
+- [ ] 06-fixed-footer (depende de 02, 04) — frontend Sidebar/Topbar/Sidebar.test.tsx (novo)
+- [ ] 07-breadcrumb-topbar (depende de 01) — frontend Topbar/Breadcrumb/AppLayout
+- [ ] 08-collapse-handle (depende de 03, 05, 06) — frontend Sidebar
+
 ## Log
 - 2026-09-07: tracker criado, iniciando Fase A/01.
 - 2026-09-07: A/01 concluído (commit eadd1bd). Nota do subagente: graphify-out/graph.json tem backlog de ~162 docs desatualizados (.claude/PRPs/plans/*.md) fora do escopo dos tickets — precisa `graphify --update` completo em algum momento, separado deste loop.
@@ -59,3 +70,4 @@ ao concluir. CHANGELOG.md sempre atualizado (Autor: Kaique Gonzaga Silvestre <ka
 - 2026-09-07: C/01 concluído (15e7cb0). C/02 concluído (10e1851) — bug real corrigido: Radix DropdownMenuItem `disabled` não bloqueava `onClick`, item "Desativar"/"Ativar" de Perfil disparava mutation mesmo desabilitado; guard `if (!canToggle) return` adicionado.
 - 2026-09-07: C/03 concluído (4197046, proteções de perfil/permissões/proprietário espelhadas do backend). C/04 concluído (b3769a5). FASE C COMPLETA.
 - 2026-09-07: iniciando Fase D (dashboard-restructure) — sem issues quebradas ainda, lendo spec.md completo pra criar tickets.
+- 2026-09-07: usuário pediu explicitamente para executar Fase F (sidebar) em paralelo com subagents. Mapeado grafo de dependência x arquivo tocado: 02,03,04,05,06,08 tocam todos `Sidebar.tsx`, então paralelismo real só é seguro entre tickets que não compartilham arquivo. Round 1 (paralelo): F/01 (backend, commit 646a25f) + F/02 (frontend navConfig/Sidebar, commit e8e12b0) — concluídos, sem conflito.
