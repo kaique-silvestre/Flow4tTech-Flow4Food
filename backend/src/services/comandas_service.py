@@ -1,5 +1,6 @@
 import datetime
 import json
+from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
@@ -605,6 +606,77 @@ def aplicar_desconto(db: Session, comanda_id: int, data: AplicarDescontoRequest)
     return _build_response(db, comanda)
 
 
+@dataclass
+class _FechamentoCalculo:
+    total_com_desconto: Decimal
+    desconto_valor_calculado: Optional[Decimal]
+    esperado: Optional[Decimal]
+    novo_saldo: Optional[Decimal]
+    valor_comissao: Optional[Decimal]
+
+
+def _calcular_fechamento(
+    *,
+    subtotal: Decimal,
+    desconto_percentual: Optional[Decimal],
+    desconto_valor: Optional[Decimal],
+    saldo_pendente: Optional[Decimal],
+    total_pago: Decimal,
+    modo_divisao: str,
+    taxa_servico: bool,
+    garcom_id: Optional[int],
+) -> _FechamentoCalculo:
+    desconto_valor_calculado: Optional[Decimal] = None
+    if desconto_percentual is not None:
+        total_com_desconto: Decimal = subtotal * (Decimal("1") - desconto_percentual / Decimal("100"))
+        desconto_valor_calculado = (subtotal - total_com_desconto).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+    elif desconto_valor is not None:
+        total_com_desconto = subtotal - desconto_valor
+    else:
+        total_com_desconto = subtotal
+
+    pagamento_parcial = modo_divisao == "parcial"
+    esperado: Optional[Decimal] = None
+    novo_saldo: Optional[Decimal] = None
+
+    if pagamento_parcial:
+        base_parcial: Decimal = saldo_pendente if saldo_pendente is not None else total_com_desconto
+        if total_pago >= base_parcial:
+            raise AppError(
+                ErrorCode.PAGAMENTO_NAO_BATE,
+                "Pagamento parcial deve ser menor que o total",
+                http_status=400,
+            )
+        novo_saldo = base_parcial - total_pago
+    else:
+        base_total: Decimal = saldo_pendente if saldo_pendente is not None else total_com_desconto
+        esperado = (
+            (base_total * _TAXA_SERVICO_MULTIPLICADOR) if taxa_servico else base_total
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        if abs(total_pago - esperado) > Decimal("0.01"):
+            raise AppError(
+                ErrorCode.PAGAMENTO_NAO_BATE,
+                f"Soma dos pagamentos (R$ {total_pago}) nao confere com o total (R$ {base_total})",
+                http_status=400,
+            )
+
+    valor_comissao: Optional[Decimal] = None
+    if not pagamento_parcial and taxa_servico and garcom_id is not None:
+        valor_comissao = (total_com_desconto * TAXA_SERVICO_PERCENTUAL / Decimal("100")).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+
+    return _FechamentoCalculo(
+        total_com_desconto=total_com_desconto,
+        desconto_valor_calculado=desconto_valor_calculado,
+        esperado=esperado,
+        novo_saldo=novo_saldo,
+        valor_comissao=valor_comissao,
+    )
+
+
 def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> ComandaResponse:
     comanda = comandas_repository.get_by_id(db, comanda_id)
     if comanda is None:
@@ -629,33 +701,18 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
     total_pago: Decimal = sum((p.valor for p in data.pagamentos), Decimal("0"))
     pagamento_parcial = data.modo_divisao == "parcial"
 
-    if comanda.desconto_percentual is not None:
-        total_com_desconto: Decimal = subtotal * (Decimal("1") - comanda.desconto_percentual / Decimal("100"))
-        comanda.desconto_valor = (subtotal - total_com_desconto).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    elif comanda.desconto_valor is not None:
-        total_com_desconto = subtotal - comanda.desconto_valor
-    else:
-        total_com_desconto = subtotal
-
-    if pagamento_parcial:
-        base_parcial: Decimal = comanda.saldo_pendente if comanda.saldo_pendente is not None else total_com_desconto
-        if total_pago >= base_parcial:
-            raise AppError(
-                ErrorCode.PAGAMENTO_NAO_BATE,
-                "Pagamento parcial deve ser menor que o total",
-                http_status=400,
-            )
-    else:
-        base_total: Decimal = comanda.saldo_pendente if comanda.saldo_pendente is not None else total_com_desconto
-        esperado: Decimal = (
-            (base_total * _TAXA_SERVICO_MULTIPLICADOR) if data.taxa_servico else base_total
-        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        if abs(total_pago - esperado) > Decimal("0.01"):
-            raise AppError(
-                ErrorCode.PAGAMENTO_NAO_BATE,
-                f"Soma dos pagamentos (R$ {total_pago}) nao confere com o total (R$ {base_total})",
-                http_status=400,
-            )
+    calculo = _calcular_fechamento(
+        subtotal=subtotal,
+        desconto_percentual=comanda.desconto_percentual,
+        desconto_valor=comanda.desconto_valor,
+        saldo_pendente=comanda.saldo_pendente,
+        total_pago=total_pago,
+        modo_divisao=data.modo_divisao,
+        taxa_servico=bool(data.taxa_servico),
+        garcom_id=comanda.garcom_id,
+    )
+    if calculo.desconto_valor_calculado is not None:
+        comanda.desconto_valor = calculo.desconto_valor_calculado
 
     for p in data.pagamentos:
         metodo = db.get(MetodoPagamento, p.metodo_id)
@@ -677,23 +734,21 @@ def fechar_comanda(db: Session, comanda_id: int, data: FecharComandaRequest) -> 
     itens_negativos: list[str] = []
 
     if pagamento_parcial:
-        novo_saldo: Decimal = base_parcial - total_pago
-        comandas_repository.atualizar_saldo_pendente(db, comanda_id, novo_saldo)
+        assert calculo.novo_saldo is not None
+        comandas_repository.atualizar_saldo_pendente(db, comanda_id, calculo.novo_saldo)
     else:
         for ic in itens:
             negativos = _dar_baixa_estoque(db, ic.produto_id, ic.quantidade)
             itens_negativos.extend(negativos)
             _liberar_reserva_estoque(db, ic.produto_id, ic.quantidade)
-        comandas_repository.fechar_comanda_repo(db, comanda_id, esperado)
+        assert calculo.esperado is not None
+        comandas_repository.fechar_comanda_repo(db, comanda_id, calculo.esperado)
 
-    if not pagamento_parcial and data.taxa_servico and comanda.garcom_id is not None:
-        valor_comissao = (
-            total_com_desconto * TAXA_SERVICO_PERCENTUAL / Decimal("100")
-        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    if calculo.valor_comissao is not None:
         comissao = ComissaoGarcom(
             garcom_id=comanda.garcom_id,
             comanda_id=comanda_id,
-            valor=valor_comissao,
+            valor=calculo.valor_comissao,
             percentual=TAXA_SERVICO_PERCENTUAL,
             created_at=datetime.datetime.now(datetime.timezone.utc),
         )

@@ -403,3 +403,135 @@ def test_top_itens(crud_client):
     assert resp.status_code == 200
     nomes = [i["nome"] for i in resp.json()]
     assert "Cerveja" in nomes
+
+
+def test_calcular_fechamento_total_pago_sem_desconto_sem_taxa():
+    from src.services.comandas_service import _calcular_fechamento
+
+    calculo = _calcular_fechamento(
+        subtotal=Decimal("100.00"),
+        desconto_percentual=None,
+        desconto_valor=None,
+        saldo_pendente=None,
+        total_pago=Decimal("100.00"),
+        modo_divisao="sem_divisao",
+        taxa_servico=False,
+        garcom_id=None,
+    )
+
+    assert calculo.total_com_desconto == Decimal("100.00")
+    assert calculo.esperado == Decimal("100.00")
+    assert calculo.novo_saldo is None
+    assert calculo.valor_comissao is None
+
+
+def test_calcular_fechamento_com_desconto_percentual_quantiza():
+    from src.services.comandas_service import _calcular_fechamento
+
+    calculo = _calcular_fechamento(
+        subtotal=Decimal("100.00"),
+        desconto_percentual=Decimal("12.50"),
+        desconto_valor=None,
+        saldo_pendente=None,
+        total_pago=Decimal("87.50"),
+        modo_divisao="sem_divisao",
+        taxa_servico=False,
+        garcom_id=None,
+    )
+
+    assert calculo.total_com_desconto == Decimal("87.500")
+    assert calculo.esperado == Decimal("87.50")
+
+
+def test_calcular_fechamento_com_taxa_servico_e_garcom_calcula_comissao():
+    from src.services.comandas_service import TAXA_SERVICO_PERCENTUAL, _calcular_fechamento
+
+    calculo = _calcular_fechamento(
+        subtotal=Decimal("100.00"),
+        desconto_percentual=None,
+        desconto_valor=None,
+        saldo_pendente=None,
+        total_pago=Decimal("110.00"),
+        modo_divisao="sem_divisao",
+        taxa_servico=True,
+        garcom_id=7,
+    )
+
+    assert calculo.esperado == Decimal("110.00")
+    assert calculo.valor_comissao == (Decimal("100.00") * TAXA_SERVICO_PERCENTUAL / Decimal("100")).quantize(
+        Decimal("0.01")
+    )
+
+
+def test_calcular_fechamento_pagamento_completo_nao_bate_levanta_erro():
+    from src.core.errors import AppError, ErrorCode
+    from src.services.comandas_service import _calcular_fechamento
+
+    with pytest.raises(AppError) as exc_info:
+        _calcular_fechamento(
+            subtotal=Decimal("100.00"),
+            desconto_percentual=None,
+            desconto_valor=None,
+            saldo_pendente=None,
+            total_pago=Decimal("50.00"),
+            modo_divisao="sem_divisao",
+            taxa_servico=False,
+            garcom_id=None,
+        )
+
+    assert exc_info.value.code == ErrorCode.PAGAMENTO_NAO_BATE
+
+
+def test_calcular_fechamento_parcial_menor_que_base_calcula_novo_saldo():
+    from src.services.comandas_service import _calcular_fechamento
+
+    calculo = _calcular_fechamento(
+        subtotal=Decimal("100.00"),
+        desconto_percentual=None,
+        desconto_valor=None,
+        saldo_pendente=None,
+        total_pago=Decimal("40.00"),
+        modo_divisao="parcial",
+        taxa_servico=False,
+        garcom_id=None,
+    )
+
+    assert calculo.novo_saldo == Decimal("60.00")
+    assert calculo.esperado is None
+    assert calculo.valor_comissao is None
+
+
+def test_calcular_fechamento_parcial_maior_ou_igual_base_levanta_erro():
+    from src.core.errors import AppError, ErrorCode
+    from src.services.comandas_service import _calcular_fechamento
+
+    with pytest.raises(AppError) as exc_info:
+        _calcular_fechamento(
+            subtotal=Decimal("100.00"),
+            desconto_percentual=None,
+            desconto_valor=None,
+            saldo_pendente=None,
+            total_pago=Decimal("100.00"),
+            modo_divisao="parcial",
+            taxa_servico=False,
+            garcom_id=None,
+        )
+
+    assert exc_info.value.code == ErrorCode.PAGAMENTO_NAO_BATE
+
+
+def test_calcular_fechamento_parcial_usa_saldo_pendente_quando_reaberta():
+    from src.services.comandas_service import _calcular_fechamento
+
+    calculo = _calcular_fechamento(
+        subtotal=Decimal("100.00"),
+        desconto_percentual=None,
+        desconto_valor=None,
+        saldo_pendente=Decimal("30.00"),
+        total_pago=Decimal("10.00"),
+        modo_divisao="parcial",
+        taxa_servico=False,
+        garcom_id=None,
+    )
+
+    assert calculo.novo_saldo == Decimal("20.00")
