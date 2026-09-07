@@ -6,8 +6,8 @@ import { useInsumoCriticos } from "@/features/estoque/useEstoque";
 import { useContasPagarResumo } from "@/features/contas_pagar/useContasPagar";
 import { usePermissions } from "@/hooks/usePermission";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
-import { ChevronRight, Menu } from "lucide-react";
-import { NAV_GROUPS, type NavItem, type SubNavItem } from "./navConfig";
+import { ChevronRight, Menu, Search } from "lucide-react";
+import { NAV_GROUPS, filterNavItems, type NavItem, type SubNavItem } from "./navConfig";
 import { NavBadge } from "@/components/ui/nav-badge";
 import { useAuthStore } from "@/stores/authStore";
 import { SUBSCRIPTION_STATUS_LABELS } from "@/features/platform/subscriptionStatus";
@@ -65,6 +65,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [flyoutPos, setFlyoutPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const navRef = useRef<HTMLDivElement>(null);
   const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -162,6 +163,10 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
     items: visibleItemsOf(group.items),
   })).filter((group) => group.items.length > 0);
 
+  // Search filters on top of what's already visible by permission/feature —
+  // it never re-introduces an item the user isn't allowed to see.
+  const filteredGroups = filterNavItems(searchQuery, visibleGroups);
+
   function renderFlyout(children: SubNavItem[], label: string) {
     return createPortal(
       <div
@@ -207,8 +212,30 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
 
       <EmpresaBlock collapsed={collapsed} />
 
+      {/* Colapsada: campo some inteiramente (sem espaço pra digitar/exibir
+          texto). O valor digitado fica preservado em `searchQuery` mesmo
+          escondido, e reaparece ao expandir de novo. */}
+      {!collapsed && (
+        <div className="border-b border-gray-200 px-3 py-2 shrink-0">
+          <div className="relative">
+            <Search
+              size={14}
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar no menu..."
+              aria-label="Buscar no menu"
+              className="w-full rounded-md border border-gray-200 bg-gray-50 py-1.5 pl-8 pr-2.5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-gray-300 focus:bg-white focus:outline-none"
+            />
+          </div>
+        </div>
+      )}
+
       <nav ref={navRef} className="flex flex-1 flex-col gap-0.5 p-2 overflow-y-auto">
-        {visibleGroups.map((group, groupIndex) => (
+        {filteredGroups.map((group, groupIndex) => (
           <div key={group.heading ?? `group-${groupIndex}`} className="flex flex-col gap-0.5">
             {group.heading && !collapsed && (
               <span className="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 select-none truncate">

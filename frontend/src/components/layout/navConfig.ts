@@ -120,3 +120,42 @@ export const NAV_GROUPS: NavGroup[] = [
  * need the flat list (e.g. Breadcrumb.tsx).
  */
 export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((group) => group.items);
+
+/**
+ * Local, case-insensitive filter over nav groups by item `label`.
+ *
+ * - Empty (or whitespace-only) query returns every group/item unchanged.
+ * - A parent item is kept if it matches itself, OR if any of its children
+ *   match — in that case only the matching children are kept under it.
+ * - A group left with no items after filtering is dropped entirely.
+ *
+ * Pure, 100% client-side — no network call, no debounce (the full list is
+ * already in memory and small enough that filtering is effectively free).
+ */
+export function filterNavItems(query: string, groups: NavGroup[]): NavGroup[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return groups;
+
+  return groups
+    .map((group) => {
+      const items = group.items.reduce<NavItem[]>((acc, item) => {
+        const selfMatches = item.label.toLowerCase().includes(q);
+        if (selfMatches) {
+          acc.push(item);
+          return acc;
+        }
+        if (item.children) {
+          const matchingChildren = item.children.filter((child) =>
+            child.label.toLowerCase().includes(q),
+          );
+          if (matchingChildren.length > 0) {
+            acc.push({ ...item, children: matchingChildren });
+          }
+        }
+        return acc;
+      }, []);
+
+      return { heading: group.heading, items };
+    })
+    .filter((group) => group.items.length > 0);
+}
