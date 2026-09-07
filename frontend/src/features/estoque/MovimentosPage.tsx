@@ -1,5 +1,14 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { formatCurrency, stockDisplay, parseApiDate } from "@/lib/format";
 import {
   useSaldoEstoque,
@@ -119,44 +128,44 @@ function InsumoMovimentos() {
         <p className="text-sm text-gray-500">Nenhum movimento encontrado.</p>
       ) : (
         <div className="flex-1 flex flex-col">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b text-left text-gray-500">
-                <th className="py-2 pr-4">Data</th>
-                <th className="py-2 pr-4">Item</th>
-                <th className="py-2 pr-4">Tipo</th>
-                <th className="py-2 pr-4">Quantidade</th>
-                <th className="py-2 pr-4">Unidade</th>
-                <th className="py-2">Saldo após</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Data</TableHead>
+                <TableHead>Item</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead className="text-right">Quantidade</TableHead>
+                <TableHead>Unidade</TableHead>
+                <TableHead className="text-right">Saldo após</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {result.itens.map((mov) => {
                 const { qty: qtdDisplay, unit: unitDisplay } = stockDisplay(mov.quantidade, mov.unidade_base);
                 const { qty: saldoDisplay } = stockDisplay(mov.saldo_apos, mov.unidade_base);
                 return (
-                  <tr key={mov.id} className="border-b last:border-0">
-                    <td className="py-2 pr-4 text-gray-500">
+                  <TableRow key={mov.id}>
+                    <TableCell className="text-gray-500">
                       {parseApiDate(mov.created_at).toLocaleString("pt-BR", {
                         day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit",
                       })}
-                    </td>
-                    <td className="py-2 pr-4 font-medium">{mov.item_nome}</td>
-                    <td className="py-2 pr-4">
+                    </TableCell>
+                    <TableCell className="font-medium">{mov.item_nome}</TableCell>
+                    <TableCell>
                       <span className={`rounded-full px-2 py-0.5 text-xs ${TIPO_BADGE[mov.tipo] ?? ""}`}>
                         {TIPO_LABEL[mov.tipo] ?? mov.tipo}
                       </span>
-                    </td>
-                    <td className={`py-2 pr-4 ${mov.tipo === "entrada" ? "text-green-700" : "text-red-600"}`}>
+                    </TableCell>
+                    <TableCell className={`text-right ${mov.tipo === "entrada" ? "text-green-700" : "text-red-600"}`}>
                       {mov.tipo === "entrada" ? "+" : "-"}{qtdDisplay}
-                    </td>
-                    <td className="py-2 pr-4 text-gray-500">{unitDisplay}</td>
-                    <td className="py-2 text-gray-600">{saldoDisplay}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="text-gray-500">{unitDisplay}</TableCell>
+                    <TableCell className="text-right text-gray-600">{saldoDisplay}</TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
 
           <div className="flex-1" />
           <div className="sticky bottom-0 bg-white border-t border-gray-100 mt-4 py-2 flex items-center justify-between text-sm">
@@ -234,29 +243,29 @@ function ProdutoMovimentos() {
         <p className="text-sm text-gray-500">Nenhuma saída de produto encontrada.</p>
       ) : (
         <div className="flex-1 flex flex-col">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b text-left text-gray-500">
-                <th className="py-2 pr-4">Data</th>
-                <th className="py-2 pr-4">Produto</th>
-                <th className="py-2 pr-4">Comanda</th>
-                <th className="py-2 pr-4">Status</th>
-                <th className="py-2 pr-4">Qtd</th>
-                <th className="py-2 pr-4">Preço unit.</th>
-                <th className="py-2">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Data</TableHead>
+                <TableHead>Produto</TableHead>
+                <TableHead>Comanda</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Qtd</TableHead>
+                <TableHead className="text-right">Preço unit.</TableHead>
+                <TableHead className="text-right">Subtotal</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {result.itens.map((mov) => (
-                <tr key={mov.id} className="border-b last:border-0">
-                  <td className="py-2 pr-4 text-gray-500">
+                <TableRow key={mov.id}>
+                  <TableCell className="text-gray-500">
                     {parseApiDate(mov.created_at).toLocaleString("pt-BR", {
                       day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit",
                     })}
-                  </td>
-                  <td className="py-2 pr-4 font-medium">{mov.produto_nome}</td>
-                  <td className="py-2 pr-4 text-gray-500">{mov.comanda_label}</td>
-                  <td className="py-2 pr-4">
+                  </TableCell>
+                  <TableCell className="font-medium">{mov.produto_nome}</TableCell>
+                  <TableCell className="text-gray-500">{mov.comanda_label}</TableCell>
+                  <TableCell>
                     {mov.cancelado ? (
                       <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600">Cancelado</span>
                     ) : mov.cortesia ? (
@@ -264,16 +273,16 @@ function ProdutoMovimentos() {
                     ) : (
                       <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">Venda</span>
                     )}
-                  </td>
-                  <td className="py-2 pr-4">{Number(mov.quantidade)}</td>
-                  <td className="py-2 pr-4 text-gray-500">{formatCurrency(Number(mov.preco_unitario))}</td>
-                  <td className={`py-2 ${mov.cancelado ? "text-gray-400 line-through" : "text-gray-800"}`}>
+                  </TableCell>
+                  <TableCell className="text-right">{Number(mov.quantidade)}</TableCell>
+                  <TableCell className="text-right text-gray-500">{formatCurrency(Number(mov.preco_unitario))}</TableCell>
+                  <TableCell className={`text-right ${mov.cancelado ? "text-gray-400 line-through" : "text-gray-800"}`}>
                     {formatCurrency(Number(mov.subtotal))}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
 
           <div className="flex-1" />
           <div className="sticky bottom-0 bg-white border-t border-gray-100 mt-4 py-2 flex items-center justify-between text-sm">
@@ -294,7 +303,12 @@ function ProdutoMovimentos() {
 }
 
 export function MovimentosPage() {
-  const [tab, setTab] = useState<"insumos" | "produtos">("insumos");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") === "produtos" ? "produtos" : "insumos";
+
+  function setTab(next: "insumos" | "produtos") {
+    setSearchParams({ tab: next });
+  }
 
   return (
     <div className="p-6 min-h-full flex flex-col">
