@@ -7,7 +7,7 @@ import { useContasPagarResumo } from "@/features/contas_pagar/useContasPagar";
 import { usePermissions } from "@/hooks/usePermission";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useLogout } from "@/hooks/useLogout";
-import { ChevronRight, LogOut, Menu, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, Search } from "lucide-react";
 import { NAV_GROUPS, filterNavItems, type NavItem, type SubNavItem } from "./navConfig";
 import { NavBadge } from "@/components/ui/nav-badge";
 import { useAuthStore } from "@/stores/authStore";
@@ -307,12 +307,16 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
         ${collapsed ? "lg:w-14" : "lg:w-52"}
       `}
     >
+      {/* Handle de colapso: botão circular grudado na borda direita da
+          sidebar, centralizado verticalmente, só em desktop (no mobile o
+          menu é controlado pelo hambúrguer do Topbar). Substitui a antiga
+          barra de linha inteira no topo do <aside>. */}
       <button
-        className="hidden h-12 items-center justify-center border-b border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-50 shrink-0 lg:flex transition-colors"
+        className="hidden lg:flex absolute top-1/2 -right-3 z-50 h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400 shadow-md transition-colors hover:bg-gray-50 hover:text-gray-700"
         onClick={onToggle}
         title={collapsed ? "Expandir menu" : "Colapsar menu"}
       >
-        <Menu size={18} />
+        {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
 
       <EmpresaBlock collapsed={collapsed} />
