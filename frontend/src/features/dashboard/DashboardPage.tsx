@@ -44,7 +44,8 @@ function urgencyClass(minutos: number): string {
   return "";
 }
 
-function variacao(atual: number, anterior: number): number | null {
+// null quando não há base de comparação (anterior === 0 cobre também o caso atual === 0 && anterior === 0).
+export function variacao(atual: number, anterior: number): number | null {
   if (anterior === 0) return null;
   return ((atual - anterior) / anterior) * 100;
 }
@@ -64,12 +65,11 @@ export function DashboardPage() {
   const { data, isLoading } = useDashboard();
   const navigate = useNavigate();
 
-  const cmvPct = data?.faturamento_hoje
-    ? (data.cmv_hoje / data.faturamento_hoje) * 100
-    : 0;
+  const cmvPct =
+    data && data.faturamento_hoje > 0 ? (data.cmv_hoje / data.faturamento_hoje) * 100 : null;
 
   const cmvColor =
-    cmvPct === 0
+    !cmvPct
       ? "text-gray-400"
       : cmvPct < 30
       ? "text-green-600"
@@ -181,7 +181,7 @@ export function DashboardPage() {
                 <p className="text-xs text-gray-500 uppercase tracking-wide">CMV Hoje</p>
               </div>
               <p className={`text-2xl font-bold ${cmvColor}`}>
-                {cmvPct.toFixed(1)}%
+                {cmvPct === null ? "—" : `${cmvPct.toFixed(1)}%`}
               </p>
               <p className="mt-1 text-xs text-gray-400">{formatCurrency(data?.cmv_hoje ?? 0)}</p>
             </div>

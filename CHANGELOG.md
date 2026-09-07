@@ -40,6 +40,7 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ### Fixed
 
+- Corrige card "CMV Hoje" do Dashboard exibindo "—" em vez de percentual inválido quando `faturamento_hoje` é zero, e ajusta `variacao()` (usada por todos os badges de comparação) para deixar explícito o caso `atual === 0 && anterior === 0` — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 - Corrige actor_id inconsistente (usava `payload.get("sub")` cru em vez do fallback completo) em `update_assinatura`, `update_assinatura_full` e `impersonate_user` — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-06
 - Corrige audit log de `update_tenant_profile` que registrava `body.permissions` (valor bruto da requisição, pode ser `None`) em vez do valor efetivamente salvo — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-06
 
