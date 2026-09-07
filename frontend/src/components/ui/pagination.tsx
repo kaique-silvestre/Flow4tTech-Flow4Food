@@ -1,15 +1,27 @@
 import { useState, useEffect } from "react";
 import { Button } from "./button";
 
+const OPCOES_POR_PAGINA = [10, 25, 50] as const;
+
 interface PaginationProps {
   pagina: number;
   totalPaginas: number;
   total: number;
   label?: string;
   onPageChange: (p: number) => void;
+  porPagina?: number;
+  onPorPaginaChange?: (n: number) => void;
 }
 
-export function Pagination({ pagina, totalPaginas, total, label = "itens", onPageChange }: PaginationProps) {
+export function Pagination({
+  pagina,
+  totalPaginas,
+  total,
+  label = "itens",
+  onPageChange,
+  porPagina,
+  onPorPaginaChange,
+}: PaginationProps) {
   const [inputVal, setInputVal] = useState(String(pagina));
 
   useEffect(() => {
@@ -29,7 +41,20 @@ export function Pagination({ pagina, totalPaginas, total, label = "itens", onPag
 
   return (
     <div className="border-t border-gray-100 mt-4 py-2 flex items-center justify-between text-sm">
-      <span className="text-gray-400 text-xs">{total} {label}</span>
+      <div className="flex items-center gap-2 text-gray-400 text-xs">
+        <span>{total} {label}</span>
+        {porPagina !== undefined && onPorPaginaChange && (
+          <select
+            value={porPagina}
+            onChange={(e) => onPorPaginaChange(Number(e.target.value))}
+            className="rounded border border-gray-300 px-1 py-0.5 text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-gray-400"
+          >
+            {OPCOES_POR_PAGINA.map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+        )}
+      </div>
 
       <div className="flex items-center gap-1">
         <Button

@@ -12,6 +12,7 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 ### Added
 
 - Componente `Table` reutilizável estilo shadcn (`components/ui/table.tsx`) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
+- Seletor de itens por página (10/25/50) em `Pagination`, usado pelo Cardápio no lugar do tamanho fixo de 10 — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 
 ### Changed
 

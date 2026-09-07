@@ -56,7 +56,7 @@ function collectIds(id: number, tree: Categoria[]): Set<number> {
   return ids;
 }
 
-const POR_PAGINA = 10;
+const POR_PAGINA_PADRAO = 10;
 
 export function normalizarTexto(texto: string): string {
   return texto
@@ -97,7 +97,13 @@ export function CardapioPage() {
   const [catFiltro, setCatFiltro] = useState<number | null>(null);
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(POR_PAGINA_PADRAO);
   const [ordenacao, setOrdenacao] = useState<"az" | "original">("az");
+
+  function handlePorPaginaChange(n: number) {
+    setPorPagina(n);
+    setPagina(1);
+  }
 
   function toggleExpand(id: number) {
     setExpandidos((prev) => {
@@ -222,7 +228,7 @@ export function CardapioPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginar(produtosOrdenados, pagina, POR_PAGINA).map((p) => {
+            {paginar(produtosOrdenados, pagina, porPagina).map((p) => {
               const custo = calcCusto(p);
               const precoEfetivo = (p.preco_promocional != null ? p.preco_promocional : p.preco_venda);
               const lucro =
@@ -361,10 +367,12 @@ export function CardapioPage() {
         <div className="flex-1" />
         <Pagination
           pagina={pagina}
-          totalPaginas={Math.ceil(produtosOrdenados.length / POR_PAGINA)}
+          totalPaginas={Math.ceil(produtosOrdenados.length / porPagina)}
           total={produtosOrdenados.length}
           label="produtos"
           onPageChange={setPagina}
+          porPagina={porPagina}
+          onPorPaginaChange={handlePorPaginaChange}
         />
         </div>
       )}
