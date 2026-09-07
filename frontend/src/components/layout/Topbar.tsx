@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
+import { useLogout } from "@/hooks/useLogout";
 import { IMPERSONATION_SESSION_KEY } from "@/lib/impersonation";
 import { toast } from "@/lib/toast";
 import { Menu, CalendarDays, ArrowUpRight, X } from "lucide-react";
@@ -174,9 +175,8 @@ interface TopbarProps {
 }
 
 export function Topbar({ onMenuClick }: TopbarProps) {
-  const clearToken = useAuthStore((s) => s.clearToken);
   const user = useAuthStore((s) => s.user);
-  const navigate = useNavigate();
+  const logout = useLogout();
   const [open, setOpen] = useState(false);
   const [alterarSenhaOpen, setAlterarSenhaOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -193,9 +193,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   function handleLogout() {
     setOpen(false);
-    clearToken();
-    toast.success("Sessão encerrada");
-    navigate("/login", { replace: true });
+    logout();
   }
 
   function handleAlterarSenha() {

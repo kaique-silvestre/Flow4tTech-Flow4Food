@@ -6,7 +6,8 @@ import { useInsumoCriticos } from "@/features/estoque/useEstoque";
 import { useContasPagarResumo } from "@/features/contas_pagar/useContasPagar";
 import { usePermissions } from "@/hooks/usePermission";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
-import { ChevronRight, Menu, Search } from "lucide-react";
+import { useLogout } from "@/hooks/useLogout";
+import { ChevronRight, LogOut, Menu, Search } from "lucide-react";
 import { NAV_GROUPS, filterNavItems, type NavItem, type SubNavItem } from "./navConfig";
 import { NavBadge } from "@/components/ui/nav-badge";
 import { useAuthStore } from "@/stores/authStore";
@@ -57,6 +58,12 @@ function EmpresaBlock({ collapsed }: { collapsed: boolean }) {
 
 /* ---------- component ---------- */
 
+// Label used to pull "Configurações" out of NAV_GROUPS and into the fixed
+// footer, alongside "Sair" — everything else in NAV_GROUPS stays in the
+// scrollable nav list. Matched by label rather than restructuring
+// navConfig.ts, which this ticket does not touch.
+const CONFIGURACOES_LABEL = "Configurações";
+
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
@@ -68,8 +75,10 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [flyoutPos, setFlyoutPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const navRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
   const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const location = useLocation();
+  const logout = useLogout();
   const { data: countAbertas = 0 } = useComandasAbertasCount();
   const { data: criticos = [] } = useInsumoCriticos();
   const countCriticos = criticos.length;
@@ -113,7 +122,10 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       const target = e.target as HTMLElement;
-      if (navRef.current && !navRef.current.contains(target) && !target.closest("[data-sidebar-flyout]")) {
+      const insideNav = navRef.current?.contains(target);
+      const insideFooter = footerRef.current?.contains(target);
+      const insideFlyout = target.closest("[data-sidebar-flyout]");
+      if (!insideNav && !insideFooter && !insideFlyout) {
         setOpenGroup(null);
       }
     }
@@ -158,7 +170,19 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
     });
   }
 
-  const visibleGroups = NAV_GROUPS.map((group) => ({
+  // "Configurações" is pulled out of NAV_GROUPS here and rendered in the
+  // fixed footer instead of the scrollable list below — everything else in
+  // NAV_GROUPS renders exactly as before.
+  const mainGroups = NAV_GROUPS.map((group) => ({
+    heading: group.heading,
+    items: group.items.filter((item) => item.label !== CONFIGURACOES_LABEL),
+  })).filter((group) => group.items.length > 0);
+
+  const configuracoesItem =
+    NAV_GROUPS.flatMap((group) => group.items).find((item) => item.label === CONFIGURACOES_LABEL) ?? null;
+  const configuracoesChildren = configuracoesItem?.children ? visibleChildren(configuracoesItem.children) : [];
+
+  const visibleGroups = mainGroups.map((group) => ({
     heading: group.heading,
     items: visibleItemsOf(group.items),
   })).filter((group) => group.items.length > 0);
@@ -190,6 +214,87 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
         ))}
       </div>,
       document.body,
+    );
+  }
+
+  // Renders a nav item that has children as an accordion trigger: inline
+  // accordion (CSS grid height animation) when expanded, flyout portal when
+  // collapsed (rail). Shared by the scrollable nav list and the fixed
+  // footer's "Configurações" so both use the exact same open/close
+  // mechanism (`openGroup` state, `toggleGroup`, `renderFlyout`) instead of
+  // parallel implementations.
+  function renderNavGroupItem(item: NavItem, children: SubNavItem[]) {
+    const badge = getGroupBadge(item.label);
+    const isOpen = openGroup === item.label;
+
+    return (
+      <div key={item.label} className="relative">
+        <button
+          ref={(el) => { btnRefs.current[item.label] = el; }}
+          onClick={() => toggleGroup(item.label)}
+          className={`group flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors duration-150 ${
+            collapsed ? "justify-center" : ""
+          } ${
+            isOpen
+              ? "bg-gray-100 text-gray-900 font-medium"
+              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          }`}
+          title={item.label}
+        >
+          {item.icon && (
+            <item.icon
+              size={18}
+              className={`shrink-0 transition-colors duration-150 ${
+                isOpen ? "text-gray-900" : "text-gray-400 group-hover:text-gray-600"
+              }`}
+            />
+          )}
+          {!collapsed && <span className="flex-1 truncate text-left">{item.label}</span>}
+          {!collapsed && badge && (
+            <NavBadge count={badge.count} color={badge.color} />
+          )}
+          {collapsed && badge && (
+            <NavBadge count={badge.count} color={badge.color} dot />
+          )}
+          {!collapsed && (
+            <ChevronRight
+              size={14}
+              className={`shrink-0 text-gray-400 transition-transform duration-150 ${
+                isOpen ? "rotate-90" : "rotate-0"
+              }`}
+            />
+          )}
+        </button>
+
+        {/* Expandida: accordion inline embaixo do grupo (CSS grid
+            grid-rows-[0fr]->[1fr] anima a altura sem cortar o
+            conteúdo com overflow fixo). Colapsada: flyout via
+            portal, comportamento inalterado. */}
+        {!collapsed && (
+          <div
+            className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
+              isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+            }`}
+          >
+            <div className="overflow-hidden">
+              <div className="flex flex-col gap-0.5 py-0.5">
+                {children.map((child) => (
+                  <NavLink
+                    key={child.to}
+                    to={child.to}
+                    end
+                    className="flex items-center gap-2.5 rounded-md py-2 pl-9 pr-2.5 text-sm transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  >
+                    <child.icon size={16} className="shrink-0" />
+                    <span className="truncate">{child.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        {collapsed && isOpen && renderFlyout(children, item.label)}
+      </div>
     );
   }
 
@@ -244,79 +349,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
             )}
             {group.items.map((item) => {
           if (item.children) {
-            const children = visibleChildren(item.children);
-            const badge = getGroupBadge(item.label);
-            const isOpen = openGroup === item.label;
-
-            return (
-              <div key={item.label} className="relative">
-                <button
-                  ref={(el) => { btnRefs.current[item.label] = el; }}
-                  onClick={() => toggleGroup(item.label)}
-                  className={`group flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors duration-150 ${
-                    collapsed ? "justify-center" : ""
-                  } ${
-                    isOpen
-                      ? "bg-gray-100 text-gray-900 font-medium"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
-                  title={item.label}
-                >
-                  {item.icon && (
-                    <item.icon
-                      size={18}
-                      className={`shrink-0 transition-colors duration-150 ${
-                        isOpen ? "text-gray-900" : "text-gray-400 group-hover:text-gray-600"
-                      }`}
-                    />
-                  )}
-                  {!collapsed && <span className="flex-1 truncate text-left">{item.label}</span>}
-                  {!collapsed && badge && (
-                    <NavBadge count={badge.count} color={badge.color} />
-                  )}
-                  {collapsed && badge && (
-                    <NavBadge count={badge.count} color={badge.color} dot />
-                  )}
-                  {!collapsed && (
-                    <ChevronRight
-                      size={14}
-                      className={`shrink-0 text-gray-400 transition-transform duration-150 ${
-                        isOpen ? "rotate-90" : "rotate-0"
-                      }`}
-                    />
-                  )}
-                </button>
-
-                {/* Expandida: accordion inline embaixo do grupo (CSS grid
-                    grid-rows-[0fr]->[1fr] anima a altura sem cortar o
-                    conteúdo com overflow fixo). Colapsada: flyout via
-                    portal, comportamento inalterado. */}
-                {!collapsed && (
-                  <div
-                    className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
-                      isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                    }`}
-                  >
-                    <div className="overflow-hidden">
-                      <div className="flex flex-col gap-0.5 py-0.5">
-                        {children.map((child) => (
-                          <NavLink
-                            key={child.to}
-                            to={child.to}
-                            end
-                            className="flex items-center gap-2.5 rounded-md py-2 pl-9 pr-2.5 text-sm transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          >
-                            <child.icon size={16} className="shrink-0" />
-                            <span className="truncate">{child.label}</span>
-                          </NavLink>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {collapsed && isOpen && renderFlyout(children, item.label)}
-              </div>
-            );
+            return renderNavGroupItem(item, visibleChildren(item.children));
           }
 
           /* ---- DIRECT LINK ---- */
@@ -351,6 +384,25 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
           </div>
         ))}
       </nav>
+
+      {/* Rodapé fixo, fora da área rolável: "Configurações" (accordion
+          reaproveitado de renderNavGroupItem, mesma lógica de permissão de
+          sempre) e "Sair" (fluxo de logout compartilhado com o Topbar). */}
+      <div ref={footerRef} className="flex flex-col gap-0.5 border-t border-gray-200 p-2 shrink-0">
+        {configuracoesItem && configuracoesChildren.length > 0 &&
+          renderNavGroupItem(configuracoesItem, configuracoesChildren)}
+
+        <button
+          onClick={logout}
+          title="Sair"
+          className={`group flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-red-600 transition-colors duration-150 hover:bg-red-50 ${
+            collapsed ? "justify-center" : ""
+          }`}
+        >
+          <LogOut size={18} className="shrink-0" />
+          {!collapsed && <span className="truncate text-left">Sair</span>}
+        </button>
+      </div>
     </aside>
   );
 }
