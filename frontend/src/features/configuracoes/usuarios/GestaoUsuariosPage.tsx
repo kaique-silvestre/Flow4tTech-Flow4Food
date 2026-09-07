@@ -1,8 +1,15 @@
 import { useState } from "react";
+import { MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableHeader,
@@ -191,34 +198,39 @@ export function GestaoUsuariosPage() {
                           <StatusBadge ativo={user.is_active} />
                         </TableCell>
                         <TableCell className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => openEditUser(user)}>
-                              Editar
-                            </Button>
-                            {!isSelf && !user.is_owner && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className={user.is_active ? "text-red-600 hover:text-red-700 hover:bg-red-50" : ""}
-                                onClick={() => {
-                                  const isDeactivating = user.is_active;
-                                  setConfirmState({
-                                    open: true,
-                                    title: isDeactivating
-                                      ? `Desativar "${user.name}"?`
-                                      : `Ativar "${user.name}"?`,
-                                    description: isDeactivating
-                                      ? "O usuário perderá acesso ao sistema. É possível reativar depois."
-                                      : "O usuário voltará a ter acesso ao sistema.",
-                                    confirmLabel: isDeactivating ? "Desativar" : "Ativar",
-                                    action: () => toggleActive.mutate(user.id),
-                                  });
-                                }}
-                              >
-                                {user.is_active ? "Desativar" : "Ativar"}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="icon" variant="ghost" aria-label="Ações">
+                                <MoreHorizontal className="h-4 w-4" />
                               </Button>
-                            )}
-                          </div>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openEditUser(user)}>
+                                Editar
+                              </DropdownMenuItem>
+                              {!isSelf && !user.is_owner && (
+                                <DropdownMenuItem
+                                  className={user.is_active ? "text-red-600" : ""}
+                                  onClick={() => {
+                                    const isDeactivating = user.is_active;
+                                    setConfirmState({
+                                      open: true,
+                                      title: isDeactivating
+                                        ? `Desativar "${user.name}"?`
+                                        : `Ativar "${user.name}"?`,
+                                      description: isDeactivating
+                                        ? "O usuário perderá acesso ao sistema. É possível reativar depois."
+                                        : "O usuário voltará a ter acesso ao sistema.",
+                                      confirmLabel: isDeactivating ? "Desativar" : "Ativar",
+                                      action: () => toggleActive.mutate(user.id),
+                                    });
+                                  }}
+                                >
+                                  {user.is_active ? "Desativar" : "Ativar"}
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     );
@@ -265,37 +277,36 @@ export function GestaoUsuariosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {profiles.map((profile) => (
-                  <TableRow key={profile.id} className={!profile.is_active ? "opacity-60" : ""}>
-                    <TableCell className="px-4 py-3 font-medium">{profile.name}</TableCell>
-                    <TableCell className="px-4 py-3">{profile.user_count}</TableCell>
-                    <TableCell className="px-4 py-3">{profile.permissions.length}/8</TableCell>
-                    <TableCell className="px-4 py-3">{profile.is_system ? "✓" : "—"}</TableCell>
-                    <TableCell className="px-4 py-3">
-                      <StatusBadge ativo={profile.is_active} />
-                    </TableCell>
-                    <TableCell className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="min-w-[4.5rem]"
-                          onClick={() => openEditProfile(profile)}
-                        >
-                          {profile.name === "Admin" ? "Ver" : "Editar"}
-                        </Button>
-                        {(() => {
-                          const isAdmin = profile.name === "Admin";
-                          const hasUsers = profile.user_count > 0;
-                          const canToggle = !isAdmin && !hasUsers;
-                          const isDeactivating = profile.is_active;
-                          return (
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                {profiles.map((profile) => {
+                  const isAdmin = profile.name === "Admin";
+                  const hasUsers = profile.user_count > 0;
+                  const canToggle = !isAdmin && !hasUsers;
+                  const isDeactivating = profile.is_active;
+                  return (
+                    <TableRow key={profile.id} className={!profile.is_active ? "opacity-60" : ""}>
+                      <TableCell className="px-4 py-3 font-medium">{profile.name}</TableCell>
+                      <TableCell className="px-4 py-3">{profile.user_count}</TableCell>
+                      <TableCell className="px-4 py-3">{profile.permissions.length}/8</TableCell>
+                      <TableCell className="px-4 py-3">{profile.is_system ? "✓" : "—"}</TableCell>
+                      <TableCell className="px-4 py-3">
+                        <StatusBadge ativo={profile.is_active} />
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost" aria-label="Ações">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditProfile(profile)}>
+                              {isAdmin ? "Ver" : "Editar"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                               disabled={!canToggle}
-                              className={canToggle && isDeactivating ? "text-red-600 hover:text-red-700 hover:bg-red-50" : ""}
-                              onClick={canToggle ? () => {
+                              className={canToggle && isDeactivating ? "text-red-600" : ""}
+                              onClick={() => {
+                                if (!canToggle) return;
                                 setConfirmState({
                                   open: true,
                                   title: isDeactivating
@@ -307,16 +318,16 @@ export function GestaoUsuariosPage() {
                                   confirmLabel: isDeactivating ? "Desativar" : "Ativar",
                                   action: () => toggleProfileActive.mutate(profile.id),
                                 });
-                              } : undefined}
+                              }}
                             >
                               {isDeactivating ? "Desativar" : "Ativar"}
-                            </Button>
-                          );
-                        })()}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
