@@ -58,6 +58,13 @@ function collectIds(id: number, tree: Categoria[]): Set<number> {
 
 const POR_PAGINA = 10;
 
+export function normalizarTexto(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
+
 function calcCusto(produto: ProdutoResponse): number | null {
   if (!produto.ficha_tecnica?.length) return null;
   let total = 0;
@@ -106,7 +113,7 @@ export function CardapioPage() {
   const produtosFiltrados = produtos.filter((p) => {
     if (filtro === "ativos" && !p.ativo) return false;
     if (filtro === "inativos" && p.ativo) return false;
-    if (busca && !p.nome.toLowerCase().includes(busca.toLowerCase())) return false;
+    if (busca && !normalizarTexto(p.nome).includes(normalizarTexto(busca))) return false;
     if (catFiltro !== null) {
       const ids = collectIds(catFiltro, categorias);
       if (!p.categoria_id || !ids.has(p.categoria_id)) return false;
