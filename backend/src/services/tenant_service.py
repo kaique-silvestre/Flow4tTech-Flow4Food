@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from src.core.database import clear_tenant_rls_context
+from src.core import tenant_rls
 from src.core.errors import AppError, ErrorCode
 from src.core.logging import get_logger
 from src.models.assinaturas import Assinatura
@@ -17,7 +17,6 @@ from src.repositories.tenant_repository import (
     create_tenant,
     get_tenant_by_id,
     list_tenants_with_assinaturas,
-    set_rls_tenant,
     update_tenant,
 )
 from src.repositories.users_repository import get_user_by_email_global, get_user_by_username
@@ -90,7 +89,7 @@ def criar_tenant(
         cloned_profiles = clone_profiles_from_seed(db, tenant.id)
 
         # Switch RLS context to new tenant for subsequent SELECTs (refresh, username check)
-        set_rls_tenant(db, tenant.id)
+        tenant_rls.arm(db, tenant.id)
 
         # 3. Find the Admin profile among cloned
         admin_profile = next((p for p in cloned_profiles if p.name == "Admin"), None)
@@ -146,7 +145,7 @@ def criar_tenant(
         # Clean up RLS context so the connection returns clean to the pool.
         # tenants and assinaturas tables have no RLS, so refresh works without context.
         try:
-            clear_tenant_rls_context(db)
+            tenant_rls.clear(db)
         except Exception:
             logger.warning("tenant_rls_cleanup_failed", tenant_id=tenant.id, exc_info=True)
         db.refresh(tenant)

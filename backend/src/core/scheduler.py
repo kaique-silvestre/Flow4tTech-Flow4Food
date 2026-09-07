@@ -6,12 +6,9 @@ from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, JobExecution
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import text
 
-from src.core.database import (
-    SchedulerSessionLocal,
-    clear_tenant_rls_context,
-    set_tenant_rls_context,
-)
+from src.core.database import SchedulerSessionLocal
 from src.core.logging import get_logger
+from src.core.tenant_rls import arm, clear
 from src.repositories import (
     compras_repository,
     notificacoes_repository,
@@ -46,11 +43,11 @@ def _tenant_ids(db) -> list[int]:
 
 
 def _set_tenant_context(db, tenant_id: int) -> None:
-    set_tenant_rls_context(db, tenant_id)
+    arm(db, tenant_id)
 
 
 def _clear_tenant_context(db) -> None:
-    clear_tenant_rls_context(db)
+    clear(db)
 
 
 def _verificar_entregas_previstas() -> None:

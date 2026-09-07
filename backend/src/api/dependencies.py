@@ -10,12 +10,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.core.config import get_settings
-from src.core.database import (  # noqa: F401
-    _tenant_ctx,
-    get_db,
-    get_platform_db,
-    set_tenant_rls_context,
-)
+from src.core.database import get_db, get_platform_db
+from src.core.tenant_rls import arm, clear
 from src.models.assinaturas import Assinatura
 from src.models.platform_settings import PlatformSettings
 from src.repositories import platform_admins_repository, revoked_tokens_repository
@@ -83,15 +79,16 @@ async def get_tenant_db(
     """Session scoped to tenant via RLS (PostgreSQL only).
 
     Two-layer approach:
-    1. Direct SET on db session here — necessary because get_current_user runs
-       is_revoked() (a SQL query) before this function, which checks out the
-       connection from the pool BEFORE _tenant_ctx is set. The checkout listener
-       fires without tenant context. We must re-apply SET ROLE / SET tenant_id
-       explicitly on the already-checked-out connection.
-    2. _tenant_ctx (a contextvars.ContextVar, see core/database.py) is set so
-       the pool checkout listener re-establishes RLS context on any NEW
-       connection checked out after db.commit() (SQLAlchemy 2.0 releases the
-       connection on commit).
+    1. arm() sets ROLE/tenant_id directly on this db session — necessary
+       because get_current_user runs is_revoked() (a SQL query) before this
+       function, which checks out the connection from the pool BEFORE
+       _tenant_ctx is set. The checkout listener fires without tenant context.
+       We must re-apply SET ROLE / SET tenant_id explicitly on the
+       already-checked-out connection.
+    2. arm() also sets _tenant_ctx (a contextvars.ContextVar, see
+       core/tenant_rls.py) so the pool checkout listener re-establishes RLS
+       context on any NEW connection checked out after db.commit()
+       (SQLAlchemy 2.0 releases the connection on commit).
 
     This must stay `async def` (not a plain sync generator): FastAPI runs
     async generator dependencies' setup/teardown directly on the event loop,
@@ -113,13 +110,12 @@ async def get_tenant_db(
     if tenant_id is not None:
         structlog.contextvars.bind_contextvars(tenant_id=tenant_id)
     if is_pg:
-        _tenant_ctx.tenant_id = tenant_id
-        set_tenant_rls_context(db, tenant_id)
+        arm(db, tenant_id)
     try:
         yield db
     finally:
         if is_pg:
-            _tenant_ctx.tenant_id = None
+            clear(db)
         if tenant_id is not None:
             structlog.contextvars.unbind_contextvars("tenant_id")
 

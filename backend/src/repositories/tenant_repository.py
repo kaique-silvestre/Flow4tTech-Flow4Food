@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.core.database import set_tenant_context
+from src.core import tenant_rls
 from src.models.assinaturas import Assinatura
 from src.models.profiles import Profile, ProfilePermission
 from src.models.tenants import Tenant
@@ -49,11 +49,6 @@ def create_assinatura(db: Session, assinatura: Assinatura) -> Assinatura:
     return assinatura
 
 
-def set_rls_tenant(db: Session, tenant_id: int) -> None:
-    """Set app.tenant_id for RLS (session-scoped, survives commits)."""
-    set_tenant_context(db, tenant_id)
-
-
 def clone_profiles_from_seed(db: Session, new_tenant_id: int) -> list[Profile]:
     """Clone Admin/Gerente/Caixa profiles from tenant_id=1 to new_tenant_id.
 
@@ -62,7 +57,7 @@ def clone_profiles_from_seed(db: Session, new_tenant_id: int) -> list[Profile]:
     now = datetime.now(timezone.utc)
     # This must fail loudly: continuing without the seed tenant RLS context can
     # silently provision a tenant without its required profiles.
-    set_tenant_context(db, 1)
+    tenant_rls.arm(db, 1)
 
     seed_profiles = (
         db.query(Profile)

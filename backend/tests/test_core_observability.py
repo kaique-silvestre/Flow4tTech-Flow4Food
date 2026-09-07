@@ -5,8 +5,8 @@ import pytest
 import structlog
 
 from src.api.dependencies import get_tenant_db
-from src.core import scheduler, sentry
-from src.repositories import comandas_repository, tenant_repository
+from src.core import scheduler, sentry, tenant_rls
+from src.repositories import comandas_repository
 
 
 class _SqliteSession:
@@ -34,7 +34,7 @@ def test_rls_setup_failures_are_not_silenced() -> None:
     db.execute.side_effect = RuntimeError("RLS role unavailable")
 
     with pytest.raises(RuntimeError, match="RLS role unavailable"):
-        tenant_repository.set_rls_tenant(db, 7)
+        tenant_rls.arm(db, 7)
 
 
 def test_increment_version_is_scoped_to_tenant() -> None:

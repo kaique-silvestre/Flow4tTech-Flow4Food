@@ -9,8 +9,13 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 <!-- Novas entradas entram aqui, no topo. Ver CLAUDE.md → "Changelog" para o padrão de preenchimento. -->
 
+### Changed
+
+- Consolida o protocolo de RLS por tenant (`SET ROLE`/`SET app.tenant_id`), hoje espalhado por `database.py`, `dependencies.py` e `tenant_repository.py`, em `core/tenant_rls.py` (`arm`/`clear`) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-06
+
 ### Security
 
+- Login e clonagem de perfis-semente (`clone_profiles_from_seed`) passam a trocar para a role `app_user` (RLS real) em vez de só setar `app.tenant_id` sem restringir a role — fecha gap de defense-in-depth — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-06
 - Protege sessões de impersonação contra refresh indevido, remove JWT da URL e envia falhas administrativas 5xx ao Sentry; pagina tenants e cockpit no servidor — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
 - Registra trilha de auditoria para mutações administrativas autenticadas por JWT — incluindo usuários, permissões, recursos por tenant, configurações e anúncios — sem armazenar senhas, e redige CPF, credenciais e tokens dos logs estruturados — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-02
 

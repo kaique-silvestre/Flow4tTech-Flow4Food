@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from src.core.config import get_settings
 from src.core.errors import AppError, ErrorCode
 from src.core.logging import get_logger
+from src.core.tenant_rls import arm
 from src.models.system_users import PasswordReset
 from src.repositories import refresh_tokens_repository
 from src.repositories.billing_repository import get_assinatura_by_tenant
@@ -23,7 +24,6 @@ from src.repositories.password_reset_repository import (
     get_valid_reset,
     invalidate_user_resets,
 )
-from src.repositories.tenant_repository import set_rls_tenant
 from src.repositories.users_repository import (
     get_user_by_email_global,
     get_user_by_id,
@@ -152,7 +152,7 @@ def login(db: Session, identifier: str, password: str) -> TokenResponse:
     if not verify_password(password, user.password_hash):
         raise AppError(code=ErrorCode.SENHA_INCORRETA, message=_INVALID_MSG, http_status=401)
 
-    set_rls_tenant(db, user.tenant_id)
+    arm(db, user.tenant_id)
     user.last_login = datetime.now(timezone.utc)
     db.commit()
 
