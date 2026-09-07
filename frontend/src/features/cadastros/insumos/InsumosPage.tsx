@@ -1,7 +1,17 @@
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
 import { Pagination, paginar } from "@/components/ui/pagination";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { InsumoEditModal } from "./InsumoEditModal";
 import {
   useAllInsumos,
@@ -13,6 +23,13 @@ type Filtro = "ativos" | "inativos" | "todos";
 
 const POR_PAGINA = 12;
 
+export function normalizarTexto(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
+
 export function InsumosPage() {
   const { data, isLoading, isError } = useAllInsumos();
   const insumos = data?.itens ?? [];
@@ -21,12 +38,16 @@ export function InsumosPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<InsumoResponse | null>(null);
   const [filtro, setFiltro] = useState<Filtro>("ativos");
+  const [busca, setBusca] = useState("");
   const [pagina, setPagina] = useState(1);
   const [confirmId, setConfirmId] = useState<number | null>(null);
 
-  const insumosFiltrados = insumos.filter((i) =>
-    filtro === "todos" ? true : filtro === "ativos" ? i.ativo : !i.ativo,
-  );
+  const insumosFiltrados = insumos.filter((i) => {
+    if (filtro === "ativos" && !i.ativo) return false;
+    if (filtro === "inativos" && i.ativo) return false;
+    if (busca && !normalizarTexto(i.nome).includes(normalizarTexto(busca))) return false;
+    return true;
+  });
 
   function openCreate() {
     setEditing(null);
@@ -45,18 +66,26 @@ export function InsumosPage() {
         <Button onClick={openCreate}>Novo Insumo</Button>
       </div>
 
-      <div className="mb-3 flex gap-1">
-        {(["ativos", "inativos", "todos"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => { setFiltro(f); setPagina(1); }}
-            className={`rounded border px-3 py-1 text-sm capitalize ${
-              filtro === f ? "bg-gray-900 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-          </button>
-        ))}
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <div className="flex gap-1">
+          {(["ativos", "inativos", "todos"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => { setFiltro(f); setPagina(1); }}
+              className={`rounded border px-3 py-1 text-sm capitalize ${
+                filtro === f ? "bg-gray-900 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
+        <Input
+          placeholder="Buscar insumo..."
+          value={busca}
+          onChange={(e) => { setBusca(e.target.value); setPagina(1); }}
+          className="w-full sm:w-52 text-sm"
+        />
       </div>
 
       {isLoading ? (
@@ -71,40 +100,40 @@ export function InsumosPage() {
         <p className="text-sm text-gray-500">Nenhum insumo encontrado.</p>
       ) : (
         <div className="flex-1 flex flex-col">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b text-left text-gray-500">
-              <th className="py-2 pr-4">Nome</th>
-              <th className="py-2 pr-4">Estoque</th>
-              <th className="py-2 pr-4">Unidade</th>
-              <th className="py-2 pr-4">Status</th>
-              <th className="py-2" />
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead>Nome</TableHead>
+              <TableHead className="text-right">Estoque</TableHead>
+              <TableHead>Unidade</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="py-2" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {paginar(insumosFiltrados, pagina, POR_PAGINA).map((insumo) => (
-              <tr key={insumo.id} className="border-b last:border-0">
-                <td className={`py-2 pr-4 ${!insumo.ativo ? "text-gray-400 line-through" : ""}`}>
+              <TableRow key={insumo.id}>
+                <TableCell className={!insumo.ativo ? "text-gray-400 line-through" : ""}>
                   {insumo.nome}
-                </td>
-                <td className="py-2 pr-4 text-gray-600">
+                </TableCell>
+                <TableCell className="text-right text-gray-600">
                   {insumo.unidade_base === "kg"
                     ? Number(insumo.estoque_atual).toFixed(3)
                     : Math.round(Number(insumo.estoque_atual)).toString()}
-                </td>
-                <td className="py-2 pr-4 text-gray-600">{insumo.unidade_base}</td>
-                <td className="py-2 pr-4">
+                </TableCell>
+                <TableCell className="text-gray-600">{insumo.unidade_base}</TableCell>
+                <TableCell>
                   {insumo.ativo ? (
-                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                    <Badge variant="outline" className="border-green-200 bg-green-100 text-green-700">
                       Ativo
-                    </span>
+                    </Badge>
                   ) : (
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                    <Badge variant="outline" className="border-gray-200 bg-gray-100 text-gray-500">
                       Inativo
-                    </span>
+                    </Badge>
                   )}
-                </td>
-                <td className="py-2 text-right">
+                </TableCell>
+                <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button size="sm" variant="outline" onClick={() => openEdit(insumo)}>
                       Editar
@@ -118,11 +147,11 @@ export function InsumosPage() {
                       {insumo.ativo ? "Desativar" : "Reativar"}
                     </Button>
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
         <div className="flex-1" />
         <Pagination
           pagina={pagina}
