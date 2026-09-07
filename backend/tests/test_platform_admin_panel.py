@@ -554,7 +554,7 @@ def test_profile_permissions_update_is_audited(client, audit_calls):
         "entity": "Profile",
         "entity_id": profile.id,
         "before": {"permissions": [], "is_active": True},
-        "after": {"permissions": ["dashboard", "caixa"], "is_active": False},
+        "after": {"permissions": ["caixa", "dashboard"], "is_active": False},
     }]
 
 

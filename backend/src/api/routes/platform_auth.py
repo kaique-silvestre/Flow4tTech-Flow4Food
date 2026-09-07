@@ -1,8 +1,9 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, status
 from pydantic import BaseModel, EmailStr, Field, field_validator
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.api.dependencies import require_platform_admin
@@ -10,9 +11,10 @@ from src.core.database import get_platform_db
 from src.core.errors import AppError, ErrorCode
 from src.core.limiter import limiter
 from src.core.logging import get_logger
+from src.models.system_users import SystemUser
 from src.repositories import platform_repository, revoked_tokens_repository
 from src.schemas.tenants import TenantCreate
-from src.services import audit_service, platform_auth_service
+from src.services import audit_service, platform_auth_service, platform_service
 from src.services.auth_service import create_access_token, hash_password
 from src.services.tenant_service import criar_tenant as provision_tenant
 
@@ -261,15 +263,15 @@ def update_assinatura(
     payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> dict:
-    changed_by = payload.get("sub")
+    actor_id = _platform_actor_id(payload)
     assinatura = platform_repository.update_assinatura_status(
-        db, tenant_id, body.status, changed_by=int(changed_by) if changed_by else None
+        db, tenant_id, body.status, changed_by=actor_id
     )
     background_tasks.add_task(
         audit_service.log_background,
         "subscription.update",
         tenant_id=tenant_id,
-        user_id=_platform_actor_id(payload),
+        user_id=actor_id,
         entity="Assinatura",
         entity_id=assinatura.id,
         after={"status": body.status},
@@ -508,22 +510,16 @@ def update_tenant(
     )
     if detail is None:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Tenant não encontrado", http_status=404)
-    background_tasks.add_task(
-        audit_service.log_background,
-        "platform.tenant.update",
+    platform_service.audited_field_update(
+        background_tasks,
+        action="platform.tenant.update",
         tenant_id=tenant_id,
-        user_id=_platform_actor_id(payload),
+        actor_id=_platform_actor_id(payload),
         entity="Tenant",
         entity_id=tenant_id,
-        before={
-            key: before[key]
-            for key in ("nome_fantasia", "cnpj", "endereco", "telefone", "max_users")
-            if before is not None and key in before
-        },
-        after={
-            key: detail[key]
-            for key in ("nome_fantasia", "cnpj", "endereco", "telefone", "max_users")
-        },
+        before_row=before or {},
+        after_row=detail,
+        fields=("nome_fantasia", "cnpj", "endereco", "telefone", "max_users"),
     )
     return TenantDetail(**detail)
 
@@ -543,19 +539,19 @@ def update_assinatura_full(
     payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> dict:
-    changed_by = payload.get("sub")
+    actor_id = _platform_actor_id(payload)
     assinatura = platform_repository.update_assinatura_status(
         db,
         tenant_id,
         body.status,
         data_vencimento=body.data_vencimento,
-        changed_by=int(changed_by) if changed_by else None,
+        changed_by=actor_id,
     )
     background_tasks.add_task(
         audit_service.log_background,
         "subscription.update_full",
         tenant_id=tenant_id,
-        user_id=_platform_actor_id(payload),
+        user_id=actor_id,
         entity="Assinatura",
         entity_id=assinatura.id,
         after={"status": body.status, "data_vencimento": body.data_vencimento.isoformat() if body.data_vencimento else None},
@@ -652,28 +648,17 @@ def update_platform_user(
     )
     if user is None:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=404)
-    background_tasks.add_task(
-        audit_service.log_background,
-        "platform.tenant_user.update",
+    platform_service.audited_field_update(
+        background_tasks,
+        action="platform.tenant_user.update",
         tenant_id=tenant_id,
-        user_id=_platform_actor_id(payload),
+        actor_id=_platform_actor_id(payload),
         entity="SystemUser",
         entity_id=user_id,
-        before=(
-            {
-                "username": before["username"],
-                "profile_id": before["profile_id"],
-                "is_active": before["is_active"],
-            }
-            if before is not None
-            else None
-        ),
-        after={
-            "username": user["username"],
-            "profile_id": user["profile_id"],
-            "is_active": user["is_active"],
-            "password_changed": body.password is not None,
-        },
+        before_row=before or {},
+        after_row=user,
+        fields=("username", "profile_id", "is_active"),
+        extra_after={"password_changed": body.password is not None},
     )
     return PlatformUserResponse(**user)
 
@@ -731,7 +716,7 @@ def update_tenant_profile(
             if before is not None
             else None
         ),
-        after={"permissions": body.permissions, "is_active": row["is_active"]},
+        after={"permissions": row["permissions"], "is_active": row["is_active"]},
     )
     return ProfileResponse(**row)
 
@@ -796,37 +781,23 @@ def impersonate_user(
     payload: dict = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ) -> ImpersonateResponse:
-    from datetime import timedelta
-
-    from sqlalchemy import select
-
-    from src.models.system_users import SystemUser
-    from src.models.user_permissions import UserPermission
-
     user = db.execute(
         select(SystemUser).where(SystemUser.id == user_id, SystemUser.tenant_id == tenant_id)
     ).scalar_one_or_none()
     if user is None:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=404)
 
-    perms = db.execute(
-        select(UserPermission.screen).where(UserPermission.user_id == user_id)
-    ).scalars().all()
-    if not perms and user.profile_id:
-        from src.models.profiles import ProfilePermission
-        perms = db.execute(
-            select(ProfilePermission.screen).where(ProfilePermission.profile_id == user.profile_id)
-        ).scalars().all()
+    perms = platform_service.resolve_impersonation_permissions(db, user)
 
-    admin_id = payload.get("sub") or payload.get("admin_id")
+    actor_id = _platform_actor_id(payload)
     admin_email = payload.get("email", "")
     token_payload: dict[str, Any] = {
         "sub": str(user.id),
         "user_id": user.id,
         "tenant_id": tenant_id,
-        "permissions": list(perms),
+        "permissions": perms,
         "impersonation": True,
-        "impersonated_by": admin_id,
+        "impersonated_by": actor_id,
         "impersonated_by_email": admin_email,
     }
     token = create_access_token(token_payload, expires_delta=timedelta(hours=2))
@@ -837,7 +808,7 @@ def impersonate_user(
         user_id=user_id,
         entity="SystemUser",
         entity_id=user_id,
-        impersonated_by=int(admin_id) if admin_id else None,
+        impersonated_by=actor_id,
     )
     return ImpersonateResponse(access_token=token)
 

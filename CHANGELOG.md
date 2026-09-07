@@ -12,6 +12,12 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 ### Changed
 
 - Consolida o protocolo de RLS por tenant (`SET ROLE`/`SET app.tenant_id`), hoje espalhado por `database.py`, `dependencies.py` e `tenant_repository.py`, em `core/tenant_rls.py` (`arm`/`clear`) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-06
+- Extrai boilerplate de audit-logging e resolução de permissões de impersonação de `platform_auth.py` para `platform_service.py` novo — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-06
+
+### Fixed
+
+- Corrige actor_id inconsistente (usava `payload.get("sub")` cru em vez do fallback completo) em `update_assinatura`, `update_assinatura_full` e `impersonate_user` — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-06
+- Corrige audit log de `update_tenant_profile` que registrava `body.permissions` (valor bruto da requisição, pode ser `None`) em vez do valor efetivamente salvo — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-06
 
 ### Security
 
