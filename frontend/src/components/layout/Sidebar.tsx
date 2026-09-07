@@ -7,7 +7,7 @@ import { useContasPagarResumo } from "@/features/contas_pagar/useContasPagar";
 import { usePermissions } from "@/hooks/usePermission";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { ChevronRight, Menu } from "lucide-react";
-import { NAV_ITEMS, type SubNavItem } from "./navConfig";
+import { NAV_GROUPS, type NavItem, type SubNavItem } from "./navConfig";
 import { NavBadge } from "@/components/ui/nav-badge";
 
 /* ---------- component ---------- */
@@ -90,12 +90,19 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
   }
 
 
-  const visibleItems = NAV_ITEMS.filter((item) => {
-    if (item.screen && !permissions.includes(item.screen)) return false;
-    if (!isFeatureEnabled(item.feature)) return false;
-    if (item.children) return visibleChildren(item.children).length > 0;
-    return true;
-  });
+  function visibleItemsOf(items: NavItem[]) {
+    return items.filter((item) => {
+      if (item.screen && !permissions.includes(item.screen)) return false;
+      if (!isFeatureEnabled(item.feature)) return false;
+      if (item.children) return visibleChildren(item.children).length > 0;
+      return true;
+    });
+  }
+
+  const visibleGroups = NAV_GROUPS.map((group) => ({
+    heading: group.heading,
+    items: visibleItemsOf(group.items),
+  })).filter((group) => group.items.length > 0);
 
   function renderFlyout(children: SubNavItem[], label: string) {
     return createPortal(
@@ -141,7 +148,14 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
       </button>
 
       <nav ref={navRef} className="flex flex-1 flex-col gap-0.5 p-2 overflow-y-auto">
-        {visibleItems.map((item) => {
+        {visibleGroups.map((group, groupIndex) => (
+          <div key={group.heading ?? `group-${groupIndex}`} className="flex flex-col gap-0.5">
+            {group.heading && !collapsed && (
+              <span className="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 select-none truncate">
+                {group.heading}
+              </span>
+            )}
+            {group.items.map((item) => {
           if (item.children) {
             const children = visibleChildren(item.children);
             const badge = getGroupBadge(item.label);
@@ -218,7 +232,9 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
               {!collapsed && <span className="truncate">{item.label}</span>}
             </NavLink>
           );
-        })}
+            })}
+          </div>
+        ))}
       </nav>
     </aside>
   );

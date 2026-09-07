@@ -75,15 +75,48 @@ const CONFIGURACOES_CHILDREN: SubNavItem[] = [
   { label: "Usuários", to: "/configuracoes/usuarios", icon: Users, screen: "gestao_usuarios", feature: "gestao_usuarios" },
 ];
 
-export const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", to: "/", icon: LayoutDashboard, screen: "dashboard", feature: "dashboard" },
-  { label: "Calendário", to: "/calendario", icon: CalendarDays, screen: "calendario", feature: "calendario" },
-  { label: "Cardápio", to: "/cardapio", icon: UtensilsCrossed, screen: "comandas", feature: "comandas" },
-  { label: "Vendas", to: null, icon: ClipboardList, screen: "comandas", feature: "comandas", children: VENDAS_CHILDREN },
-  { label: "Compras", to: null, icon: ShoppingCart, screen: "compras", feature: "compras", children: COMPRAS_CHILDREN },
-  { label: "Estoque", to: null, icon: Package, screen: "estoque", feature: "estoque", children: ESTOQUE_CHILDREN },
-  { label: "Financeiro", to: null, icon: Wallet, screen: "compras", feature: "financeiro", children: FINANCEIRO_CHILDREN },
-  { label: "Relatórios", to: null, icon: BarChart3, screen: "relatorios", feature: "relatorios", children: RELATORIOS_CHILDREN },
-  { label: "Cadastros", to: null, icon: BookOpen, screen: "cadastros", feature: "cadastros", children: CADASTROS_CHILDREN },
-  { label: "Configurações", to: null, icon: Settings, children: CONFIGURACOES_CHILDREN },
+export interface NavGroup {
+  /** Section label rendered above the group (uppercase, discreet style). Omitted for the top, ungrouped items. */
+  heading?: string;
+  items: NavItem[];
+}
+
+export const NAV_GROUPS: NavGroup[] = [
+  {
+    items: [
+      { label: "Dashboard", to: "/", icon: LayoutDashboard, screen: "dashboard", feature: "dashboard" },
+      { label: "Calendário", to: "/calendario", icon: CalendarDays, screen: "calendario", feature: "calendario" },
+    ],
+  },
+  {
+    heading: "Operação",
+    items: [
+      { label: "Cardápio", to: "/cardapio", icon: UtensilsCrossed, screen: "comandas", feature: "comandas" },
+      { label: "Vendas", to: null, icon: ClipboardList, screen: "comandas", feature: "comandas", children: VENDAS_CHILDREN },
+      { label: "Compras", to: null, icon: ShoppingCart, screen: "compras", feature: "compras", children: COMPRAS_CHILDREN },
+      { label: "Estoque", to: null, icon: Package, screen: "estoque", feature: "estoque", children: ESTOQUE_CHILDREN },
+    ],
+  },
+  {
+    heading: "Gestão",
+    items: [
+      { label: "Financeiro", to: null, icon: Wallet, screen: "compras", feature: "financeiro", children: FINANCEIRO_CHILDREN },
+      { label: "Relatórios", to: null, icon: BarChart3, screen: "relatorios", feature: "relatorios", children: RELATORIOS_CHILDREN },
+      { label: "Cadastros", to: null, icon: BookOpen, screen: "cadastros", feature: "cadastros", children: CADASTROS_CHILDREN },
+    ],
+  },
+  {
+    // "Configurações" stays in the main data set for now — it only moves out
+    // to a fixed footer in a later ticket (06).
+    items: [
+      { label: "Configurações", to: null, icon: Settings, children: CONFIGURACOES_CHILDREN },
+    ],
+  },
 ];
+
+/**
+ * Flat view of all nav items, derived from NAV_GROUPS, preserving the same
+ * order as before the grouping was introduced. Kept for consumers that only
+ * need the flat list (e.g. Breadcrumb.tsx).
+ */
+export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((group) => group.items);
