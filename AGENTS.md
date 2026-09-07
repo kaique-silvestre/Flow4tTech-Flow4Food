@@ -1,5 +1,9 @@
 # Matchpoint — Guia de Desenvolvimento
 
+## Knowledge graph (graphify)
+
+`graphify-out/graph.json` existe — grafo de conhecimento do repo (código + docs). Antes de responder pergunta sobre arquitetura, relação entre módulos, "como funciona X" ou "o que chama Y", consulte o grafo primeiro (`graphify query "<pergunta>"`) em vez de ler arquivos um a um. Não reconstrói sozinho — se o grafo estiver desatualizado (arquivos novos/mudados), rode `graphify --update` antes de confiar nele.
+
 ## Rodar o Backend
 
 ```powershell

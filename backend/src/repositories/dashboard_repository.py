@@ -6,10 +6,14 @@ from sqlalchemy import and_, case, func, select
 from sqlalchemy.orm import Session
 
 from src.models.comandas import Comanda, StatusComanda
+from src.models.comissoes_garcom import ComissaoGarcom
 from src.models.compras import Compra
 from src.models.fornecedores import Fornecedor
+from src.models.garcons import Garcom
 from src.models.insumos import Insumo
 from src.models.itens_comanda import ItemComanda
+from src.models.metodos_pagamento import MetodoPagamento
+from src.models.pagamentos import Pagamento
 from src.models.produtos import Produto
 from src.repositories.relatorio_repository import _day_utc_range, cmv_total
 
@@ -115,7 +119,7 @@ def top_10_produtos_30d(db: Session) -> list[dict]:
             ItemComanda.cortesia.is_(False),
         )
         .group_by(Produto.id, Produto.nome)
-        .order_by(func.sum(ItemComanda.quantidade).desc())
+        .order_by(func.sum(ItemComanda.preco_unitario * ItemComanda.quantidade).desc())
         .limit(10)
     ).all()
     return [
@@ -292,6 +296,54 @@ def insumos_abaixo_critico(db: Session) -> list[dict]:
             "nivel_critico": float(r.nivel_critico),
             "unidade_base": r.unidade_base,
         }
+        for r in rows
+    ]
+
+
+def pagamentos_hoje_por_metodo(db: Session) -> list[dict]:
+    """Pagamentos recebidos hoje por método, independente do status da comanda.
+
+    Deliberadamente não reusa `_build_por_metodo` (que filtra por
+    `comanda_id.in_(comandas_fechadas_hoje)`) — esse filtro excluiria um
+    pagamento parcial já recebido numa comanda ainda aberta ou reaberta,
+    escondendo dinheiro/pix que já está fisicamente em caixa hoje.
+    """
+    today = _today_sp()
+    start, end = _day_utc_range(today)
+    rows = db.execute(
+        select(
+            MetodoPagamento.id,
+            MetodoPagamento.nome,
+            func.sum(Pagamento.valor).label("total"),
+            func.count(Pagamento.id).label("qtd"),
+        )
+        .join(MetodoPagamento, Pagamento.metodo_id == MetodoPagamento.id)
+        .where(Pagamento.created_at >= start, Pagamento.created_at <= end)
+        .group_by(MetodoPagamento.id, MetodoPagamento.nome)
+        .order_by(func.sum(Pagamento.valor).desc())
+    ).all()
+    return [
+        {"metodo_id": r.id, "metodo_nome": r.nome, "total": r.total or Decimal("0"), "qtd": r.qtd}
+        for r in rows
+    ]
+
+
+def comissoes_pendentes_por_garcom(db: Session) -> list[dict]:
+    """Comissões com `pago=False`, agregadas por garçom — sem filtro de data
+    (é uma dívida em aberto, não um corte por período)."""
+    rows = db.execute(
+        select(
+            ComissaoGarcom.garcom_id,
+            Garcom.nome,
+            func.sum(ComissaoGarcom.valor).label("valor_pendente"),
+        )
+        .join(Garcom, ComissaoGarcom.garcom_id == Garcom.id)
+        .where(ComissaoGarcom.pago.is_(False))
+        .group_by(ComissaoGarcom.garcom_id, Garcom.nome)
+        .order_by(func.sum(ComissaoGarcom.valor).desc())
+    ).all()
+    return [
+        {"garcom_id": r.garcom_id, "nome": r.nome, "valor_pendente": r.valor_pendente or Decimal("0")}
         for r in rows
     ]
 

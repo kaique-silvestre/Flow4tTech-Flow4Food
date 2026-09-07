@@ -9,6 +9,7 @@ from src.core.errors import AppError, ErrorCode
 from src.repositories import dashboard_repository as dr
 from src.schemas.dashboard_schemas import (
     ComandaAbertaItem,
+    ComissaoGarcomResumo,
     DashboardHistoricoItem,
     DashboardResponse,
     DashboardResumoAnualItem,
@@ -16,8 +17,14 @@ from src.schemas.dashboard_schemas import (
     EntregaEsperadaItem,
     HoraBucket,
     InsumoCriticoItem,
+    MotivoPerdaResumo,
     ProdutoTop,
 )
+from src.schemas.estoque import SaldoItemResponse
+from src.schemas.relatorio_schemas import PagamentoResumo
+from src.services import estoque_service, relatorio_service
+
+_QTD_INSUMOS_MENOR_ESTOQUE = 5
 
 
 def dashboard(db: Session) -> DashboardResponse:
@@ -36,7 +43,7 @@ def dashboard(db: Session) -> DashboardResponse:
     lucro_estimado = faturamento_hoje - cmv
 
     faturamento_por_hora = [HoraBucket(**h) for h in dr.faturamento_por_hora_hoje(db, ids_hoje)]
-    top_10 = [ProdutoTop(**p) for p in dr.top_10_produtos_30d(db)]
+    top_10 = _montar_top_10_produtos(db)
     ultimos_30 = [DiaFaturamento(**d) for d in dr.faturamento_ultimos_30d(db)]
     heatmap = [DiaFaturamento(**d) for d in dr.heatmap_mes_atual(db)]
 
@@ -86,6 +93,24 @@ def dashboard(db: Session) -> DashboardResponse:
     faturamento_mes_atual = dr.faturamento_mes(db, hoje.year, hoje.month)
     faturamento_mes_anterior = dr.faturamento_mes(db, ano_ant, mes_ant)
 
+    por_metodo_pagamento_hoje = [PagamentoResumo(**p) for p in dr.pagamentos_hoje_por_metodo(db)]
+
+    top_garcons_hoje = relatorio_service.vendas_por_garcom(db, hoje, hoje).garcons[:3]
+
+    perdas_mes = relatorio_service.perdas_cortesias(db, primeiro_mes_atual, hoje)
+    perdas_cortesias_mes_total = perdas_mes.total_geral
+    perdas_cortesias_mes_por_motivo = [
+        MotivoPerdaResumo(motivo=g.motivo, valor=g.total_valor) for g in perdas_mes.grupos
+    ]
+
+    comissoes_pendentes = [
+        ComissaoGarcomResumo(garcom_id=c["garcom_id"], nome=c["nome"], valor_pendente=c["valor_pendente"])
+        for c in dr.comissoes_pendentes_por_garcom(db)
+    ]
+    comissoes_a_pagar_total = sum((c.valor_pendente for c in comissoes_pendentes), Decimal("0"))
+
+    insumos_menor_estoque = _montar_insumos_menor_estoque(db, insumos_criticos)
+
     return DashboardResponse(
         faturamento_hoje=faturamento_hoje,
         ticket_medio_hoje=ticket_medio,
@@ -107,7 +132,50 @@ def dashboard(db: Session) -> DashboardResponse:
         faturamento_7d_anterior=faturamento_7d_anterior,
         faturamento_mes_atual=faturamento_mes_atual,
         faturamento_mes_anterior=faturamento_mes_anterior,
+        por_metodo_pagamento_hoje=por_metodo_pagamento_hoje,
+        top_garcons_hoje=top_garcons_hoje,
+        perdas_cortesias_mes_total=perdas_cortesias_mes_total,
+        perdas_cortesias_mes_por_motivo=perdas_cortesias_mes_por_motivo,
+        comissoes_a_pagar_total=comissoes_a_pagar_total,
+        comissoes_a_pagar_por_garcom=comissoes_pendentes,
+        insumos_menor_estoque=insumos_menor_estoque,
     )
+
+
+def _montar_top_10_produtos(db: Session) -> list[ProdutoTop]:
+    """Top 10 por faturamento (30d), enriquecido com CMV% reusando a classificação
+    de `relatorio_service.cmv_por_produto` (mesmo tratamento de produto sem ficha
+    técnica: `classificacao="sem_custo"`, sem percentual)."""
+    cmv_por_item = {i.item_id: i for i in relatorio_service.cmv_por_produto(db).itens}
+    resultado = []
+    for p in dr.top_10_produtos_30d(db):
+        cmv_item = cmv_por_item.get(p["item_id"])
+        cmv_percentual = None
+        classificacao_cmv = "sem_custo"
+        if cmv_item is not None:
+            classificacao_cmv = cmv_item.classificacao
+            if cmv_item.margem_percentual is not None:
+                cmv_percentual = float(Decimal("100") - cmv_item.margem_percentual)
+        resultado.append(
+            ProdutoTop(
+                **p,
+                cmv_percentual=cmv_percentual,
+                classificacao_cmv=classificacao_cmv,
+            )
+        )
+    return resultado
+
+
+def _montar_insumos_menor_estoque(
+    db: Session, insumos_criticos: list[InsumoCriticoItem]
+) -> list[SaldoItemResponse]:
+    """Exatamente 5 insumos com menor `estoque_disponivel`, excluindo os já
+    presentes em `insumos_criticos` (críticos e "menor estoque" não se
+    sobrepõem no mesmo card)."""
+    nomes_criticos = {i.nome for i in insumos_criticos}
+    pagina = estoque_service.get_saldo_list(db, ordenar_por_disponivel_asc=True)
+    itens = [item for item in pagina.itens if item.nome not in nomes_criticos]
+    return itens[:_QTD_INSUMOS_MENOR_ESTOQUE]
 
 
 def dashboard_historico(

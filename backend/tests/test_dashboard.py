@@ -105,12 +105,62 @@ def _fechar(c, comanda_id, metodo_id, valor, version):
     return resp.json()
 
 
+def _criar_insumo(c, nome="Insumo"):
+    resp = c.post("/api/insumos", json={"nome": nome, "unidade_base": "un"})
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+def _baixa_sem_venda(c, item_id, quantidade, motivo):
+    resp = c.post(
+        "/api/estoque/baixa-sem-venda",
+        json={"item_id": item_id, "quantidade": str(quantidade), "motivo": motivo},
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
 def _set_custo_medio(insumo_id: int, custo: Decimal) -> None:
     from src.models.insumos import Insumo
 
     db: Session = _TestingSession()
     try:
         db.execute(update(Insumo).where(Insumo.id == insumo_id).values(custo_medio=custo))
+        db.commit()
+    finally:
+        db.close()
+
+
+def _forcar_comissao_pendente(comissao_id: int) -> None:
+    """Força `pago=False` direto no banco.
+
+    Necessário porque no SQLite dos testes o `server_default="false"` do
+    model (`ComissaoGarcom.pago`) é renderizado como a string literal
+    `'false'` (não o booleano), que o SQLite grava e a coluna `BOOLEAN` lê de
+    volta como truthy — uma comissão recém-criada por `fechar_comanda` já
+    nasce com `pago=True` neste ambiente de teste (não reproduz o Postgres de
+    produção, onde o mesmo default resolve para `false` corretamente)."""
+    from src.models.comissoes_garcom import ComissaoGarcom
+
+    db: Session = _TestingSession()
+    try:
+        db.execute(update(ComissaoGarcom).where(ComissaoGarcom.id == comissao_id).values(pago=False))
+        db.commit()
+    finally:
+        db.close()
+
+
+def _set_estoque(insumo_id: int, estoque_atual: Decimal, nivel_critico=None) -> None:
+    """Ajusta `estoque_atual`/`nivel_critico` direto no banco — não há endpoint
+    de API para definir `estoque_atual` fora do fluxo de movimentos."""
+    from src.models.insumos import Insumo
+
+    db: Session = _TestingSession()
+    try:
+        values = {"estoque_atual": estoque_atual}
+        if nivel_critico is not None:
+            values["nivel_critico"] = nivel_critico
+        db.execute(update(Insumo).where(Insumo.id == insumo_id).values(**values))
         db.commit()
     finally:
         db.close()
@@ -290,6 +340,45 @@ def test_dashboard_top_10_produtos(c):
     assert top[2]["quantidade"] == 1
 
 
+def test_por_metodo_pagamento_hoje_inclui_pagamento_parcial_de_comanda_ainda_aberta(c):
+    """Comanda com pagamento parcial hoje que NÃO fecha (modo_divisao="parcial"
+    mantém a comanda aberta, com saldo_pendente) → o pagamento já recebido deve
+    contar em por_metodo_pagamento_hoje mesmo assim (prova que a query não reusa
+    o filtro de comandas fechadas de fechamento_caixa/_build_por_metodo).
+
+    Nota: um cenário de fechar-e-depois-reabrir não serve de prova aqui —
+    `reabrir_comanda` apaga as linhas de `Pagamento` da comanda (comportamento
+    de `comandas_service.py`, fora do escopo deste ticket), então não haveria
+    pagamento algum para a query encontrar depois da reabertura. O caso crítico
+    real descrito na spec ("pagamento parcial hoje que não fechou, status
+    aberto/reaberto") é o pagamento parcial abaixo, que deixa a comanda aberta
+    sem jamais apagar o pagamento já registrado."""
+    garcom = _criar_garcom(c)
+    item = _criar_item(c, preco="100.00")
+    metodo = _criar_metodo(c, nome="Dinheiro")
+
+    comanda = _abrir_comanda(c, garcom["id"])
+    r = _lancar_item(c, comanda["id"], item["id"], comanda["version"])
+    resp_fechar = c.post(
+        f"/api/comandas/{comanda['id']}/fechar",
+        json={
+            "pagamentos": [{"metodo_id": metodo["id"], "valor": "40.00"}],
+            "modo_divisao": "parcial",
+            "version": r["version"],
+        },
+    )
+    assert resp_fechar.status_code == 200, resp_fechar.text
+    assert resp_fechar.json()["status"] != "fechada"
+
+    resp = c.get("/api/dashboard")
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+
+    por_metodo = {p["metodo_nome"]: p for p in data["por_metodo_pagamento_hoje"]}
+    assert "Dinheiro" in por_metodo
+    assert float(por_metodo["Dinheiro"]["total"]) == pytest.approx(40.0)
+
+
 def test_dashboard_comandas_abertas_lista(c):
     """2 comandas abertas com itens → lista retorna ambas com qtd_itens correto."""
     garcom = _criar_garcom(c)
@@ -313,6 +402,162 @@ def test_dashboard_comandas_abertas_lista(c):
     by_id = {c_item["id"]: c_item for c_item in lista}
     assert by_id[comanda1["id"]]["qtd_itens"] == 2
     assert by_id[comanda2["id"]]["qtd_itens"] == 2
+
+
+def test_dashboard_top_garcons_hoje_top_3_por_faturamento(c):
+    """4 garçons fecham comandas hoje com faturamentos distintos → top_garcons_hoje
+    traz só os 3 melhores, ordenados por faturamento desc."""
+    item = _criar_item(c, preco="10.00")
+    metodo = _criar_metodo(c)
+
+    faturamentos = {"Ana": 40, "Bruno": 30, "Carla": 20, "Duda": 10}
+    for nome, valor in faturamentos.items():
+        garcom = _criar_garcom(c, nome=nome)
+        comanda = _abrir_comanda(c, garcom["id"], identificacao=f"Mesa {nome}")
+        r = _lancar_item(c, comanda["id"], item["id"], comanda["version"], quantidade=valor // 10)
+        _fechar(c, comanda["id"], metodo["id"], f"{valor}.00", r["version"])
+
+    resp = c.get("/api/dashboard")
+    assert resp.status_code == 200, resp.text
+    top = resp.json()["top_garcons_hoje"]
+
+    assert len(top) == 3
+    assert [g["garcom_nome"] for g in top] == ["Ana", "Bruno", "Carla"]
+    assert float(top[0]["faturamento"]) == pytest.approx(40.0)
+
+
+def test_dashboard_perdas_cortesias_mes(c):
+    """2 baixas-sem-venda com motivos distintos no mês corrente → total e breakdown
+    por motivo aparecem em perdas_cortesias_mes_total/_por_motivo."""
+    insumo = _criar_insumo(c, nome="Insumo Perda")
+    _set_custo_medio(insumo["id"], Decimal("3.00"))
+
+    _baixa_sem_venda(c, insumo["id"], "2", "perda")
+    _baixa_sem_venda(c, insumo["id"], "1", "quebra")
+
+    resp = c.get("/api/dashboard")
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+
+    assert float(data["perdas_cortesias_mes_total"]) == pytest.approx(9.0)  # 2*3 + 1*3
+    motivos = {g["motivo"]: float(g["valor"]) for g in data["perdas_cortesias_mes_por_motivo"]}
+    assert motivos["perda"] == pytest.approx(6.0)
+    assert motivos["quebra"] == pytest.approx(3.0)
+
+
+def test_dashboard_comissoes_a_pagar(c):
+    """Comanda fechada com taxa_servico=True gera comissão pago=False → aparece
+    em comissoes_a_pagar_total/_por_garcom."""
+    garcom = _criar_garcom(c, nome="Garcom Comissionado")
+    item = _criar_item(c, preco="100.00")
+    metodo = _criar_metodo(c)
+
+    comanda = _abrir_comanda(c, garcom["id"])
+    r = _lancar_item(c, comanda["id"], item["id"], comanda["version"])
+    resp_fechar = c.post(
+        f"/api/comandas/{comanda['id']}/fechar",
+        json={
+            "pagamentos": [{"metodo_id": metodo["id"], "valor": "110.00"}],
+            "modo_divisao": "sem_divisao",
+            "taxa_servico": True,
+            "version": r["version"],
+        },
+    )
+    assert resp_fechar.status_code == 200, resp_fechar.text
+
+    stats = c.get(f"/api/garcons/{garcom['id']}/stats").json()
+    comissao_id = stats["comissoes"][0]["id"]
+    _forcar_comissao_pendente(comissao_id)
+
+    resp = c.get("/api/dashboard")
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+
+    # 10% de taxa de serviço sobre 100.00 = 10.00, ainda não paga.
+    assert float(data["comissoes_a_pagar_total"]) == pytest.approx(10.0)
+    por_garcom = {c_item["nome"]: c_item for c_item in data["comissoes_a_pagar_por_garcom"]}
+    assert "Garcom Comissionado" in por_garcom
+    assert float(por_garcom["Garcom Comissionado"]["valor_pendente"]) == pytest.approx(10.0)
+
+
+def test_dashboard_insumos_menor_estoque_ordenado_exclui_criticos(c):
+    """6 insumos não-críticos + 1 crítico com o menor estoque de todos →
+    insumos_menor_estoque traz exatamente 5, ordenados por estoque_disponivel
+    asc, sem incluir o insumo crítico (que aparece só em insumos_criticos)."""
+    critico = _criar_insumo(c, nome="Insumo Critico")
+    _set_estoque(critico["id"], Decimal("1"), nivel_critico=Decimal("5"))
+
+    nomes_nao_criticos = []
+    for i, estoque in enumerate([50, 40, 30, 20, 10, 60]):
+        insumo = _criar_insumo(c, nome=f"Insumo NC{i}")
+        _set_estoque(insumo["id"], Decimal(str(estoque)))
+        nomes_nao_criticos.append((insumo["nome"], estoque))
+
+    resp = c.get("/api/dashboard")
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+
+    criticos_nomes = {i["nome"] for i in data["insumos_criticos"]}
+    assert "Insumo Critico" in criticos_nomes
+
+    menor_estoque = data["insumos_menor_estoque"]
+    assert len(menor_estoque) == 5
+    nomes_menor_estoque = [i["nome"] for i in menor_estoque]
+    assert "Insumo Critico" not in nomes_menor_estoque
+
+    esperado_ordem = [n for n, _ in sorted(nomes_nao_criticos, key=lambda t: t[1])][:5]
+    assert nomes_menor_estoque == esperado_ordem
+
+
+def test_dashboard_top_10_produtos_por_faturamento_com_cmv(c):
+    """Produto de menor quantidade mas maior faturamento aparece antes na lista
+    (prova que a ordenação mudou de quantidade para faturamento); produto sem
+    ficha técnica recebe classificacao_cmv="sem_custo" e cmv_percentual=None."""
+    insumo = _criar_insumo(c, nome="Insumo Top10")
+    _set_custo_medio(insumo["id"], Decimal("2.00"))
+    metodo = _criar_metodo(c)
+    garcom = _criar_garcom(c)
+
+    produto_a = c.post(
+        "/api/produtos",
+        json={
+            "nome": "AltaQtdBaixoFaturamento",
+            "preco_venda": "10.00",
+            "ficha_tecnica": [{"insumo_id": insumo["id"], "quantidade": "1"}],
+        },
+    ).json()
+    produto_b = c.post(
+        "/api/produtos",
+        json={
+            "nome": "BaixaQtdAltoFaturamento",
+            "preco_venda": "100.00",
+            "ficha_tecnica": [{"insumo_id": insumo["id"], "quantidade": "1"}],
+        },
+    ).json()
+    produto_c = _criar_item(c, nome="SemFichaTecnica", preco="30.00")
+
+    comanda = _abrir_comanda(c, garcom["id"])
+    v = comanda["version"]
+    r = _lancar_item(c, comanda["id"], produto_a["id"], v, quantidade=5)
+    v = r["version"]
+    r = _lancar_item(c, comanda["id"], produto_b["id"], v, quantidade=1)
+    v = r["version"]
+    r = _lancar_item(c, comanda["id"], produto_c["id"], v, quantidade=1)
+    _fechar(c, comanda["id"], metodo["id"], "180.00", r["version"])
+
+    resp = c.get("/api/dashboard")
+    assert resp.status_code == 200, resp.text
+    top = resp.json()["top_10_produtos"]
+
+    nomes = [p["nome"] for p in top[:3]]
+    assert nomes == ["BaixaQtdAltoFaturamento", "AltaQtdBaixoFaturamento", "SemFichaTecnica"]
+
+    by_nome = {p["nome"]: p for p in top}
+    assert by_nome["BaixaQtdAltoFaturamento"]["cmv_percentual"] == pytest.approx(2.0)
+    assert by_nome["BaixaQtdAltoFaturamento"]["classificacao_cmv"] == "verde"
+    assert by_nome["AltaQtdBaixoFaturamento"]["cmv_percentual"] == pytest.approx(20.0)
+    assert by_nome["SemFichaTecnica"]["cmv_percentual"] is None
+    assert by_nome["SemFichaTecnica"]["classificacao_cmv"] == "sem_custo"
 
 
 # ---------------------------------------------------------------------------
@@ -504,3 +749,4 @@ def test_faturamento_por_hora_hoje_agrega_por_hora_local():
         assert by_hora[23] == Decimal("0")
     finally:
         db.close()
+

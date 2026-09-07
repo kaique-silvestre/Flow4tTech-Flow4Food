@@ -98,9 +98,17 @@ def get_saldo_list(
     busca: Optional[str] = None,
     pagina: int = 1,
     por_pagina: int = 500,
+    ordenar_por_disponivel_asc: bool = False,
 ) -> SaldoPageResponse:
     import math
-    insumos, total = estoque_repository.list_saldo(db, categoria_id, busca, pagina=pagina, por_pagina=por_pagina)
+    insumos, total = estoque_repository.list_saldo(
+        db,
+        categoria_id,
+        busca,
+        pagina=pagina,
+        por_pagina=por_pagina,
+        ordenar_por_disponivel_asc=ordenar_por_disponivel_asc,
+    )
     categoria_ids = {i.categoria_id for i in insumos if i.categoria_id is not None}
     categoria_nomes = _get_categorias_nomes(db, categoria_ids)
     result = []

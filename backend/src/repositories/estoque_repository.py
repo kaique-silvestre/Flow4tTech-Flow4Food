@@ -115,9 +115,14 @@ def list_saldo(
     busca: Optional[str] = None,
     pagina: int = 1,
     por_pagina: int = 500,
+    ordenar_por_disponivel_asc: bool = False,
 ) -> tuple[list[Insumo], int]:
-    stmt = select(Insumo).where(Insumo.ativo == True).order_by(Insumo.nome)  # noqa: E712
+    stmt = select(Insumo).where(Insumo.ativo == True)  # noqa: E712
     count_stmt = select(func.count()).select_from(Insumo).where(Insumo.ativo == True)  # noqa: E712
+    if ordenar_por_disponivel_asc:
+        stmt = stmt.order_by((Insumo.estoque_atual - Insumo.estoque_reservado).asc())
+    else:
+        stmt = stmt.order_by(Insumo.nome)
     if categoria_id is not None:
         stmt = stmt.where(Insumo.categoria_id == categoria_id)
         count_stmt = count_stmt.where(Insumo.categoria_id == categoria_id)

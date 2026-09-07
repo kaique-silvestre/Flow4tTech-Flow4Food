@@ -1,7 +1,11 @@
 import datetime
 from decimal import Decimal
+from typing import Optional
 
 from pydantic import BaseModel
+
+from src.schemas.estoque import SaldoItemResponse
+from src.schemas.relatorio_schemas import PagamentoResumo, VendasGarcomItem
 
 
 class HoraBucket(BaseModel):
@@ -14,6 +18,8 @@ class ProdutoTop(BaseModel):
     nome: str
     quantidade: int
     faturamento: float
+    cmv_percentual: Optional[float] = None
+    classificacao_cmv: str = "sem_custo"
 
 
 class DiaFaturamento(BaseModel):
@@ -55,6 +61,17 @@ class InsumoCriticoItem(BaseModel):
     unidade_base: str
 
 
+class MotivoPerdaResumo(BaseModel):
+    motivo: str
+    valor: Decimal
+
+
+class ComissaoGarcomResumo(BaseModel):
+    garcom_id: int
+    nome: str
+    valor_pendente: Decimal
+
+
 class DashboardResponse(BaseModel):
     faturamento_hoje: Decimal
     ticket_medio_hoje: Decimal
@@ -76,3 +93,10 @@ class DashboardResponse(BaseModel):
     faturamento_7d_anterior: float = 0.0
     faturamento_mes_atual: Decimal = Decimal("0")
     faturamento_mes_anterior: Decimal = Decimal("0")
+    por_metodo_pagamento_hoje: list[PagamentoResumo] = []
+    top_garcons_hoje: list[VendasGarcomItem] = []
+    perdas_cortesias_mes_total: Decimal = Decimal("0")
+    perdas_cortesias_mes_por_motivo: list[MotivoPerdaResumo] = []
+    comissoes_a_pagar_total: Decimal = Decimal("0")
+    comissoes_a_pagar_por_garcom: list[ComissaoGarcomResumo] = []
+    insumos_menor_estoque: list[SaldoItemResponse] = []

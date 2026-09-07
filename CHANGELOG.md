@@ -11,6 +11,7 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ### Added
 
+- Novos campos no `DashboardResponse` (formas de pagamento, top garçons, cortesias/perdas por motivo, comissões a pagar, insumos com estoque baixo) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 - Componente `Table` reutilizável estilo shadcn (`components/ui/table.tsx`) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 - Seletor de itens por página (10/25/50) em `Pagination`, usado pelo Cardápio no lugar do tamanho fixo de 10 — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 - Página dedicada de produto (`/cardapio/:id`) com nome, categoria, preço, ficha técnica editável e ação Desativar/Reativar, substituindo o expand inline e o botão "Editar" da listagem do Cardápio — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
