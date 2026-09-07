@@ -2,6 +2,14 @@ import { useState } from "react";
 import { useDebounce } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Pagination, paginar } from "@/components/ui/pagination";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { useCategorias } from "@/features/cadastros/categorias/useCategorias";
 import { formatCurrency, formatCustoMedio, stockDisplay } from "@/lib/format";
 import { BaixaSemVendaModal } from "./BaixaSemVendaModal";
@@ -60,19 +68,19 @@ export function EstoquePage() {
         <p className="text-sm text-gray-500">Nenhum item em estoque.</p>
       ) : (
         <div className="flex-1 flex flex-col">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b text-left text-gray-500">
-                <th className="py-2 pr-4">Item</th>
-                <th className="py-2 pr-4">Categoria</th>
-                <th className="py-2 pr-4">Estoque atual</th>
-                <th className="py-2 pr-4">Reservado</th>
-                <th className="py-2 pr-4">Disponível</th>
-                <th className="py-2 pr-4">Custo médio</th>
-                <th className="py-2 text-right">Valor em estoque</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Item</TableHead>
+                <TableHead>Categoria</TableHead>
+                <TableHead className="text-right">Estoque atual</TableHead>
+                <TableHead className="text-right">Reservado</TableHead>
+                <TableHead className="text-right">Disponível</TableHead>
+                <TableHead className="text-right">Custo médio</TableHead>
+                <TableHead className="text-right">Valor em estoque</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {paginar(itens, pagina, POR_PAGINA).map((item) => {
                 const valorEstoque =
                   item.custo_medio != null
@@ -81,8 +89,8 @@ export function EstoquePage() {
                 const { qty, unit } = stockDisplay(item.estoque_atual, item.unidade_base);
                 const isCritico = item.nivel_critico != null && item.nivel_critico > 0 && Number(item.estoque_disponivel) < Number(item.nivel_critico);
                 return (
-                  <tr key={item.id} className={`border-b last:border-0 ${isCritico ? "bg-orange-50" : ""}`}>
-                    <td className="py-2 pr-4 font-medium">
+                  <TableRow key={item.id} className={isCritico ? "bg-orange-50" : undefined}>
+                    <TableCell className="font-medium">
                       <span className="inline-flex items-center gap-2">
                         {isCritico && (
                           <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
@@ -92,28 +100,28 @@ export function EstoquePage() {
                         )}
                         {item.nome}
                       </span>
-                    </td>
-                    <td className="py-2 pr-4 text-gray-500">{item.categoria_nome ?? "—"}</td>
-                    <td className={`py-2 pr-4 font-medium ${Number(item.estoque_atual) < 0 ? "text-red-600" : isCritico ? "text-orange-600" : ""}`}>
+                    </TableCell>
+                    <TableCell className="text-gray-500">{item.categoria_nome ?? "—"}</TableCell>
+                    <TableCell className={`text-right font-medium ${Number(item.estoque_atual) < 0 ? "text-red-600" : isCritico ? "text-orange-600" : ""}`}>
                       {qty} {unit}
-                    </td>
-                    <td className="py-2 pr-4 text-gray-500">
+                    </TableCell>
+                    <TableCell className="text-right text-gray-500">
                       {stockDisplay(item.estoque_reservado, item.unidade_base).qty} {stockDisplay(item.estoque_reservado, item.unidade_base).unit}
-                    </td>
-                    <td className={`py-2 pr-4 font-medium ${Number(item.estoque_disponivel) < 0 ? "text-red-600" : ""}`}>
+                    </TableCell>
+                    <TableCell className={`text-right font-medium ${Number(item.estoque_disponivel) < 0 ? "text-red-600" : ""}`}>
                       {stockDisplay(item.estoque_disponivel, item.unidade_base).qty} {stockDisplay(item.estoque_disponivel, item.unidade_base).unit}
-                    </td>
-                    <td className="py-2 pr-4 text-gray-600">
+                    </TableCell>
+                    <TableCell className="text-right text-gray-600">
                       {formatCustoMedio(item.custo_medio, item.unidade_base)}
-                    </td>
-                    <td className="py-2 text-right text-gray-600">
+                    </TableCell>
+                    <TableCell className="text-right text-gray-600">
                       {valorEstoque != null ? formatCurrency(valorEstoque) : "—"}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           <div className="border-t border-gray-100">
             <div className="flex items-center justify-between py-2 text-sm font-medium text-gray-700">
               <span>Total em estoque</span>
