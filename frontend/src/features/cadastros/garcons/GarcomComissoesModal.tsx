@@ -8,6 +8,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { formatCurrency, parseApiDate } from "@/lib/format";
 import type { Garcom, ComissaoResponse } from "./useGarcons";
 import {
@@ -39,12 +47,12 @@ function ComissaoRow({ c, onUpdated }: { c: ComissaoResponse; onUpdated: () => v
   }
 
   return (
-    <tr className="border-b last:border-0 text-sm">
-      <td className="py-2 pr-3 text-gray-600">#{c.comanda_id}</td>
-      <td className="py-2 pr-3 text-gray-600">
+    <TableRow>
+      <TableCell className="text-gray-600">#{c.comanda_id}</TableCell>
+      <TableCell className="text-gray-600">
         {parseApiDate(c.created_at).toLocaleDateString("pt-BR")}
-      </td>
-      <td className="py-2 pr-3">
+      </TableCell>
+      <TableCell className="text-right">
         {editingValor !== null ? (
           <Input
             type="number"
@@ -62,15 +70,15 @@ function ComissaoRow({ c, onUpdated }: { c: ComissaoResponse; onUpdated: () => v
           />
         ) : (
           <button
-            className="hover:underline text-left"
+            className="hover:underline text-right"
             onClick={() => setEditingValor(Number(c.valor).toFixed(2))}
             title="Clique para editar"
           >
             {formatCurrency(Number(c.valor))}
           </button>
         )}
-      </td>
-      <td className="py-2 pr-3">
+      </TableCell>
+      <TableCell>
         <button
           onClick={() => togglePago.mutate(c.id, { onSuccess: onUpdated })}
           className={`rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -81,8 +89,8 @@ function ComissaoRow({ c, onUpdated }: { c: ComissaoResponse; onUpdated: () => v
         >
           {c.pago ? "Pago" : "Pendente"}
         </button>
-      </td>
-      <td className="py-2">
+      </TableCell>
+      <TableCell>
         <Button
           size="sm"
           variant="ghost"
@@ -94,8 +102,8 @@ function ComissaoRow({ c, onUpdated }: { c: ComissaoResponse; onUpdated: () => v
         >
           Excluir
         </Button>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -143,22 +151,22 @@ export function GarcomComissoesModal({ open, onClose, garcom }: Props) {
               <p className="text-sm text-gray-500 py-2">Nenhuma comissão registrada.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-gray-500">
-                      <th className="py-2 pr-3">Comanda</th>
-                      <th className="py-2 pr-3">Data</th>
-                      <th className="py-2 pr-3">Valor</th>
-                      <th className="py-2 pr-3">Status</th>
-                      <th className="py-2" />
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>Comanda</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="py-2" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {paginar(stats.comissoes, pagina, COMISSOES_POR_PAGINA).map((c) => (
                       <ComissaoRow key={c.id} c={c} onUpdated={() => refetch()} />
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
                 {stats.comissoes.length > COMISSOES_POR_PAGINA && (
                   <div className="mt-3 flex items-center justify-between text-sm text-gray-500">
                     <span>{stats.comissoes.length} comissões</span>
