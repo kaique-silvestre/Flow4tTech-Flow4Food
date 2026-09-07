@@ -43,7 +43,10 @@ vi.mock("./useProfiles", () => ({
   useToggleProfileActive: () => ({ mutate: toggleProfileMutate, isPending: false }),
 }));
 
-vi.mock("./UserModal", () => ({ UserModal: () => null }));
+vi.mock("./UserModal", () => ({
+  UserModal: ({ open, user }: { open: boolean; user?: UserResponse }) =>
+    open ? <div data-testid="user-modal">{user ? `Editando ${user.name}` : "Novo usuário"}</div> : null,
+}));
 vi.mock("./ProfileModal", () => ({ ProfileModal: () => null }));
 
 // Radix Dialog e Radix DropdownMenu disputam foco quando um item de menu
@@ -163,6 +166,39 @@ describe("GestaoUsuariosPage - dropdown de ações de Usuário", () => {
 
     await screen.findByText("Editar");
     expect(screen.queryByText("Desativar")).not.toBeInTheDocument();
+  });
+
+  it("desabilita Editar quando o usuário é proprietário e não é o próprio logado", async () => {
+    users = [makeUser({ is_owner: true, is_active: true })];
+    currentUserId = 999;
+    renderPage();
+
+    await openRowMenu("José da Silva");
+
+    const editItem = await screen.findByText("Editar");
+    expect(editItem.closest('[role="menuitem"]')).toHaveAttribute("data-disabled");
+  });
+
+  it("mantém Editar habilitado quando o proprietário edita a si mesmo", async () => {
+    users = [makeUser({ id: 42, is_owner: true, is_active: true })];
+    currentUserId = 42;
+    renderPage();
+
+    await openRowMenu("José da Silva");
+
+    const editItem = await screen.findByText("Editar");
+    expect(editItem.closest('[role="menuitem"]')).not.toHaveAttribute("data-disabled");
+  });
+
+  it("não abre o modal ao clicar em Editar desabilitado (proprietário)", async () => {
+    users = [makeUser({ is_owner: true, is_active: true })];
+    currentUserId = 999;
+    renderPage();
+
+    await openRowMenu("José da Silva");
+    fireEvent.click(await screen.findByText("Editar"));
+
+    expect(screen.queryByTestId("user-modal")).not.toBeInTheDocument();
   });
 
   it("abre confirmação e dispara mutation ao clicar em Desativar", async () => {

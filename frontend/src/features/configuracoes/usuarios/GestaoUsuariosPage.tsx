@@ -178,6 +178,7 @@ export function GestaoUsuariosPage() {
                 <TableBody>
                   {users.map((user) => {
                     const isSelf = currentUser?.user_id === user.id;
+                    const cannotEditOwner = user.is_owner && !isSelf;
                     return (
                       <TableRow key={user.id} className={!user.is_active ? "opacity-60" : ""}>
                         <TableCell className="px-4 py-3 font-medium">
@@ -205,7 +206,18 @@ export function GestaoUsuariosPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEditUser(user)}>
+                              <DropdownMenuItem
+                                disabled={cannotEditOwner}
+                                title={
+                                  cannotEditOwner
+                                    ? "Usuário proprietário só pode ser editado por si mesmo"
+                                    : undefined
+                                }
+                                onClick={() => {
+                                  if (cannotEditOwner) return;
+                                  openEditUser(user);
+                                }}
+                              >
                                 Editar
                               </DropdownMenuItem>
                               {!isSelf && !user.is_owner && (

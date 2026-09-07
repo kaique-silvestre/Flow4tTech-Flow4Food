@@ -20,6 +20,7 @@ import {
   type UserResponse,
 } from "./useUsers";
 import { useProfiles } from "./useProfiles";
+import { useAuthStore } from "@/stores/authStore";
 
 const SCREENS: { id: string; label: string }[] = [
   { id: "dashboard", label: "Dashboard" },
@@ -62,6 +63,8 @@ interface Props {
 export function UserModal({ open, onClose, user }: Props) {
   const isEdit = !!user;
   const isFreeUser = isEdit && user.profile_id == null;
+  const currentUser = useAuthStore((s) => s.user);
+  const isSelf = isEdit && currentUser?.user_id === user.id;
   const { data: profiles = [] } = useProfiles();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser(user?.id ?? 0);
@@ -170,16 +173,21 @@ export function UserModal({ open, onClose, user }: Props) {
             {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
           </div>
           <div className="space-y-1">
-            <Label>Perfil (opcional)</Label>
+            <Label htmlFor="profile_id">Perfil (opcional)</Label>
             <select
+              id="profile_id"
               {...register("profile_id", { valueAsNumber: true })}
               className="w-full rounded border px-3 py-2 text-sm"
+              disabled={isSelf}
             >
               <option value={0}>Sem perfil fixo</option>
               {profiles.filter((p) => p.is_active).map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
+            {isSelf && (
+              <p className="text-xs text-gray-500">Você não pode alterar seu próprio perfil</p>
+            )}
           </div>
           {showScreens && (
             <div className="space-y-2">
@@ -194,6 +202,7 @@ export function UserModal({ open, onClose, user }: Props) {
                         <input
                           type="checkbox"
                           checked={field.value.includes(screen.id)}
+                          disabled={isSelf}
                           onChange={(e) => {
                             if (e.target.checked) {
                               field.onChange([...field.value, screen.id]);
@@ -208,6 +217,9 @@ export function UserModal({ open, onClose, user }: Props) {
                   </div>
                 )}
               />
+              {isSelf && (
+                <p className="text-xs text-gray-500">Você não pode alterar suas próprias permissões</p>
+              )}
             </div>
           )}
           {!isEdit && (
