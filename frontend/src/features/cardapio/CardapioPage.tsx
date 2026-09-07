@@ -13,48 +13,17 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { useCategorias, flattenCategorias } from "@/features/cadastros/categorias/useCategorias";
+import { useCategorias } from "@/features/cadastros/categorias/useCategorias";
 import {
   useProdutos,
   useDesativarProduto,
   useReativarProduto,
   type ProdutoResponse,
 } from "@/features/cadastros/produtos/useProdutos";
-import type { Categoria } from "@/features/cadastros/categorias/useCategorias";
 import { ProdutoModal } from "./ProdutoModal";
+import { CategoriaFilterPopover, buildCategoryPaths, collectIds } from "./CategoriaFilterPopover";
 
 type FiltroAtivo = "ativos" | "inativos" | "todos";
-
-function buildCategoryPaths(tree: Categoria[], prefix = ""): Record<number, string> {
-  const result: Record<number, string> = {};
-  for (const cat of tree) {
-    const path = prefix ? `${prefix} > ${cat.nome}` : cat.nome;
-    result[cat.id] = path;
-    if (cat.children?.length) {
-      Object.assign(result, buildCategoryPaths(cat.children, path));
-    }
-  }
-  return result;
-}
-
-function collectIds(id: number, tree: Categoria[]): Set<number> {
-  const ids = new Set<number>([id]);
-  for (const c of tree) {
-    if (c.id === id) {
-      for (const ch of c.children ?? []) {
-        ids.add(ch.id);
-        for (const gch of ch.children ?? []) ids.add(gch.id);
-      }
-    } else {
-      for (const ch of c.children ?? []) {
-        if (ch.id === id) {
-          for (const gch of ch.children ?? []) ids.add(gch.id);
-        }
-      }
-    }
-  }
-  return ids;
-}
 
 const POR_PAGINA_PADRAO = 10;
 
@@ -95,6 +64,7 @@ export function CardapioPage() {
   const [filtro, setFiltro] = useState<FiltroAtivo>("ativos");
   const [busca, setBusca] = useState("");
   const [catFiltro, setCatFiltro] = useState<number | null>(null);
+  const [catExpandidos, setCatExpandidos] = useState<Set<number>>(new Set());
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(POR_PAGINA_PADRAO);
@@ -105,13 +75,19 @@ export function CardapioPage() {
     setPagina(1);
   }
 
+  function toggleInSet(prev: Set<number>, id: number): Set<number> {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  }
+
   function toggleExpand(id: number) {
-    setExpandidos((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setExpandidos((prev) => toggleInSet(prev, id));
+  }
+
+  function toggleCatExpand(id: number) {
+    setCatExpandidos((prev) => toggleInSet(prev, id));
   }
 
   const catPathMap = buildCategoryPaths(categorias);
@@ -170,18 +146,14 @@ export function CardapioPage() {
             </button>
           ))}
         </div>
-        <select
-          value={catFiltro ?? ""}
-          onChange={(e) => { setCatFiltro(e.target.value ? Number(e.target.value) : null); setPagina(1); }}
-          className="rounded border px-2 py-1.5 text-sm text-gray-700"
-        >
-          <option value="">Todas as categorias</option>
-          {flattenCategorias(categorias).map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.indent ? `  ${c.nome}` : c.nome}
-            </option>
-          ))}
-        </select>
+        <CategoriaFilterPopover
+          categorias={categorias}
+          catPathMap={catPathMap}
+          value={catFiltro}
+          onChange={(id) => { setCatFiltro(id); setPagina(1); }}
+          expandidos={catExpandidos}
+          onToggleExpand={toggleCatExpand}
+        />
         <Input
           placeholder="Buscar produto..."
           value={busca}
