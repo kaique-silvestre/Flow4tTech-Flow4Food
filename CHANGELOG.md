@@ -11,6 +11,7 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ### Added
 
+- `tenant_name` (nome_fantasia do tenant) no payload do JWT, tanto no login quanto no refresh de token, para o frontend exibir o nome da empresa sem chamada de rede extra — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 - Novos campos no `DashboardResponse` (formas de pagamento, top garçons, cortesias/perdas por motivo, comissões a pagar, insumos com estoque baixo) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 - Componente `Table` reutilizável estilo shadcn (`components/ui/table.tsx`) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 - Seletor de itens por página (10/25/50) em `Pagination`, usado pelo Cardápio no lugar do tamanho fixo de 10 — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
@@ -19,6 +20,7 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ### Changed
 
+- Menu lateral (`navConfig.ts`/`Sidebar.tsx`) reorganizado em grupos com heading de seção: Dashboard e Calendário soltos no topo, "Operação" (Cardápio, Vendas, Compras, Estoque) e "Gestão" (Financeiro, Relatórios, Cadastros), sem alterar navegação/permissões existentes — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 - Reflete no front as três proteções que o backend já aplica em Gestão de Usuários (não pode alterar o próprio perfil, não pode alterar as próprias permissões, Proprietário só pode ser editado por si mesmo), desabilitando os controles correspondentes com texto de apoio em vez de só descobrir a regra pelo erro 409 após salvar — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 - Consolida as ações por linha de Gestão de Usuários (Usuários: Editar/Desativar-Ativar; Perfis: Editar-ou-Ver/Desativar-Ativar) em um único `DropdownMenu`, no lugar dos botões soltos, preservando todas as regras de exibição e habilitação existentes — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 - A aba ativa de Gestão de Usuários (`Usuários`/`Perfis`) agora é um query param (`?tab=usuarios`|`?tab=perfis`) endereçável e desfeito pelo botão voltar do navegador, em vez de estado local; filtros internos de cada aba continuam locais — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07

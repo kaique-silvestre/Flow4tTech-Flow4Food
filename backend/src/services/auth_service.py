@@ -16,7 +16,7 @@ from src.core.errors import AppError, ErrorCode
 from src.core.logging import get_logger
 from src.core.tenant_rls import arm
 from src.models.system_users import PasswordReset
-from src.repositories import refresh_tokens_repository
+from src.repositories import refresh_tokens_repository, tenant_repository
 from src.repositories.billing_repository import get_assinatura_by_tenant
 from src.repositories.password_reset_repository import (
     create_reset,
@@ -75,8 +75,9 @@ def resolve_permissions(user) -> list:
     return [p.screen for p in profile.permissions if p.can_access]
 
 
-def _build_token_response(user, subscription_status: str) -> TokenResponse:
+def _build_token_response(db: Session, user, subscription_status: str) -> TokenResponse:
     permissions = resolve_permissions(user)
+    tenant = tenant_repository.get_tenant_by_id(db, user.tenant_id)
     payload = {
         "sub": str(user.id),
         "user_id": user.id,
@@ -87,6 +88,7 @@ def _build_token_response(user, subscription_status: str) -> TokenResponse:
         "profile_name": user.profile.name if user.profile else None,
         "permissions": permissions,
         "subscription_status": subscription_status,
+        "tenant_name": tenant.nome_fantasia if tenant else None,
     }
     return TokenResponse(access_token=create_access_token(payload))
 
@@ -121,6 +123,7 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str]:
         raise AppError(code=ErrorCode.NOT_FOUND, message="Usuário não encontrado", http_status=401)
     assinatura = get_assinatura_by_tenant(db, user.tenant_id)
     subscription_status = assinatura.status if assinatura else "trial"
+    tenant = tenant_repository.get_tenant_by_id(db, user.tenant_id)
     new_access = create_access_token({
         "sub": str(user.id),
         "user_id": user.id,
@@ -131,6 +134,7 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str]:
         "profile_name": user.profile.name if user.profile else None,
         "permissions": resolve_permissions(user),
         "subscription_status": subscription_status,
+        "tenant_name": tenant.nome_fantasia if tenant else None,
     })
     new_refresh = create_refresh_token(db, user.id)
     return new_access, new_refresh
@@ -158,7 +162,7 @@ def login(db: Session, identifier: str, password: str) -> TokenResponse:
 
     assinatura = get_assinatura_by_tenant(db, user.tenant_id)
     subscription_status = assinatura.status if assinatura else "trial"
-    return _build_token_response(user, subscription_status)
+    return _build_token_response(db, user, subscription_status)
 
 
 def get_current_user_info(payload: dict) -> UserInfo:

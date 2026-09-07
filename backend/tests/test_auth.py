@@ -16,9 +16,10 @@ from src.api.dependencies import get_current_user, get_db, require_permission
 from src.core.database import Base
 from src.models.profiles import PermissionTemplate, Profile, ProfilePermission, TemplatePermission
 from src.models.system_users import SystemUser
+from src.models.tenants import Tenant
 from src.core.errors import AppError
 from src.repositories import refresh_tokens_repository, revoked_tokens_repository
-from src.services.auth_service import create_access_token, create_refresh_token, hash_password, resolve_permissions, rotate_refresh_token
+from src.services.auth_service import create_access_token, create_refresh_token, hash_password, login, resolve_permissions, rotate_refresh_token
 
 _JWT_SECRET = "test-secret-only-for-tests-32chars!!"
 _SQLITE_URL = "sqlite:///:memory:"
@@ -324,6 +325,63 @@ def test_resolve_permissions_custom_profile():
         _ = user.profile.permissions
         perms = resolve_permissions(user)
         assert perms == ["relatorios"]
+    finally:
+        db.close()
+
+
+def test_login_includes_tenant_name_in_jwt(monkeypatch):
+    import src.services.auth_service as auth_svc
+    monkeypatch.setattr(auth_svc, "get_assinatura_by_tenant", lambda db, tid: None)
+
+    db = _Session()
+    try:
+        now = datetime.now(timezone.utc)
+        tenant = Tenant(id=1, nome_fantasia="Restaurante Teste", created_at=now)
+        profile = Profile(id=1, tenant_id=1, name="Gerente", created_at=now, updated_at=now)
+        user = SystemUser(
+            id=1, tenant_id=1, profile_id=1,
+            name="Test User", username="testuser",
+            password_hash=hash_password("pass"),
+            is_active=True, created_at=now, updated_at=now,
+        )
+        db.add_all([tenant, profile, user])
+        db.commit()
+
+        token_response = login(db, "testuser", "pass")
+
+        payload = jwt.decode(token_response.access_token, _JWT_SECRET, algorithms=["HS256"])
+        assert payload["tenant_name"] == "Restaurante Teste"
+        # existing fields remain untouched
+        assert payload["tenant_id"] == 1
+        assert payload["username"] == "testuser"
+    finally:
+        db.close()
+
+
+def test_rotate_refresh_token_includes_tenant_name(monkeypatch):
+    import src.services.auth_service as auth_svc
+    monkeypatch.setattr(auth_svc, "get_assinatura_by_tenant", lambda db, tid: None)
+
+    db = _Session()
+    try:
+        now = datetime.now(timezone.utc)
+        tenant = Tenant(id=1, nome_fantasia="Restaurante Teste", created_at=now)
+        profile = Profile(id=1, tenant_id=1, name="Gerente", created_at=now, updated_at=now)
+        user = SystemUser(
+            id=1, tenant_id=1, profile_id=1,
+            name="Test User", username="testuser",
+            password_hash=hash_password("pass"),
+            is_active=True, created_at=now, updated_at=now,
+        )
+        db.add_all([tenant, profile, user])
+        db.commit()
+
+        raw_refresh = create_refresh_token(db, user.id)
+        db.expire_all()
+        new_access, _ = rotate_refresh_token(db, raw_refresh)
+
+        payload = jwt.decode(new_access, _JWT_SECRET, algorithms=["HS256"])
+        assert payload["tenant_name"] == "Restaurante Teste"
     finally:
         db.close()
 
