@@ -15,6 +15,7 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 ### Changed
 
+- Botão de ordenação do Cardápio agora mostra "A→Z" ou "Z→A" conforme o estado atual, em vez de só mudar a cor de fundo (ambíguo sobre qual ordem está ativa) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 - Normaliza a busca por nome no Cardápio para ignorar acentuação e caixa (ex.: "agua" encontra "Água Com Gás 500ml"), combinando com os filtros de status e categoria existentes — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 - Migra a tabela de produtos do Cardápio para o novo componente `Table`, mantendo alinhamento, hover e todas as ações existentes — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 - Consolida o protocolo de RLS por tenant (`SET ROLE`/`SET app.tenant_id`), hoje espalhado por `database.py`, `dependencies.py` e `tenant_repository.py`, em `core/tenant_rls.py` (`arm`/`clear`) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-06

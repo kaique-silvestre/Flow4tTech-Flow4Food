@@ -189,9 +189,9 @@ export function CardapioPage() {
               ? "border-gray-900 bg-gray-900 text-white"
               : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
           }`}
-          title="Ordenar A→Z"
+          title="Alternar ordenação"
         >
-          A→Z
+          {ordenacao === "original" ? "A→Z" : "Z→A"}
         </button>
       </div>
 
