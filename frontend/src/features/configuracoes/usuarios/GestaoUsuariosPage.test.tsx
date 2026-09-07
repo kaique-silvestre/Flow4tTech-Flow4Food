@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GestaoUsuariosPage } from "./GestaoUsuariosPage";
 import type { UserResponse } from "./useUsers";
@@ -106,13 +107,18 @@ function makeProfile(overrides: Partial<ProfileResponse> = {}): ProfileResponse 
   };
 }
 
-function renderPage() {
+function renderPage(initialPath = "/configuracoes/usuarios") {
+  const router = createMemoryRouter(
+    [{ path: "/configuracoes/usuarios", element: <GestaoUsuariosPage /> }],
+    { initialEntries: [initialPath] },
+  );
   const client = new QueryClient();
   render(
     <QueryClientProvider client={client}>
-      <GestaoUsuariosPage />
+      <RouterProvider router={router} />
     </QueryClientProvider>,
   );
+  return router;
 }
 
 async function openRowMenu(rowText: string) {
@@ -122,6 +128,37 @@ async function openRowMenu(rowText: string) {
   fireEvent.click(trigger);
   return row;
 }
+
+describe("GestaoUsuariosPage - aba ativa via query param", () => {
+  it("usa a aba Usuários por padrão quando não há query param", () => {
+    users = [makeUser({ name: "José da Silva" })];
+    profiles = [];
+    renderPage();
+
+    expect(screen.getByText("José da Silva")).toBeInTheDocument();
+  });
+
+  it("carrega a aba Perfis ao abrir com ?tab=perfis", () => {
+    users = [];
+    profiles = [makeProfile({ name: "Garçom" })];
+    renderPage("/configuracoes/usuarios?tab=perfis");
+
+    expect(screen.getByText("Garçom")).toBeInTheDocument();
+  });
+
+  it("atualiza o query param ao trocar de aba, sem adicionar filtros na URL", () => {
+    users = [];
+    profiles = [makeProfile({ name: "Garçom" })];
+    const router = renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Perfis" }));
+
+    expect(router.state.location.pathname + router.state.location.search).toBe(
+      "/configuracoes/usuarios?tab=perfis",
+    );
+    expect(screen.getByText("Garçom")).toBeInTheDocument();
+  });
+});
 
 describe("GestaoUsuariosPage - dropdown de ações de Usuário", () => {
   it("mostra itens Editar e Desativar para usuário comum ativo", async () => {

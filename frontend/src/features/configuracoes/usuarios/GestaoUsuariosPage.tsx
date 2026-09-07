@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,7 +53,8 @@ type ConfirmState = {
 type Tab = "usuarios" | "perfis";
 
 export function GestaoUsuariosPage() {
-  const [tab, setTab] = useState<Tab>("usuarios");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab: Tab = searchParams.get("tab") === "perfis" ? "perfis" : "usuarios";
   const [search, setSearch] = useState("");
   const [filterProfile, setFilterProfile] = useState<number | undefined>();
   const [searchProfiles, setSearchProfiles] = useState("");
@@ -81,6 +83,10 @@ export function GestaoUsuariosPage() {
       !searchProfiles ||
       p.name.toLowerCase().includes(searchProfiles.toLowerCase())
     );
+
+  function setTab(next: Tab) {
+    setSearchParams({ tab: next });
+  }
 
   function openEditUser(user: UserResponse) {
     setEditingUser(user);
