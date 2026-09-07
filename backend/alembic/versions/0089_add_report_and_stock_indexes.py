@@ -22,15 +22,16 @@ depends_on = None
 
 def upgrade() -> None:
     op.create_index("ix_comandas_tenant_data_fechamento", "comandas", ["tenant_id", "data_fechamento"])
-    op.create_index("ix_comandas_tenant_status", "comandas", ["tenant_id", "status"])
+    # ix_comandas_tenant_status já existe (criado em 0043_add_tenant_id_rls) — recriá-lo aqui quebra
+    # `alembic upgrade head` num banco novo (DuplicateTable).
     op.create_index("ix_comandas_tenant_garcom_id", "comandas", ["tenant_id", "garcom_id"])
 
-    op.create_index("ix_pagamentos_tenant_comanda_id", "pagamentos", ["tenant_id", "comanda_id"])
+    # ix_pagamentos_tenant_comanda_id já existe (criado em 0043_add_tenant_id_rls).
     op.create_index("ix_pagamentos_tenant_created_at", "pagamentos", ["tenant_id", "created_at"])
 
     op.create_index("ix_movimentos_estoque_tenant_tipo", "movimentos_estoque", ["tenant_id", "tipo"])
     op.create_index("ix_movimentos_estoque_tenant_created_at", "movimentos_estoque", ["tenant_id", "created_at"])
-    op.create_index("ix_movimentos_estoque_tenant_insumo_id", "movimentos_estoque", ["tenant_id", "insumo_id"])
+    # ix_movimentos_estoque_tenant_insumo_id já existe (criado em 0043_add_tenant_id_rls).
 
     op.create_index("ix_insumos_tenant_categoria_id", "insumos", ["tenant_id", "categoria_id"])
     op.create_index("ix_insumos_tenant_ean", "insumos", ["tenant_id", "ean"])
@@ -56,13 +57,10 @@ def downgrade() -> None:
     op.drop_index("ix_insumos_tenant_ean", table_name="insumos")
     op.drop_index("ix_insumos_tenant_categoria_id", table_name="insumos")
 
-    op.drop_index("ix_movimentos_estoque_tenant_insumo_id", table_name="movimentos_estoque")
     op.drop_index("ix_movimentos_estoque_tenant_created_at", table_name="movimentos_estoque")
     op.drop_index("ix_movimentos_estoque_tenant_tipo", table_name="movimentos_estoque")
 
     op.drop_index("ix_pagamentos_tenant_created_at", table_name="pagamentos")
-    op.drop_index("ix_pagamentos_tenant_comanda_id", table_name="pagamentos")
 
     op.drop_index("ix_comandas_tenant_garcom_id", table_name="comandas")
-    op.drop_index("ix_comandas_tenant_status", table_name="comandas")
     op.drop_index("ix_comandas_tenant_data_fechamento", table_name="comandas")
