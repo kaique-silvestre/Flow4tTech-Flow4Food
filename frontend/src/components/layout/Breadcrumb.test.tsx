@@ -1,34 +1,40 @@
 import { describe, expect, it } from "vitest";
 import { buildCrumbs } from "./Breadcrumb";
 
+const TENANT = "Empresa";
+
 describe("buildCrumbs", () => {
-  it("returns no breadcrumb for a root item with no deeper route", () => {
-    expect(buildCrumbs("/cardapio", undefined)).toEqual([]);
+  it("returns tenant + page label for a root route (e.g. Dashboard)", () => {
+    expect(buildCrumbs("/", TENANT)).toEqual([{ label: TENANT }, { label: "Dashboard" }]);
   });
 
-  it("returns only the parent label when a deeper route has no dynamic label yet", () => {
-    expect(buildCrumbs("/cardapio/5", undefined)).toEqual([{ label: "Cardápio" }]);
+  it("returns tenant + page label for a top-level item with no children (e.g. Cardápio)", () => {
+    expect(buildCrumbs("/cardapio", TENANT)).toEqual([{ label: TENANT }, { label: "Cardápio" }]);
   });
 
-  it("returns parent + dynamic label when a deeper route has a label", () => {
-    expect(buildCrumbs("/cardapio/5", "X-Burger")).toEqual([
-      { label: "Cardápio", to: "/cardapio" },
+  it("returns exactly 2 segments for a group's subitem, dropping the parent group (e.g. Estoque > Movimentos)", () => {
+    expect(buildCrumbs("/estoque/movimentos", TENANT)).toEqual([
+      { label: TENANT },
+      { label: "Movimentos" },
+    ]);
+  });
+
+  it("collapses redundant group/child labels (e.g. Compras > Compras) into tenant + single label", () => {
+    expect(buildCrumbs("/compras", TENANT)).toEqual([{ label: TENANT }, { label: "Compras" }]);
+  });
+
+  it("falls back to the parent item label on a deeper route with no dynamic label yet", () => {
+    expect(buildCrumbs("/cardapio/5", TENANT)).toEqual([{ label: TENANT }, { label: "Cardápio" }]);
+  });
+
+  it("uses the dynamic label on a deeper route once it's available", () => {
+    expect(buildCrumbs("/cardapio/5", TENANT, "X-Burger")).toEqual([
+      { label: TENANT },
       { label: "X-Burger" },
     ]);
   });
 
-  it("keeps static children groups working (e.g. Estoque > Movimentos)", () => {
-    expect(buildCrumbs("/estoque/movimentos", "should be ignored")).toEqual([
-      { label: "Estoque" },
-      { label: "Movimentos", to: "/estoque/movimentos" },
-    ]);
-  });
-
-  it("collapses redundant group/child labels (e.g. Compras > Compras)", () => {
-    expect(buildCrumbs("/compras", undefined)).toEqual([{ label: "Compras" }]);
-  });
-
-  it("returns no breadcrumb for an unmatched route", () => {
-    expect(buildCrumbs("/does-not-exist", undefined)).toEqual([]);
+  it("returns only the tenant name (1 segment) for an unrecognized route, never an invented label", () => {
+    expect(buildCrumbs("/does-not-exist", TENANT)).toEqual([{ label: TENANT }]);
   });
 });

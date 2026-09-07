@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { useLocation, Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { NAV_ITEMS } from "./navConfig";
+import { useAuthStore } from "@/stores/authStore";
+import { decodeJwtPayload } from "@/lib/jwt";
 
 interface BreadcrumbContextValue {
   label: string | undefined;
@@ -36,15 +38,30 @@ export function useBreadcrumbLabel(label: string | undefined) {
   }, [label, setLabel]);
 }
 
+/**
+ * Reads `tenant_name` straight off the JWT payload. `AuthUser` doesn't expose
+ * this field (yet) — decoding locally here avoids depending on/duplicating
+ * work on that shared type while it's under separate development.
+ */
+function useTenantName(): string | undefined {
+  const token = useAuthStore((s) => s.token);
+  return useMemo(() => {
+    if (!token) return undefined;
+    const payload = decodeJwtPayload<{ tenant_name?: string }>(token);
+    return payload?.tenant_name;
+  }, [token]);
+}
+
 export function Breadcrumb() {
   const { pathname } = useLocation();
   const { label } = useBreadcrumbContext();
+  const tenantName = useTenantName();
 
-  const crumbs = buildCrumbs(pathname, label);
+  const crumbs = buildCrumbs(pathname, tenantName, label);
   if (crumbs.length === 0) return null;
 
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-gray-400 mb-4">
+    <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-gray-400">
       {crumbs.map((crumb, i) => {
         const isLast = i === crumbs.length - 1;
         return (
@@ -76,7 +93,19 @@ function matchesPath(itemPath: string, pathname: string): boolean {
   return pathname === itemPath || pathname.startsWith(itemPath + "/");
 }
 
-export function buildCrumbs(pathname: string, dynamicLabel?: string): Crumb[] {
+/**
+ * Builds the topbar breadcrumb trail: always `[tenant_name]` (unrecognized
+ * route) or `[tenant_name, page label]` (recognized route) — never a 3rd
+ * segment, even for a group's subitem (the group itself is dropped, e.g.
+ * "Estoque > Movimentos" becomes just `[tenant_name, "Movimentos"]").
+ */
+export function buildCrumbs(
+  pathname: string,
+  tenantName: string | undefined,
+  dynamicLabel?: string
+): Crumb[] {
+  const company: Crumb = { label: tenantName ?? "" };
+
   // Check groups with children first (most specific match wins)
   for (const item of NAV_ITEMS) {
     if (item.children) {
@@ -85,28 +114,23 @@ export function buildCrumbs(pathname: string, dynamicLabel?: string): Crumb[] {
       for (const child of sorted) {
         if (matchesPath(child.to, pathname)) {
           // Skip redundant "Compras > Compras" — show just "Compras"
-          if (item.label === child.label) {
-            return [{ label: item.label }];
-          }
-          return [
-            { label: item.label },
-            { label: child.label, to: child.to },
-          ];
+          const pageLabel = item.label === child.label ? item.label : child.label;
+          return [company, { label: pageLabel }];
         }
       }
     }
 
-    // Direct link items — skip root-level pages (Dashboard, Cardápio)
+    // Direct link items — including root-level pages (Dashboard, Cardápio)
     if (item.to) {
-      if (pathname === item.to) return [];
+      if (pathname === item.to) {
+        return [company, { label: item.label }];
+      }
       if (pathname.startsWith(item.to + "/")) {
-        if (dynamicLabel) {
-          return [{ label: item.label, to: item.to }, { label: dynamicLabel }];
-        }
-        return [{ label: item.label }];
+        return [company, { label: dynamicLabel ?? item.label }];
       }
     }
   }
 
-  return [];
+  // Unrecognized route — company name only, never an invented page label
+  return [company];
 }

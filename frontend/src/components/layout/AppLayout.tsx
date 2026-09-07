@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { Breadcrumb, BreadcrumbProvider } from "./Breadcrumb";
+import { BreadcrumbProvider } from "./Breadcrumb";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { useInsumoCriticos } from "@/features/estoque/useEstoque";
@@ -53,13 +53,12 @@ export function AppLayout() {
       )}
       <Sidebar collapsed={collapsed} onToggle={handleToggle} mobileOpen={mobileOpen} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <Topbar onMenuClick={() => setMobileOpen((o) => !o)} />
-        <main className="flex-1 overflow-auto p-4">
-          <BreadcrumbProvider>
-            <Breadcrumb />
+        <BreadcrumbProvider>
+          <Topbar onMenuClick={() => setMobileOpen((o) => !o)} />
+          <main className="flex-1 overflow-auto p-4">
             <Outlet />
-          </BreadcrumbProvider>
-        </main>
+          </main>
+        </BreadcrumbProvider>
       </div>
     </div>
   );

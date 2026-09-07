@@ -9,6 +9,7 @@ import { ChangePasswordModal } from "@/features/auth/ChangePasswordModal";
 import { Announcement, AnnouncementTag, AnnouncementTitle } from "@/components/ui/announcement";
 import { Notifications } from "@/components/ui/notifications";
 import { useProximosEventos } from "@/features/calendario/useProximosEventos";
+import { Breadcrumb } from "./Breadcrumb";
 import { cn } from "@/lib/utils";
 
 // mesmas cores do CalendarioPage → TIPO_STYLE
@@ -214,7 +215,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         >
           <Menu size={20} />
         </button>
-        <span className="font-semibold">Flow4Food</span>
+        <Breadcrumb />
       </div>
 
       <div className="flex items-center gap-2">
