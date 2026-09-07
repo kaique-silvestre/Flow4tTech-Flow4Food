@@ -1,7 +1,16 @@
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { useAuthStore } from "@/stores/authStore";
 import {
   useUsers,
@@ -11,6 +20,19 @@ import {
 import { useProfiles, useToggleProfileActive, type ProfileResponse } from "./useProfiles";
 import { UserModal } from "./UserModal";
 import { ProfileModal } from "./ProfileModal";
+import { UserAvatarInitials } from "./UserAvatarInitials";
+
+function StatusBadge({ ativo }: { ativo: boolean }) {
+  return ativo ? (
+    <Badge variant="outline" className="border-green-200 bg-green-100 text-green-700">
+      Ativo
+    </Badge>
+  ) : (
+    <Badge variant="outline" className="border-gray-200 bg-gray-100 text-gray-500">
+      Inativo
+    </Badge>
+  );
+}
 
 type ConfirmState = {
   open: boolean;
@@ -135,39 +157,40 @@ export function GestaoUsuariosPage() {
             </div>
           ) : (
             <div className="overflow-x-auto rounded border">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
-                  <tr>
-                    <th className="px-4 py-3">Nome</th>
-                    <th className="px-4 py-3">Usuário</th>
-                    <th className="px-4 py-3">Email</th>
-                    <th className="px-4 py-3">Perfil</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50 text-xs uppercase text-gray-500 hover:bg-gray-50">
+                    <TableHead className="px-4 py-3">Nome</TableHead>
+                    <TableHead className="px-4 py-3">Usuário</TableHead>
+                    <TableHead className="px-4 py-3">Email</TableHead>
+                    <TableHead className="px-4 py-3">Perfil</TableHead>
+                    <TableHead className="px-4 py-3">Status</TableHead>
+                    <TableHead className="px-4 py-3">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {users.map((user) => {
                     const isSelf = currentUser?.user_id === user.id;
                     return (
-                      <tr key={user.id} className={`hover:bg-gray-50 ${!user.is_active ? "opacity-60" : ""}`}>
-                        <td className="px-4 py-3 font-medium">
-                          <span>{user.name}</span>
-                          {user.is_owner && (
-                            <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                              Proprietário
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">{user.username}</td>
-                        <td className="px-4 py-3 text-gray-600">{user.email ?? "—"}</td>
-                        <td className="px-4 py-3">{user.profile_name}</td>
-                        <td className="px-4 py-3">
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${user.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                            {user.is_active ? "Ativo" : "Inativo"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
+                      <TableRow key={user.id} className={!user.is_active ? "opacity-60" : ""}>
+                        <TableCell className="px-4 py-3 font-medium">
+                          <div className="flex items-center gap-2">
+                            <UserAvatarInitials nome={user.name} />
+                            <span>{user.name}</span>
+                            {user.is_owner && (
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                Proprietário
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-gray-600">{user.username}</TableCell>
+                        <TableCell className="px-4 py-3 text-gray-600">{user.email ?? "—"}</TableCell>
+                        <TableCell className="px-4 py-3">{user.profile_name}</TableCell>
+                        <TableCell className="px-4 py-3">
+                          <StatusBadge ativo={user.is_active} />
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <Button variant="ghost" size="sm" onClick={() => openEditUser(user)}>
                               Editar
@@ -196,12 +219,12 @@ export function GestaoUsuariosPage() {
                               </Button>
                             )}
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </div>
@@ -230,30 +253,28 @@ export function GestaoUsuariosPage() {
             </Button>
           </div>
           <div className="overflow-x-auto rounded border">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
-                <tr>
-                  <th className="px-4 py-3">Nome</th>
-                  <th className="px-4 py-3">Usuários</th>
-                  <th className="px-4 py-3">Permissões</th>
-                  <th className="px-4 py-3">Sistema</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50 text-xs uppercase text-gray-500 hover:bg-gray-50">
+                  <TableHead className="px-4 py-3">Nome</TableHead>
+                  <TableHead className="px-4 py-3">Usuários</TableHead>
+                  <TableHead className="px-4 py-3">Permissões</TableHead>
+                  <TableHead className="px-4 py-3">Sistema</TableHead>
+                  <TableHead className="px-4 py-3">Status</TableHead>
+                  <TableHead className="px-4 py-3">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {profiles.map((profile) => (
-                  <tr key={profile.id} className={`hover:bg-gray-50 ${!profile.is_active ? "opacity-60" : ""}`}>
-                    <td className="px-4 py-3 font-medium">{profile.name}</td>
-                    <td className="px-4 py-3">{profile.user_count}</td>
-                    <td className="px-4 py-3">{profile.permissions.length}/8</td>
-                    <td className="px-4 py-3">{profile.is_system ? "✓" : "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${profile.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                        {profile.is_active ? "Ativo" : "Inativo"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
+                  <TableRow key={profile.id} className={!profile.is_active ? "opacity-60" : ""}>
+                    <TableCell className="px-4 py-3 font-medium">{profile.name}</TableCell>
+                    <TableCell className="px-4 py-3">{profile.user_count}</TableCell>
+                    <TableCell className="px-4 py-3">{profile.permissions.length}/8</TableCell>
+                    <TableCell className="px-4 py-3">{profile.is_system ? "✓" : "—"}</TableCell>
+                    <TableCell className="px-4 py-3">
+                      <StatusBadge ativo={profile.is_active} />
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Button
                           variant="ghost"
@@ -293,11 +314,11 @@ export function GestaoUsuariosPage() {
                           );
                         })()}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}
