@@ -1,6 +1,5 @@
-import React, { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pagination, paginar } from "@/components/ui/pagination";
@@ -18,6 +17,7 @@ import {
   useProdutos,
   useDesativarProduto,
   useReativarProduto,
+  custoItemFicha,
   type ProdutoResponse,
 } from "@/features/cadastros/produtos/useProdutos";
 import { ProdutoModal } from "./ProdutoModal";
@@ -38,8 +38,9 @@ function calcCusto(produto: ProdutoResponse): number | null {
   if (!produto.ficha_tecnica?.length) return null;
   let total = 0;
   for (const item of produto.ficha_tecnica) {
-    if (item.custo_medio_insumo === null) return null;
-    total += Number(item.custo_medio_insumo) * Number(item.quantidade);
+    const custo = custoItemFicha(item);
+    if (custo === null) return null;
+    total += custo;
   }
   return total;
 }
@@ -52,6 +53,7 @@ function CmvBadge({ preco, custo }: { preco: number | null; custo: number | null
 }
 
 export function CardapioPage() {
+  const navigate = useNavigate();
   const { data: produtosData, isLoading, isError } = useProdutos();
   const produtos = produtosData?.itens ?? [];
   const { data: categorias = [] } = useCategorias();
@@ -59,13 +61,11 @@ export function CardapioPage() {
   const reativar = useReativarProduto();
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<ProdutoResponse | null>(null);
   const [confirmDesativar, setConfirmDesativar] = useState<number | null>(null);
   const [filtro, setFiltro] = useState<FiltroAtivo>("ativos");
   const [busca, setBusca] = useState("");
   const [catFiltro, setCatFiltro] = useState<number | null>(null);
   const [catExpandidos, setCatExpandidos] = useState<Set<number>>(new Set());
-  const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(POR_PAGINA_PADRAO);
   const [ordenacao, setOrdenacao] = useState<"az" | "original">("az");
@@ -75,19 +75,13 @@ export function CardapioPage() {
     setPagina(1);
   }
 
-  function toggleInSet(prev: Set<number>, id: number): Set<number> {
-    const next = new Set(prev);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    return next;
-  }
-
-  function toggleExpand(id: number) {
-    setExpandidos((prev) => toggleInSet(prev, id));
-  }
-
   function toggleCatExpand(id: number) {
-    setCatExpandidos((prev) => toggleInSet(prev, id));
+    setCatExpandidos((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   const catPathMap = buildCategoryPaths(categorias);
@@ -107,16 +101,6 @@ export function CardapioPage() {
     ? [...produtosFiltrados].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
     : produtosFiltrados;
 
-  function openCreate() {
-    setEditing(null);
-    setModalOpen(true);
-  }
-
-  function openEdit(p: ProdutoResponse) {
-    setEditing(p);
-    setModalOpen(true);
-  }
-
   const filtroOpcoes: { value: FiltroAtivo; label: string }[] = [
     { value: "ativos", label: "Ativos" },
     { value: "inativos", label: "Inativos" },
@@ -127,7 +111,7 @@ export function CardapioPage() {
     <div className="p-4 lg:p-6 min-h-full flex flex-col">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Cardápio</h1>
-        <Button onClick={openCreate}>Novo Produto</Button>
+        <Button onClick={() => setModalOpen(true)}>Novo Produto</Button>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -188,7 +172,6 @@ export function CardapioPage() {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="py-2 pr-2 w-6" />
               <TableHead>Nome</TableHead>
               <TableHead className="hidden sm:table-cell">Categoria</TableHead>
               <TableHead className="text-right">Preço</TableHead>
@@ -205,133 +188,75 @@ export function CardapioPage() {
               const precoEfetivo = (p.preco_promocional != null ? p.preco_promocional : p.preco_venda);
               const lucro =
                 precoEfetivo !== null && custo !== null ? precoEfetivo - custo : null;
-              const expandido = expandidos.has(p.id);
-              const temFicha = p.ficha_tecnica && p.ficha_tecnica.length > 0;
 
               return (
-                <React.Fragment key={p.id}>
-                  <TableRow className={cn(!expandido && "last:border-0", !p.ativo && "opacity-50")}>
-                    <TableCell className="py-2 pr-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleExpand(p.id)}
-                        className="text-gray-400 hover:text-gray-700 disabled:invisible"
-                        disabled={!temFicha}
-                        title={temFicha ? "Ver insumos" : "Sem ficha técnica"}
+                <TableRow
+                  key={p.id}
+                  onClick={() => navigate(`/cardapio/${p.id}`)}
+                  className={p.ativo ? "cursor-pointer" : "cursor-pointer opacity-50"}
+                >
+                  <TableCell className="font-medium">{p.nome}</TableCell>
+                  <TableCell className="hidden sm:table-cell text-gray-500">
+                    {p.categoria_id ? (catPathMap[p.categoria_id] ?? "—") : "—"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {p.preco_promocional != null ? (
+                      <span className="flex flex-col items-end gap-0.5">
+                        <span className="text-xs text-gray-400 line-through">
+                          R$ {Number(p.preco_venda).toFixed(2)}
+                        </span>
+                        <span className="font-semibold text-green-600">
+                          R$ {Number(p.preco_promocional).toFixed(2)}
+                        </span>
+                      </span>
+                    ) : p.preco_venda !== null ? (
+                      `R$ ${Number(p.preco_venda).toFixed(2)}`
+                    ) : "—"}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-right">
+                    {custo !== null ? `R$ ${custo.toFixed(2)}` : "—"}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-right">
+                    <CmvBadge preco={precoEfetivo} custo={custo} />
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-right">
+                    {lucro !== null ? (
+                      <span className={lucro >= 0 ? "text-green-600" : "text-red-600"}>
+                        R$ {lucro.toFixed(2)}
+                      </span>
+                    ) : "—"}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-right">
+                    {p.producao_possivel === null ? (
+                      <span className="text-gray-400">—</span>
+                    ) : p.producao_possivel === 0 ? (
+                      <span className="font-medium text-red-600">0</span>
+                    ) : (
+                      <span className="text-gray-700">{p.producao_possivel}</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right space-x-2 whitespace-nowrap">
+                    {p.ativo ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => { e.stopPropagation(); setConfirmDesativar(p.id); }}
+                        className="text-yellow-600 hover:text-yellow-700"
                       >
-                        {expandido
-                          ? <ChevronDown size={14} />
-                          : <ChevronRight size={14} />}
-                      </button>
-                    </TableCell>
-                    <TableCell className="font-medium">{p.nome}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-gray-500">
-                      {p.categoria_id ? (catPathMap[p.categoria_id] ?? "—") : "—"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {p.preco_promocional != null ? (
-                        <span className="flex flex-col items-end gap-0.5">
-                          <span className="text-xs text-gray-400 line-through">
-                            R$ {Number(p.preco_venda).toFixed(2)}
-                          </span>
-                          <span className="font-semibold text-green-600">
-                            R$ {Number(p.preco_promocional).toFixed(2)}
-                          </span>
-                        </span>
-                      ) : p.preco_venda !== null ? (
-                        `R$ ${Number(p.preco_venda).toFixed(2)}`
-                      ) : "—"}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-right">
-                      {custo !== null ? `R$ ${custo.toFixed(2)}` : "—"}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-right">
-                      <CmvBadge preco={precoEfetivo} custo={custo} />
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-right">
-                      {lucro !== null ? (
-                        <span className={lucro >= 0 ? "text-green-600" : "text-red-600"}>
-                          R$ {lucro.toFixed(2)}
-                        </span>
-                      ) : "—"}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-right">
-                      {p.producao_possivel === null ? (
-                        <span className="text-gray-400">—</span>
-                      ) : p.producao_possivel === 0 ? (
-                        <span className="font-medium text-red-600">0</span>
-                      ) : (
-                        <span className="text-gray-700">{p.producao_possivel}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right space-x-2 whitespace-nowrap">
-                      <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
-                        Editar
+                        Desativar
                       </Button>
-                      {p.ativo ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setConfirmDesativar(p.id)}
-                          className="text-yellow-600 hover:text-yellow-700"
-                        >
-                          Desativar
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => reativar.mutate(p.id)}
-                          className="text-green-600 hover:text-green-700"
-                        >
-                          Reativar
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-
-                  {expandido && temFicha && (
-                    <TableRow className="last:border-0 bg-gray-50 hover:bg-gray-50">
-                      <TableCell className="p-0" />
-                      <TableCell colSpan={7} className="py-2 px-2 pb-3">
-                        <Table className="text-xs">
-                          <TableHeader>
-                            <TableRow className="text-gray-400 border-gray-200 hover:bg-transparent">
-                              <TableHead className="py-1 pr-4">Insumo</TableHead>
-                              <TableHead className="py-1 pr-4 text-right">Quantidade</TableHead>
-                              <TableHead className="py-1 pr-4 text-right">Custo médio</TableHead>
-                              <TableHead className="py-1 text-right">Custo total</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {p.ficha_tecnica!.map((ft) => {
-                              const custoMedio = ft.custo_medio_insumo !== null ? Number(ft.custo_medio_insumo) : null;
-                              const qtd = Number(ft.quantidade);
-                              const custoItem = custoMedio !== null ? custoMedio * qtd : null;
-                              return (
-                                <TableRow key={ft.insumo_id} className="border-gray-100 last:border-0">
-                                  <TableCell className="py-1 pr-4 text-gray-700">{ft.insumo_nome}</TableCell>
-                                  <TableCell className="py-1 pr-4 text-right text-gray-600">
-                                    {ft.unidade_base === "kg"
-                                      ? qtd.toFixed(3)
-                                      : Math.round(qtd).toString()}{" "}
-                                    {ft.unidade_base}
-                                  </TableCell>
-                                  <TableCell className="py-1 pr-4 text-right text-gray-600">
-                                    {custoMedio !== null ? `R$ ${custoMedio.toFixed(4)}` : "—"}
-                                  </TableCell>
-                                  <TableCell className="py-1 text-right text-gray-700">
-                                    {custoItem !== null ? `R$ ${custoItem.toFixed(4)}` : "—"}
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </React.Fragment>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => { e.stopPropagation(); reativar.mutate(p.id); }}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        Reativar
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
               );
             })}
           </TableBody>
@@ -352,7 +277,7 @@ export function CardapioPage() {
       <ProdutoModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        editing={editing}
+        onCreated={(produto) => navigate(`/cardapio/${produto.id}`)}
       />
 
       <ConfirmDialog

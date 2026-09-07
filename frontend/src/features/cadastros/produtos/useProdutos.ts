@@ -39,6 +39,12 @@ export interface ProdutoCreateRequest {
 
 export type ProdutoUpdateRequest = ProdutoCreateRequest;
 
+/** Total cost of a single ficha técnica line (custo médio do insumo × quantidade), or null if unknown. */
+export function custoItemFicha(item: FichaTecnicaItem): number | null {
+  if (item.custo_medio_insumo === null) return null;
+  return Number(item.custo_medio_insumo) * Number(item.quantidade);
+}
+
 const QK = "produtos";
 
 export function useProdutos(busca?: string, options?: { ativo?: boolean; pagina?: number; por_pagina?: number }) {

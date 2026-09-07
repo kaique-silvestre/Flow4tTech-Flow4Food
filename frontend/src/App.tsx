@@ -37,6 +37,7 @@ import { ConfiguracoesPage } from "@/features/configuracoes/ConfiguracoesPage";
 import { GestaoUsuariosPage } from "@/features/configuracoes/usuarios/GestaoUsuariosPage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { CardapioPage } from "@/features/cardapio/CardapioPage";
+import { ProdutoPage } from "@/features/cardapio/ProdutoPage";
 import { ContasPagarPage } from "@/features/contas_pagar/ContasPagarPage";
 import { CaixaPage } from "@/features/caixa/CaixaPage";
 import { AssinaturaVencidaPage } from "@/features/assinatura/AssinaturaVencidaPage";
@@ -91,6 +92,7 @@ export function App() {
                 <Route path="/vendas/comandas/:id" element={<ComandaAbertaPage />} />
                 <Route path="/vendas/comandas/:id/fechar" element={<FechamentoPage />} />
                 <Route path="/cardapio" element={<CardapioPage />} />
+                <Route path="/cardapio/:id" element={<ProdutoPage />} />
               </Route>
               <Route element={<RequirePermission screen="consumo_interno" />}>
                 <Route path="/consumo-interno" element={<ConsumoInternoPage />} />
