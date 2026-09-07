@@ -12,6 +12,9 @@ export interface AuthUser {
   profile_name: string;
   permissions: string[];
   subscription_status?: string;
+  /** Nome da empresa (tenant), presente a partir da ticket 01 (tenant_name no JWT).
+   * Opcional para não quebrar tokens antigos, emitidos antes dessa mudança. */
+  tenant_name?: string;
 }
 
 function parseJwtPayload(token: string): AuthUser | null {

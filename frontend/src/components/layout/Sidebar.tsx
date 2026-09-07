@@ -9,6 +9,51 @@ import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { ChevronRight, Menu } from "lucide-react";
 import { NAV_GROUPS, type NavItem, type SubNavItem } from "./navConfig";
 import { NavBadge } from "@/components/ui/nav-badge";
+import { useAuthStore } from "@/stores/authStore";
+import { SUBSCRIPTION_STATUS_LABELS } from "@/features/platform/subscriptionStatus";
+
+/* ---------- Bloco Empresa ---------- */
+
+/** Bloco estático (não-clicável) com a identidade da empresa (tenant) logada:
+ * quadrado com a inicial, nome completo e status da assinatura como subtítulo.
+ * Tolerante a token sem `tenant_name`/`subscription_status` (ex: token emitido
+ * antes da ticket 01) — nesse caso mostra só o que estiver disponível. */
+function EmpresaBlock({ collapsed }: { collapsed: boolean }) {
+  const user = useAuthStore((s) => s.user);
+  if (!user) return null;
+
+  const tenantName = user.tenant_name;
+  const statusLabel = user.subscription_status
+    ? (SUBSCRIPTION_STATUS_LABELS[user.subscription_status] ?? user.subscription_status)
+    : null;
+
+  if (!tenantName && !statusLabel) return null;
+
+  const initial = tenantName ? tenantName.charAt(0).toUpperCase() : "?";
+
+  return (
+    <div
+      className={`flex items-center gap-2.5 border-b border-gray-200 px-3 py-3 shrink-0 ${
+        collapsed ? "justify-center px-2" : ""
+      }`}
+      title={collapsed ? tenantName : undefined}
+    >
+      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-gray-900 text-white text-sm font-semibold select-none shrink-0">
+        {initial}
+      </div>
+      {!collapsed && (tenantName || statusLabel) && (
+        <div className="min-w-0">
+          {tenantName && (
+            <p className="text-sm font-semibold text-gray-900 truncate" title={tenantName}>
+              {tenantName}
+            </p>
+          )}
+          {statusLabel && <p className="text-xs text-gray-400 truncate">{statusLabel}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ---------- component ---------- */
 
@@ -146,6 +191,8 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
       >
         <Menu size={18} />
       </button>
+
+      <EmpresaBlock collapsed={collapsed} />
 
       <nav ref={navRef} className="flex flex-1 flex-col gap-0.5 p-2 overflow-y-auto">
         {visibleGroups.map((group, groupIndex) => (
