@@ -50,11 +50,11 @@ ao concluir. CHANGELOG.md sempre atualizado (Autor: Kaique Gonzaga Silvestre <ka
 - [x] 01-tenant-name-jwt (commit 646a25f) — backend, sem dependência
 - [x] 02-nav-groups-headings (commit e8e12b0) — frontend navConfig/Sidebar, sem dependência
 - [x] 03-empresa-block (commit 237bcbb) — frontend authStore/Sidebar/subscriptionStatus
-- [ ] 04-accordion-inline (depende de 02) — frontend Sidebar
-- [ ] 05-nav-search-filter (depende de 02) — frontend navConfig/Sidebar
-- [ ] 06-fixed-footer (depende de 02, 04) — frontend Sidebar/Topbar/Sidebar.test.tsx (novo)
+- [x] 04-accordion-inline (commit 8a4ec76) — frontend Sidebar
+- [x] 05-nav-search-filter (commit 848b720) — frontend navConfig/Sidebar
+- [x] 06-fixed-footer (commit 5abb40a) — frontend Sidebar/Topbar/Sidebar.test.tsx (novo) + useLogout.ts (novo)
 - [x] 07-breadcrumb-topbar (commit b7c3b61) — frontend Topbar/Breadcrumb/AppLayout
-- [ ] 08-collapse-handle (depende de 03, 05, 06) — frontend Sidebar
+- [x] 08-collapse-handle (commit 331d032) — frontend Sidebar — FASE F COMPLETA
 
 ## Log
 - 2026-09-07: tracker criado, iniciando Fase A/01.
@@ -72,3 +72,4 @@ ao concluir. CHANGELOG.md sempre atualizado (Autor: Kaique Gonzaga Silvestre <ka
 - 2026-09-07: iniciando Fase D (dashboard-restructure) — sem issues quebradas ainda, lendo spec.md completo pra criar tickets.
 - 2026-09-07: usuário pediu explicitamente para executar Fase F (sidebar) em paralelo com subagents. Mapeado grafo de dependência x arquivo tocado: 02,03,04,05,06,08 tocam todos `Sidebar.tsx`, então paralelismo real só é seguro entre tickets que não compartilham arquivo. Round 1 (paralelo): F/01 (backend, commit 646a25f) + F/02 (frontend navConfig/Sidebar, commit e8e12b0) — concluídos, sem conflito.
 - 2026-09-07: Round 2 (paralelo): F/03 (bloco Empresa, commit 237bcbb) + F/07 (breadcrumb topbar, commit b7c3b61) — concluídos, sem conflito (arquivos disjuntos: Sidebar/authStore vs Topbar/Breadcrumb/AppLayout). Nota: F/07 não pôde depender de `AuthUser.tenant_name` (adicionado por F/03 em paralelo) sem risco de conflito, então decodifica o JWT localmente em `Breadcrumb.tsx` via `useTenantName()` — duplica a lógica de decode com `authStore.ts`; considerar consolidar numa limpeza pós-loop (registrado, fora do escopo dos tickets). Restantes (04,05,06,08) tocam todos `Sidebar.tsx` — sequenciais a partir daqui.
+- 2026-09-07: F/04 concluído (8a4ec76, accordion inline + flyout preservado). F/05 concluído (848b720, `filterNavItems` + campo de busca, 8 testes novos). F/06 concluído (5abb40a, rodapé fixo Configurações/Sair reusando accordion da F/04, `useLogout()` novo compartilhado com Topbar, 5 testes RTL novos em `Sidebar.test.tsx`). F/08 concluído (331d032, handle circular substituindo a barra de linha inteira). FASE F COMPLETA — 8/8 tickets, suíte frontend em 134/134 testes passando, sem regressão. Nota: duplicação de decode de `tenant_name` (F/07 vs `authStore.ts`) e todas as demais "notas recorrentes" dos subagentes (graphify-out desatualizado, `normalizarTexto` duplicado por página) seguem fora do escopo desta fase, registradas para limpeza futura.
