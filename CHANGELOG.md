@@ -9,8 +9,13 @@ Categorias: `Added`, `Changed`, `Fixed`, `Removed`, `Security`.
 
 <!-- Novas entradas entram aqui, no topo. Ver CLAUDE.md → "Changelog" para o padrão de preenchimento. -->
 
+### Added
+
+- Componente `Table` reutilizável estilo shadcn (`components/ui/table.tsx`) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
+
 ### Changed
 
+- Migra a tabela de produtos do Cardápio para o novo componente `Table`, mantendo alinhamento, hover e todas as ações existentes — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-07
 - Consolida o protocolo de RLS por tenant (`SET ROLE`/`SET app.tenant_id`), hoje espalhado por `database.py`, `dependencies.py` e `tenant_repository.py`, em `core/tenant_rls.py` (`arm`/`clear`) — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-06
 - Extrai boilerplate de audit-logging e resolução de permissões de impersonação de `platform_auth.py` para `platform_service.py` novo — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-06
 - Extrai o cálculo puro de fechamento de comanda (desconto, validação de pagamento, saldo, comissão) para `_calcular_fechamento`, testável sem sessão de banco — Kaique Gonzaga Silvestre <kaique.silvestre.22@gmail.com>, 2026-09-06

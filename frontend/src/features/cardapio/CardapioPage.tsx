@@ -1,9 +1,18 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pagination, paginar } from "@/components/ui/pagination";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { useCategorias, flattenCategorias } from "@/features/cadastros/categorias/useCategorias";
 import {
   useProdutos,
@@ -191,21 +200,21 @@ export function CardapioPage() {
         <p className="text-sm text-gray-500">Nenhum produto encontrado.</p>
       ) : (
         <div className="flex-1 flex flex-col overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b text-left text-gray-500">
-              <th className="py-2 pr-2 w-6" />
-              <th className="py-2 pr-4">Nome</th>
-              <th className="hidden sm:table-cell py-2 pr-4">Categoria</th>
-              <th className="py-2 pr-4 text-right">Preço</th>
-              <th className="hidden sm:table-cell py-2 pr-4 text-right">Custo Ficha</th>
-              <th className="hidden sm:table-cell py-2 pr-4 text-right">CMV%</th>
-              <th className="hidden sm:table-cell py-2 pr-4 text-right">Lucro Bruto</th>
-              <th className="hidden sm:table-cell py-2 pr-4 text-right">Produção</th>
-              <th className="py-2" />
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="py-2 pr-2 w-6" />
+              <TableHead>Nome</TableHead>
+              <TableHead className="hidden sm:table-cell">Categoria</TableHead>
+              <TableHead className="text-right">Preço</TableHead>
+              <TableHead className="hidden sm:table-cell text-right">Custo Ficha</TableHead>
+              <TableHead className="hidden sm:table-cell text-right">CMV%</TableHead>
+              <TableHead className="hidden sm:table-cell text-right">Lucro Bruto</TableHead>
+              <TableHead className="hidden sm:table-cell text-right">Produção</TableHead>
+              <TableHead className="py-2" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {paginar(produtosOrdenados, pagina, POR_PAGINA).map((p) => {
               const custo = calcCusto(p);
               const precoEfetivo = (p.preco_promocional != null ? p.preco_promocional : p.preco_venda);
@@ -216,8 +225,8 @@ export function CardapioPage() {
 
               return (
                 <React.Fragment key={p.id}>
-                  <tr className={`border-b ${!expandido ? "last:border-0" : ""} ${!p.ativo ? "opacity-50" : ""}`}>
-                    <td className="py-2 pr-2">
+                  <TableRow className={cn(!expandido && "last:border-0", !p.ativo && "opacity-50")}>
+                    <TableCell className="py-2 pr-2">
                       <button
                         type="button"
                         onClick={() => toggleExpand(p.id)}
@@ -229,12 +238,12 @@ export function CardapioPage() {
                           ? <ChevronDown size={14} />
                           : <ChevronRight size={14} />}
                       </button>
-                    </td>
-                    <td className="py-2 pr-4 font-medium">{p.nome}</td>
-                    <td className="hidden sm:table-cell py-2 pr-4 text-gray-500">
+                    </TableCell>
+                    <TableCell className="font-medium">{p.nome}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-gray-500">
                       {p.categoria_id ? (catPathMap[p.categoria_id] ?? "—") : "—"}
-                    </td>
-                    <td className="py-2 pr-4 text-right">
+                    </TableCell>
+                    <TableCell className="text-right">
                       {p.preco_promocional != null ? (
                         <span className="flex flex-col items-end gap-0.5">
                           <span className="text-xs text-gray-400 line-through">
@@ -247,21 +256,21 @@ export function CardapioPage() {
                       ) : p.preco_venda !== null ? (
                         `R$ ${Number(p.preco_venda).toFixed(2)}`
                       ) : "—"}
-                    </td>
-                    <td className="hidden sm:table-cell py-2 pr-4 text-right">
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-right">
                       {custo !== null ? `R$ ${custo.toFixed(2)}` : "—"}
-                    </td>
-                    <td className="hidden sm:table-cell py-2 pr-4 text-right">
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-right">
                       <CmvBadge preco={precoEfetivo} custo={custo} />
-                    </td>
-                    <td className="hidden sm:table-cell py-2 pr-4 text-right">
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-right">
                       {lucro !== null ? (
                         <span className={lucro >= 0 ? "text-green-600" : "text-red-600"}>
                           R$ {lucro.toFixed(2)}
                         </span>
                       ) : "—"}
-                    </td>
-                    <td className="hidden sm:table-cell py-2 pr-4 text-right">
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-right">
                       {p.producao_possivel === null ? (
                         <span className="text-gray-400">—</span>
                       ) : p.producao_possivel === 0 ? (
@@ -269,8 +278,8 @@ export function CardapioPage() {
                       ) : (
                         <span className="text-gray-700">{p.producao_possivel}</span>
                       )}
-                    </td>
-                    <td className="py-2 text-right space-x-2 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="text-right space-x-2 whitespace-nowrap">
                       <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
                         Editar
                       </Button>
@@ -293,55 +302,55 @@ export function CardapioPage() {
                           Reativar
                         </Button>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
 
                   {expandido && temFicha && (
-                    <tr className="border-b last:border-0 bg-gray-50">
-                      <td />
-                      <td colSpan={7} className="py-2 px-2 pb-3">
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="text-gray-400 border-b border-gray-200">
-                              <th className="py-1 pr-4 text-left font-medium">Insumo</th>
-                              <th className="py-1 pr-4 text-right font-medium">Quantidade</th>
-                              <th className="py-1 pr-4 text-right font-medium">Custo médio</th>
-                              <th className="py-1 text-right font-medium">Custo total</th>
-                            </tr>
-                          </thead>
-                          <tbody>
+                    <TableRow className="last:border-0 bg-gray-50 hover:bg-gray-50">
+                      <TableCell className="p-0" />
+                      <TableCell colSpan={7} className="py-2 px-2 pb-3">
+                        <Table className="text-xs">
+                          <TableHeader>
+                            <TableRow className="text-gray-400 border-gray-200 hover:bg-transparent">
+                              <TableHead className="py-1 pr-4">Insumo</TableHead>
+                              <TableHead className="py-1 pr-4 text-right">Quantidade</TableHead>
+                              <TableHead className="py-1 pr-4 text-right">Custo médio</TableHead>
+                              <TableHead className="py-1 text-right">Custo total</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
                             {p.ficha_tecnica!.map((ft) => {
                               const custoMedio = ft.custo_medio_insumo !== null ? Number(ft.custo_medio_insumo) : null;
                               const qtd = Number(ft.quantidade);
                               const custoItem = custoMedio !== null ? custoMedio * qtd : null;
                               return (
-                                <tr key={ft.insumo_id} className="border-b border-gray-100 last:border-0">
-                                  <td className="py-1 pr-4 text-gray-700">{ft.insumo_nome}</td>
-                                  <td className="py-1 pr-4 text-right text-gray-600">
+                                <TableRow key={ft.insumo_id} className="border-gray-100 last:border-0">
+                                  <TableCell className="py-1 pr-4 text-gray-700">{ft.insumo_nome}</TableCell>
+                                  <TableCell className="py-1 pr-4 text-right text-gray-600">
                                     {ft.unidade_base === "kg"
                                       ? qtd.toFixed(3)
                                       : Math.round(qtd).toString()}{" "}
                                     {ft.unidade_base}
-                                  </td>
-                                  <td className="py-1 pr-4 text-right text-gray-600">
+                                  </TableCell>
+                                  <TableCell className="py-1 pr-4 text-right text-gray-600">
                                     {custoMedio !== null ? `R$ ${custoMedio.toFixed(4)}` : "—"}
-                                  </td>
-                                  <td className="py-1 text-right text-gray-700">
+                                  </TableCell>
+                                  <TableCell className="py-1 text-right text-gray-700">
                                     {custoItem !== null ? `R$ ${custoItem.toFixed(4)}` : "—"}
-                                  </td>
-                                </tr>
+                                  </TableCell>
+                                </TableRow>
                               );
                             })}
-                          </tbody>
-                        </table>
-                      </td>
-                    </tr>
+                          </TableBody>
+                        </Table>
+                      </TableCell>
+                    </TableRow>
                   )}
                 </React.Fragment>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
         <div className="flex-1" />
         <Pagination
           pagina={pagina}
