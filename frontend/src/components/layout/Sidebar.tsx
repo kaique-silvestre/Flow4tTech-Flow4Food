@@ -95,6 +95,19 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
     });
   }, []);
 
+  // Keep the flyout anchored to its trigger button if the sidebar is
+  // collapsed/expanded while a group is open (e.g. user toggles collapse
+  // without closing the open group first) — recomputes the portal position
+  // against the current (icon-only) button rect.
+  useEffect(() => {
+    if (!collapsed || !openGroup) return;
+    const btn = btnRefs.current[openGroup];
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      setFlyoutPos({ top: rect.top, left: rect.right + 6 });
+    }
+  }, [collapsed, openGroup]);
+
   // Close flyout on outside click or Escape
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -241,12 +254,40 @@ export function Sidebar({ collapsed, onToggle, mobileOpen }: SidebarProps) {
                     <ChevronRight
                       size={14}
                       className={`shrink-0 text-gray-400 transition-transform duration-150 ${
-                        isOpen ? "rotate-0" : ""
+                        isOpen ? "rotate-90" : "rotate-0"
                       }`}
                     />
                   )}
                 </button>
-                {isOpen && renderFlyout(children, item.label)}
+
+                {/* Expandida: accordion inline embaixo do grupo (CSS grid
+                    grid-rows-[0fr]->[1fr] anima a altura sem cortar o
+                    conteúdo com overflow fixo). Colapsada: flyout via
+                    portal, comportamento inalterado. */}
+                {!collapsed && (
+                  <div
+                    className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
+                      isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="flex flex-col gap-0.5 py-0.5">
+                        {children.map((child) => (
+                          <NavLink
+                            key={child.to}
+                            to={child.to}
+                            end
+                            className="flex items-center gap-2.5 rounded-md py-2 pl-9 pr-2.5 text-sm transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                          >
+                            <child.icon size={16} className="shrink-0" />
+                            <span className="truncate">{child.label}</span>
+                          </NavLink>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {collapsed && isOpen && renderFlyout(children, item.label)}
               </div>
             );
           }
